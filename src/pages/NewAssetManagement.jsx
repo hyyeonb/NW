@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import GroupTree from '../components/GroupTree';
 import { useGroupStore } from '../stores';
 import apiClient from '../api/client';
 import { devicesApi } from '../api';
 
 export default function NewAssetManagement() {
+  const queryClient = useQueryClient();
   const { selectedGroup } = useGroupStore();
   const [devices, setDevices] = useState([]);
   const [existingDevices, setExistingDevices] = useState([]); // 기존 등록된 장비 목록
@@ -94,12 +96,11 @@ export default function NewAssetManagement() {
     }
   }, []);
 
-  // 그룹 선택 시 기존 장비 및 임시 장비 로드
+  // 그룹 선택 시 기존 장비 및 임시 장비 로드 + 그룹트리 접기
   useEffect(() => {
     if (selectedGroup) {
       loadExistingDevices(selectedGroup.GROUP_ID);
       loadTempDevices(selectedGroup.GROUP_ID);
-      // 그룹 선택 시 그룹트리 접기
       setIsGroupTreeCollapsed(true);
     }
   }, [selectedGroup, loadExistingDevices, loadTempDevices]);
@@ -465,8 +466,6 @@ export default function NewAssetManagement() {
       }));
 
       try {
-        // 우선순위 적용: SNMP > PING > AGENT (중복 체크 시)
-        const collectType = device.COLLECT_SNMP ? 'SNMP' : (device.COLLECT_PING ? 'PING' : 'AGENT');
         const response = await apiClient.post('/mgmt/devices/direct', {
           DEVICE_NAME: device.DEVICE_NAME,
           DEVICE_IP: device.DEVICE_IP,
@@ -479,10 +478,10 @@ export default function NewAssetManagement() {
           SNMP_PRIV_PROTOCOL: device.SNMP_PRIV_PROTOCOL || null,
           SNMP_PRIV_PASSWORD: device.SNMP_PRIV_PASSWORD || null,
           GROUP_ID: device.GROUP_ID,
-          // 수집 설정 (우선순위 적용된 단일 타입)
-          COLLECT_PING: collectType === 'PING',
-          COLLECT_SNMP: collectType === 'SNMP',
-          COLLECT_AGENT: collectType === 'AGENT',
+          // 수집 설정 (사용자가 선택한 값 그대로 전달)
+          COLLECT_PING: device.COLLECT_PING === true,
+          COLLECT_SNMP: device.COLLECT_SNMP === true,
+          COLLECT_AGENT: device.COLLECT_AGENT === true,
         });
 
         const data = response.data?.data || response.data;
@@ -548,9 +547,9 @@ export default function NewAssetManagement() {
       currentDevice: null,
     }));
 
-    // 등록 완료 시 그룹트리 접기
+    // 자산 관리 페이지로 이동 시 캐시 갱신을 위해 devices 캐시 무효화
     if (processedIps.size > 0) {
-      setIsGroupTreeCollapsed(true);
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
     }
 
     setIsRegistering(false);
@@ -685,7 +684,7 @@ export default function NewAssetManagement() {
           <i className={`bi bi-chevron-${isGroupTreeCollapsed ? 'right' : 'left'}`}></i>
         </button>
         <div className="group-tree-content">
-          <GroupTree />
+          <GroupTree autoSelectFirst={false} />
         </div>
       </div>
 
@@ -1025,7 +1024,7 @@ export default function NewAssetManagement() {
                       {showLabel && <label>SNMP</label>}
                       <input
                         type="checkbox"
-                        checked={device.COLLECT_SNMP !== false}
+                        checked={device.COLLECT_SNMP === true}
                         onChange={(e) => handleDeviceChange(device.id, 'COLLECT_SNMP', e.target.checked)}
                       />
                     </div>

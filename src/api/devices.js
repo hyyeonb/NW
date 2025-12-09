@@ -79,6 +79,10 @@ export const devicesApi = {
   updateDeviceScope: (deviceId, data) =>
     apiClient.put(`/mgmt/devices/${deviceId}/scope`, data),
 
+  // SNMP 수집 시도 후 장비 정보 업데이트
+  collectSnmp: (deviceId, snmpConfig) =>
+    apiClient.post(`/mgmt/devices/${deviceId}/snmp-collect`, snmpConfig),
+
   // ==================== Vendor 관련 ====================
 
   // 벤더 목록 조회
