@@ -220,7 +220,8 @@ select:focus {
 
 .device-table th {
     padding: 14px 12px;
-    text-align: left;
+    text-align: center;
+    vertical-align: middle;
     font-weight: 600;
     color: #e2e8f0;
     font-size: 13px;
@@ -233,38 +234,42 @@ select:focus {
 
 /* ==================
    장비 테이블 컬럼별 너비 설정
-   순서: 체크박스, 이름, 시스템명, IP, 모델, 벤더, 포트, 등록일
+   순서: 체크박스, 이름, 그룹, 시스템명, IP, 모델, 벤더, 포트, 등록일
    ================== */
 .device-table th:nth-child(1),
 .device-table td:nth-child(1) { width: 40px; text-align: center; }  /* 체크박스 */
 
 .device-table th:nth-child(2),
-.device-table td:nth-child(2) { width: 15%; min-width: 120px; }  /* 장비명 */
+.device-table td:nth-child(2) { width: 12%; min-width: 100px; }  /* 장비명 */
 
 .device-table th:nth-child(3),
-.device-table td:nth-child(3) { width: 15%; min-width: 120px; }  /* 시스템명 */
+.device-table td:nth-child(3) { width: 10%; min-width: 80px; }  /* 그룹 */
 
 .device-table th:nth-child(4),
-.device-table td:nth-child(4) { width: 120px; }  /* IP */
+.device-table td:nth-child(4) { width: 12%; min-width: 100px; }  /* 시스템명 */
 
 .device-table th:nth-child(5),
-.device-table td:nth-child(5) { width: 12%; min-width: 100px; }  /* 모델 */
+.device-table td:nth-child(5) { width: 120px; }  /* IP */
 
 .device-table th:nth-child(6),
-.device-table td:nth-child(6) { width: 10%; min-width: 80px; }  /* 벤더 */
+.device-table td:nth-child(6) { width: 12%; min-width: 100px; }  /* 모델 */
 
 .device-table th:nth-child(7),
-.device-table td:nth-child(7) { width: 60px; text-align: center; }  /* 포트 */
+.device-table td:nth-child(7) { width: 12%; min-width: 100px; }  /* 벤더 */
 
 .device-table th:nth-child(8),
-.device-table td:nth-child(8) { width: 90px; }  /* 등록일 */
+.device-table td:nth-child(8) { width: 60px; text-align: center; }  /* 포트 */
+
+.device-table th:nth-child(9),
+.device-table td:nth-child(9) { width: 90px; }  /* 등록일 */
 
 .device-table td {
     padding: 14px 12px;
     color: #e2e8f0;
     font-size: 14px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    text-align: left;
+    text-align: center;
+    vertical-align: middle;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -280,28 +285,35 @@ select:focus {
     text-overflow: ellipsis;
 }
 
-/* 시스템명 - 말줄임 */
+/* 그룹 - 말줄임 */
 .device-table td:nth-child(3) {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-/* IP 주소 - 줄바꿈 방지 */
+/* 시스템명 - 말줄임 */
 .device-table td:nth-child(4) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* IP 주소 - 줄바꿈 방지 */
+.device-table td:nth-child(5) {
     white-space: nowrap;
     font-family: 'Consolas', 'Monaco', monospace;
 }
 
 /* 모델 - 말줄임 */
-.device-table td:nth-child(5) {
+.device-table td:nth-child(6) {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 /* 벤더 - 말줄임 */
-.device-table td:nth-child(6) {
+.device-table td:nth-child(7) {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -611,10 +623,10 @@ select:focus {
    장비 상세 모달 - Glass Detail Modal (컴팩트)
    ================== */
 .device-detail-modal {
-    max-width: 1200px !important;
-    width: 90%;
-    max-height: none;
-    overflow-y: visible;
+    max-width: 1500px !important;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
     padding: 24px;
 }
 
@@ -788,16 +800,17 @@ select:focus {
 }
 
 .scope-settings-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    width: 100%;
 }
 
 .scope-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
+    padding: 20px 24px;
     background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(30, 41, 59, 0.3) 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
@@ -1006,6 +1019,7 @@ select:focus {
 .port-table-wrapper {
     max-height: 500px;
     overflow-y: auto;
+    overflow-x: visible;
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -1267,7 +1281,7 @@ select:focus {
     visibility: hidden;
     opacity: 0;
     position: absolute;
-    z-index: 1000;
+    z-index: 9999;
     background: linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.95) 100%);
     backdrop-filter: blur(20px);
     color: #e2e8f0;
@@ -1278,7 +1292,8 @@ select:focus {
     word-break: break-all;
     max-width: 300px;
     min-width: 150px;
-    bottom: 100%;
+    top: 100%;
+    margin-top: 5px;
     left: 50%;
     transform: translateX(-50%);
     margin-bottom: 8px;
@@ -1292,12 +1307,12 @@ select:focus {
 .tooltip-cell .tooltip-text::after {
     content: '';
     position: absolute;
-    top: 100%;
+    bottom: 100%;
     left: 50%;
     margin-left: -8px;
     border-width: 8px;
     border-style: solid;
-    border-color: rgba(30, 41, 59, 0.98) transparent transparent transparent;
+    border-color: transparent transparent rgba(30, 41, 59, 0.98) transparent;
 }
 
 .tooltip-cell:hover .tooltip-text {
