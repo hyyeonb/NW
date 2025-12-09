@@ -1,0 +1,17 @@
+/* ==================
+   NMS Design System Entry Point
+   ================== */
+
+/*
+   새로운 모듈화된 스타일 시스템
+   폴더 구조:
+   - tokens/     : 디자인 토큰 (색상, 타이포그래피, 간격, 효과)
+   - base/       : 기본 스타일 (리셋, 바디, 스크롤바)
+   - components/ : 컴포넌트 (버튼, 폼, 테이블, 모달 등)
+   - layout/     : 레이아웃 (사이드바, 네비게이션, 페이지 컨테이너)
+   - pages/      : 페이지별 스타일
+*/
+@import "./styles/index.css";
+
+/* Tailwind utilities만 사용 (base/preflight 제외) */
+@import "tailwindcss/utilities";

@@ -1,0 +1,104 @@
+/* ==================
+   Tab Components
+   NMS Glassmorphism Design System
+   ================== */
+
+/* Detail Tabs */
+.detail-tabs {
+    display: flex;
+    gap: var(--gap-sm);
+    margin-bottom: var(--spacing-5);
+    padding-bottom: var(--spacing-4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.detail-tab {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    padding: var(--spacing-3) var(--spacing-5);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+}
+
+.detail-tab:hover {
+    background: var(--glass-bg);
+    border-color: var(--glass-border);
+    color: var(--color-text-primary);
+}
+
+.detail-tab.active {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: var(--color-primary-400);
+}
+
+.detail-tab i {
+    font-size: 16px;
+}
+
+/* Tab Content */
+.detail-tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.detail-tab-content.active {
+    display: block;
+}
+
+/* Port Loading State */
+.port-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--gap-md);
+    padding: var(--spacing-10);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-body);
+}
+
+.port-loading i.spinning {
+    animation: spin 1s linear infinite;
+}
+
+/* Port Empty State */
+.port-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-12);
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+.port-empty i {
+    font-size: 48px;
+    margin-bottom: var(--spacing-4);
+    opacity: 0.5;
+}
+
+.port-empty p {
+    font-size: var(--font-size-body);
+    margin: 0;
+}
+
+/* Speed & MAC Cells */
+.port-speed {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-body-xs);
+    color: var(--color-success-light);
+}
+
+.port-mac {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-body-xs);
+    color: var(--color-text-muted);
+}

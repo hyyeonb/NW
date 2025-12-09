@@ -1,0 +1,108 @@
+/* ==================
+   Pagination Components
+   NMS Glassmorphism Design System
+   ================== */
+
+/* Pagination Controls Container */
+.pagination-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--spacing-5);
+    padding-top: var(--spacing-4);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Items Per Page */
+.items-per-page {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-md);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-body-sm);
+}
+
+.items-per-page label {
+    margin-bottom: 0;
+    font-size: var(--font-size-body-sm);
+}
+
+.items-per-page select {
+    width: auto;
+    min-width: 70px;
+    padding: 8px 12px;
+    background: rgba(15, 15, 25, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-body-sm);
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+}
+
+.pagination button {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-body-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.pagination button:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: var(--color-text-primary);
+}
+
+.pagination button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.pagination span {
+    padding: 8px 12px;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-body-sm);
+}
+
+/* Page Numbers */
+.pagination-pages {
+    display: flex;
+    gap: var(--gap-xs);
+}
+
+.pagination-pages button {
+    min-width: 36px;
+    padding: 8px 12px;
+}
+
+.pagination-pages button.active {
+    background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+    border-color: var(--color-primary-500);
+    color: #ffffff;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .pagination-controls {
+        flex-direction: column;
+        gap: var(--spacing-4);
+        align-items: stretch;
+    }
+
+    .items-per-page {
+        justify-content: center;
+    }
+
+    .pagination {
+        justify-content: center;
+    }
+}

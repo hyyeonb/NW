@@ -1,0 +1,65 @@
+/* ==================
+   Typography Design Tokens
+   NMS Glassmorphism Design System
+   ================== */
+
+:root {
+    /* Font Family */
+    --font-family-base: 'Pretendard', 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-family-mono: 'Fira Code', 'SF Mono', Monaco, 'Cascadia Code', monospace;
+
+    /* Font Weights */
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    /* Font Sizes - Headings */
+    --font-size-h1: 26px;
+    --font-size-h2: 22px;
+    --font-size-h3: 18px;
+    --font-size-h4: 16px;
+
+    /* Font Sizes - Body */
+    --font-size-body-lg: 16px;
+    --font-size-body: 14px;
+    --font-size-body-sm: 13px;
+    --font-size-body-xs: 12px;
+
+    /* Font Sizes - UI Elements */
+    --font-size-label: 12px;
+    --font-size-label-sm: 11px;
+    --font-size-label-xs: 10px;
+
+    --font-size-button: 14px;
+    --font-size-button-sm: 13px;
+    --font-size-button-xs: 12px;
+
+    --font-size-input: 14px;
+    --font-size-input-sm: 12px;
+
+    /* Font Sizes - Table */
+    --font-size-table-header: 12px;
+    --font-size-table-body: 13px;
+
+    /* Font Sizes - Navigation */
+    --font-size-nav: 14px;
+    --font-size-nav-sm: 13px;
+
+    /* Font Sizes - Badge & Status */
+    --font-size-badge: 11px;
+    --font-size-badge-sm: 10px;
+
+    /* Line Heights */
+    --line-height-tight: 1.25;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.625;
+    --line-height-loose: 2;
+
+    /* Letter Spacing */
+    --letter-spacing-tight: -0.02em;
+    --letter-spacing-normal: 0;
+    --letter-spacing-wide: 0.025em;
+    --letter-spacing-wider: 0.05em;
+    --letter-spacing-widest: 0.1em;
+}

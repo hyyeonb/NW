@@ -1,0 +1,39 @@
+/* ==================
+   NMS Glassmorphism Design System
+   Main Style Entry Point
+   ================== */
+
+/*
+   Import Order:
+   1. Design Tokens (CSS Variables)
+   2. Base Styles (Reset, Body, Typography)
+   3. Components (Buttons, Forms, Tables, etc.)
+   4. Layout (Sidebar, Navigation, Page Container)
+   5. Pages (Page-specific styles)
+*/
+
+/* 1. Design Tokens */
+@import "./tokens/index.css";
+
+/* 2. Base Styles */
+@import "./base/index.css";
+
+/* 3. Components */
+@import "./components/index.css";
+
+/* 4. Layout */
+@import "./layout/index.css";
+
+/* 5. Pages */
+@import "./pages/index.css";
+
+/*
+   Legacy imports - to be migrated to new structure
+   These files contain page-specific or component-specific styles
+   that should eventually be refactored into the new structure
+*/
+@import "./login.css";
+@import "./group-tree.css";
+@import "./group-management.css";
+@import "./asset-management.css";
+/* Note: new-asset-management.css is now in pages folder */

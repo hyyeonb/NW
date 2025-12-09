@@ -1,0 +1,884 @@
+/* ==================
+   그룹관리 페이지 스타일
+   Apple Liquid Glass Design 2025
+   ================== */
+
+/* ==================
+   그룹 폼 - Glass Card
+   ================== */
+.group-form {
+    display: none;
+    margin-top: 24px;
+    padding: 28px;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.4) 100%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    animation: formSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.group-form::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+}
+
+@keyframes formSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.group-form label {
+    display: block;
+    margin-bottom: 12px;
+    font-weight: 600;
+    color: #ffffff;
+    font-size: 14px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.group-info {
+    margin-top: 24px;
+}
+
+/* 한 줄 그룹 정보 - Glass Info Bar */
+.info-inline {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.6) 0%, rgba(15, 23, 42, 0.3) 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+}
+
+.info-item-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.info-label-inline {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-value-inline {
+    font-size: 14px;
+    color: #e2e8f0;
+    font-weight: 500;
+}
+
+.info-divider {
+    color: rgba(148, 163, 184, 0.2);
+    font-size: 14px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 14px;
+    margin-top: 28px;
+}
+
+.form-actions .btn {
+    flex: 1;
+    padding: 12px 24px;
+    font-weight: 600;
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.form-actions .btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.form-actions .btn:hover::before {
+    left: 100%;
+}
+
+/* ==================
+   하위 그룹 테이블 - Glass Table
+   ================== */
+.table-wrapper {
+    overflow-x: auto;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.6) 0%, rgba(15, 23, 42, 0.3) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.child-groups-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.child-groups-table thead {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.15) 100%);
+}
+
+.child-groups-table th {
+    padding: 14px 18px;
+    text-align: left;
+    font-weight: 600;
+    color: #e2e8f0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(59, 130, 246, 0.25);
+    white-space: nowrap;
+}
+
+.child-groups-table td {
+    padding: 14px 18px;
+    color: #e2e8f0;
+    font-size: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.child-groups-table tbody tr {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.child-groups-table tbody tr:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+}
+
+.child-groups-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.child-groups-table td:nth-child(1) {
+    font-weight: 600;
+    background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.no-children-message {
+    padding: 30px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 14px;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.2) 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ==================
+   페이징 - Glass Pagination
+   ================== */
+.pagination-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+}
+
+.items-per-page {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.items-per-page label {
+    font-size: 14px;
+    color: #94a3b8;
+}
+
+.items-per-page select {
+    padding: 8px 14px;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: #e2e8f0;
+    font-size: 14px;
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.items-per-page select:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.pagination button {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.15) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+    padding: 10px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 14px;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+}
+
+.pagination button:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.35) 0%, rgba(139, 92, 246, 0.25) 100%);
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.2);
+}
+
+.pagination button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: linear-gradient(135deg, rgba(100, 116, 139, 0.15) 0%, rgba(100, 116, 139, 0.1) 100%);
+    border-color: rgba(100, 116, 139, 0.2);
+    color: #94a3b8;
+    transform: none;
+}
+
+.pagination span {
+    color: #f1f5f9;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0 12px;
+}
+
+/* ==================
+   반응형 테이블
+   ================== */
+@media (max-width: 768px) {
+    .info-inline {
+        padding: 14px 16px;
+        gap: 12px;
+    }
+
+    .info-label-inline {
+        font-size: 10px;
+    }
+
+    .info-value-inline {
+        font-size: 13px;
+    }
+
+    .child-groups-table th,
+    .child-groups-table td {
+        padding: 12px 14px;
+        font-size: 13px;
+    }
+
+    .group-form {
+        padding: 22px;
+        border-radius: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .info-inline {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 12px 14px;
+    }
+
+    .info-divider {
+        display: none;
+    }
+
+    .info-label-inline {
+        font-size: 9px;
+    }
+
+    .info-value-inline {
+        font-size: 12px;
+    }
+
+    .child-groups-table th,
+    .child-groups-table td {
+        padding: 10px 12px;
+        font-size: 12px;
+    }
+
+    .child-groups-table th:nth-child(2),
+    .child-groups-table td:nth-child(2) {
+        display: none;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+}
+
+/* ==================
+   아이콘 선택 모달 - Glass Modal
+   ================== */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.icon-modal-content {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.9) 100%);
+    backdrop-filter: blur(30px) saturate(200%);
+    -webkit-backdrop-filter: blur(30px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 24px;
+    padding: 32px;
+    width: 900px;
+    height: 650px;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.icon-modal-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+}
+
+.icon-modal-content h3 {
+    font-size: 22px;
+    color: #ffffff;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg, #ffffff 0%, #60a5fa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.close-btn {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    line-height: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+}
+
+.close-btn:hover {
+    color: #ffffff;
+    background: rgba(239, 68, 68, 0.2);
+}
+
+/* ==================
+   아이콘 탭 - Glass Tabs
+   ================== */
+.icon-tab-container {
+    margin-top: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.icon-tab-buttons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.4) 100%);
+    border-radius: 14px;
+    padding: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.icon-tab-button {
+    flex: 1;
+    padding: 14px 18px;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 10px;
+}
+
+.icon-tab-button:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);
+    color: #e2e8f0;
+}
+
+.icon-tab-button.active {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(139, 92, 246, 0.2) 100%);
+    color: #60a5fa;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.icon-tab-content {
+    display: none;
+}
+
+.icon-tab-content.active {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    animation: tabFadeIn 0.3s ease;
+}
+
+@keyframes tabFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==================
+   아이콘 그리드 - Glass Grid
+   ================== */
+.icon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+    gap: 12px;
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.2) 100%);
+    border-radius: 12px;
+    align-content: start;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.icon-grid::-webkit-scrollbar {
+    width: 8px;
+}
+
+.icon-grid::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 10px;
+}
+
+.icon-grid::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #3b82f6 0%, #8b5cf6 100%);
+    border-radius: 10px;
+}
+
+.icon-grid::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #60a5fa 0%, #a78bfa 100%);
+}
+
+.icon-item {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(30, 41, 59, 0.3) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 18px;
+    text-align: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    backdrop-filter: blur(10px);
+}
+
+.icon-item:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(139, 92, 246, 0.15) 100%);
+    border-color: rgba(59, 130, 246, 0.5);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow:
+        0 12px 28px rgba(59, 130, 246, 0.2),
+        0 0 0 1px rgba(59, 130, 246, 0.3);
+}
+
+.icon-item i,
+.icon-item .material-icons {
+    font-size: 30px;
+    color: #60a5fa;
+    transition: all 0.3s ease;
+}
+
+.icon-item:hover i,
+.icon-item:hover .material-icons {
+    color: #93c5fd;
+    transform: scale(1.1);
+}
+
+/* ==================
+   아이콘 검색 입력창 - Glass Input
+   ================== */
+.icon-search-container {
+    margin-bottom: 14px;
+    padding: 0 6px;
+    flex-shrink: 0;
+}
+
+.icon-search-input {
+    width: 100%;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.7) 0%, rgba(30, 41, 59, 0.5) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: #e2e8f0;
+    font-size: 14px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+}
+
+.icon-search-input:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.5);
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.7) 100%);
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.15),
+        0 4px 16px rgba(59, 130, 246, 0.1);
+}
+
+.icon-search-input::placeholder {
+    color: rgba(226, 232, 240, 0.4);
+}
+
+/* ==================
+   아이콘 카테고리 버튼 - Glass Category Pills
+   ================== */
+.icon-category-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding: 0 6px;
+    flex-shrink: 0;
+}
+
+.icon-category-btn {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(30, 41, 59, 0.3) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+}
+
+.icon-category-btn:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #e2e8f0;
+    transform: translateY(-1px);
+}
+
+.icon-category-btn.active {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(139, 92, 246, 0.2) 100%);
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #60a5fa;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+/* ==================
+   삭제 확인 모달 스타일
+   ================== */
+.delete-confirm-modal {
+    max-width: 450px !important;
+    text-align: center;
+    padding: 36px !important;
+}
+
+.delete-confirm-modal h3 {
+    color: #f87171 !important;
+    margin-bottom: 20px !important;
+}
+
+.delete-confirm-modal p {
+    color: #cbd5e1;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
+
+.delete-confirm-modal .warning-text {
+    color: #fbbf24;
+    font-weight: 600;
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%);
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(251, 191, 36, 0.2);
+    margin-top: 16px;
+}
+
+.delete-confirm-modal .form-actions {
+    justify-content: center;
+    margin-top: 28px;
+}
+
+/* ==================
+   드래그 앤 드롭 스타일
+   ================== */
+.dragging {
+    opacity: 0.5;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.15) 100%) !important;
+}
+
+.drag-over {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.1) 100%) !important;
+    border: 2px dashed rgba(34, 197, 94, 0.5) !important;
+}
+
+/* ==================
+   그룹 액션 버튼
+   ================== */
+.group-action-btn {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #94a3b8;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.group-action-btn:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.group-action-btn.delete:hover {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.1) 100%);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #f87171;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+}
+
+/* ==================
+   그룹 아이콘 표시
+   ================== */
+.group-icon-display {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.15) 100%);
+    border-radius: 10px;
+    margin-right: 12px;
+    font-size: 20px;
+    color: #60a5fa;
+}
+
+.group-icon-display:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(139, 92, 246, 0.25) 100%);
+    transform: scale(1.05);
+}
+
+/* ==================
+   빈 상태 메시지
+   ================== */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: #64748b;
+    text-align: center;
+}
+
+.empty-state i {
+    font-size: 56px;
+    margin-bottom: 20px;
+    opacity: 0.4;
+    background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 14px;
+    color: #94a3b8;
+}
+
+/* ==================
+   로딩 스피너
+   ================== */
+.loading-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px;
+    color: #94a3b8;
+}
+
+.loading-spinner .spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(59, 130, 246, 0.2);
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ==================
+   첫 그룹 등록 모달
+   ================== */
+.first-group-modal {
+    max-width: 450px !important;
+    animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.first-group-modal .modal-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 20px;
+    color: #e2e8f0;
+}
+
+.first-group-modal .modal-title i {
+    color: #60a5fa;
+    font-size: 24px;
+}
+
+.first-group-modal .form-group {
+    margin-bottom: 16px;
+}
+
+.first-group-modal .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #94a3b8;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.first-group-modal .form-group input {
+    width: 100%;
+    padding: 12px 14px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: #e2e8f0;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.first-group-modal .form-group input:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.first-group-modal .modal-footer {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: flex-end;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}

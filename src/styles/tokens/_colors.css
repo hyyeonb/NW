@@ -1,0 +1,66 @@
+/* ==================
+   Color Design Tokens
+   NMS Glassmorphism Design System
+   ================== */
+
+:root {
+    /* Primary Color Palette - Blue */
+    --color-primary-50: #eff6ff;
+    --color-primary-100: #dbeafe;
+    --color-primary-200: #bfdbfe;
+    --color-primary-300: #93c5fd;
+    --color-primary-400: #60a5fa;
+    --color-primary-500: #3b82f6;
+    --color-primary-600: #2563eb;
+    --color-primary-700: #1d4ed8;
+    --color-primary-800: #1e40af;
+    --color-primary-900: #1e3a8a;
+
+    /* Accent Colors */
+    --color-accent-purple: #8b5cf6;
+    --color-accent-pink: #ec4899;
+    --color-accent-cyan: #06b6d4;
+    --color-accent-emerald: #10b981;
+
+    /* Semantic Colors */
+    --color-success: #22c55e;
+    --color-success-light: #4ade80;
+    --color-success-dark: #16a34a;
+
+    --color-warning: #f59e0b;
+    --color-warning-light: #fbbf24;
+    --color-warning-dark: #d97706;
+
+    --color-error: #ef4444;
+    --color-error-light: #f87171;
+    --color-error-dark: #dc2626;
+
+    --color-info: #3b82f6;
+    --color-info-light: #60a5fa;
+    --color-info-dark: #2563eb;
+
+    /* Text Colors */
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #94a3b8;
+    --color-text-muted: #64748b;
+    --color-text-disabled: #475569;
+
+    /* Background Colors */
+    --color-bg-dark: #0a0a0f;
+    --color-bg-card: rgba(15, 15, 25, 0.6);
+    --color-bg-elevated: rgba(20, 20, 35, 0.95);
+    --color-bg-input: rgba(15, 15, 25, 0.8);
+
+    /* Border Colors */
+    --color-border-default: rgba(255, 255, 255, 0.1);
+    --color-border-hover: rgba(255, 255, 255, 0.2);
+    --color-border-focus: rgba(59, 130, 246, 0.5);
+
+    /* Glass Effect Colors */
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-bg-hover: rgba(255, 255, 255, 0.08);
+    --glass-bg-active: rgba(255, 255, 255, 0.12);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-border-hover: rgba(255, 255, 255, 0.2);
+    --glass-highlight: rgba(255, 255, 255, 0.15);
+}

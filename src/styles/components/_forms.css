@@ -1,0 +1,192 @@
+/* ==================
+   Form Components
+   NMS Glassmorphism Design System
+   ================== */
+
+/* Form Container */
+.form-group {
+    margin-bottom: var(--spacing-4);
+}
+
+/* Text Inputs */
+.form-input,
+input[type="text"],
+input[type="number"],
+input[type="password"],
+input[type="email"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+textarea {
+    width: 100%;
+    padding: var(--spacing-input-y) var(--spacing-input-x);
+    font-size: var(--font-size-input);
+    color: var(--color-text-primary);
+    background: linear-gradient(135deg, var(--color-bg-input) 0%, rgba(20, 20, 35, 0.6) 100%);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-normal);
+    outline: none;
+}
+
+.form-input::placeholder,
+input::placeholder {
+    color: var(--color-text-muted);
+}
+
+.form-input:focus,
+input:focus,
+textarea:focus {
+    border-color: var(--color-border-focus);
+    background: linear-gradient(135deg, rgba(15, 15, 25, 0.9) 0%, rgba(20, 20, 35, 0.8) 100%);
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.15),
+        0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.form-input:disabled,
+input:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: rgba(15, 15, 25, 0.4);
+}
+
+/* Small Input */
+.form-input-sm,
+input.input-sm {
+    padding: var(--spacing-input-sm-y) var(--spacing-input-sm-x);
+    font-size: var(--font-size-input-sm);
+    border-radius: var(--radius-md);
+}
+
+/* Select */
+select {
+    width: 100%;
+    padding: var(--spacing-input-y) var(--spacing-input-x);
+    font-size: var(--font-size-input);
+    color: var(--color-text-primary);
+    background: linear-gradient(135deg, var(--color-bg-input) 0%, rgba(20, 20, 35, 0.6) 100%);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    outline: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8.5L1.5 4h9L6 8.5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+}
+
+select:focus {
+    border-color: var(--color-border-focus);
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.15),
+        0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+select:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+select option {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 10px 12px;
+}
+
+select option:hover,
+select option:checked {
+    background: var(--color-primary-500);
+    color: #ffffff;
+}
+
+/* Checkbox & Radio */
+input[type="checkbox"],
+input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--color-primary-500);
+}
+
+/* Form Layout */
+.form-row {
+    display: flex;
+    gap: var(--gap-lg);
+    margin-bottom: var(--spacing-4);
+}
+
+.form-row > * {
+    flex: 1;
+}
+
+.form-actions {
+    display: flex;
+    gap: var(--gap-md);
+    margin-top: var(--spacing-6);
+}
+
+/* Form Grid Layouts */
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--gap-md);
+}
+
+.form-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--gap-md);
+}
+
+.form-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--gap-md);
+}
+
+/* Form Field */
+.form-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-field label {
+    font-size: var(--font-size-label-xs);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-1);
+    font-weight: var(--font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-wide);
+}
+
+/* Required Field Indicator */
+.required {
+    color: var(--color-error-light);
+    font-weight: var(--font-weight-semibold);
+}
+
+/* Responsive Form Grids */
+@media (max-width: 1200px) {
+    .form-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .form-grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .form-grid-4,
+    .form-grid-3,
+    .form-grid-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .form-row {
+        flex-direction: column;
+    }
+}

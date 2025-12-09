@@ -1,0 +1,256 @@
+/* ==================
+   Modal Components
+   NMS Glassmorphism Design System
+   ================== */
+
+/* Modal Backdrop */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: var(--blur-sm);
+    -webkit-backdrop-filter: var(--blur-sm);
+    z-index: var(--z-modal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Modal Content */
+.modal-content {
+    background: linear-gradient(135deg, rgba(20, 20, 35, 0.98) 0%, rgba(25, 25, 45, 0.95) 100%);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-3xl);
+    padding: var(--spacing-modal);
+    max-width: var(--modal-max-width);
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow:
+        var(--shadow-2xl),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    animation: modalSlideIn 0.4s var(--transition-bounce);
+    position: relative;
+}
+
+.modal-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Modal Header */
+.modal-content h3 {
+    font-size: var(--font-size-h3);
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-6);
+    padding-bottom: var(--spacing-4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-content h4 {
+    font-size: var(--font-size-h4);
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-3);
+}
+
+/* Close Button */
+.close-btn {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 400;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.05);
+    line-height: 1;
+}
+
+.close-btn:hover {
+    color: var(--color-text-primary);
+    background: rgba(255, 255, 255, 0.1);
+    transform: rotate(90deg);
+}
+
+/* Modal Footer */
+.modal-footer,
+.modal-actions,
+.detail-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--gap-md);
+    margin-top: var(--spacing-6);
+    padding-top: var(--spacing-5);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Large Modal */
+.modal-lg .modal-content {
+    max-width: var(--modal-lg-max-width);
+    width: 95%;
+}
+
+/* Registration Modal */
+.registration-modal {
+    z-index: 99999;
+}
+
+.registration-modal-content {
+    max-width: var(--modal-lg-max-width) !important;
+    width: 95% !important;
+}
+
+/* Progress Section */
+.progress-section {
+    margin-bottom: var(--spacing-6);
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-bottom: var(--spacing-3);
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-primary-500) 0%, var(--color-accent-purple) 100%);
+    border-radius: var(--radius-full);
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: var(--font-size-body);
+    color: var(--color-text-secondary);
+    text-align: center;
+}
+
+.progress-text .current-device {
+    color: var(--color-primary-400);
+    font-weight: var(--font-weight-medium);
+}
+
+/* Result Summary */
+.result-summary {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.4) 100%);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-5);
+    margin-bottom: var(--spacing-6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.result-summary p {
+    margin: 0;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-body);
+}
+
+.result-summary .success-count {
+    color: var(--color-success-light);
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-body-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+}
+
+.result-summary .failure-count {
+    color: var(--color-error-light);
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-body-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+}
+
+/* Result Sections */
+.result-section {
+    margin-bottom: var(--spacing-5);
+}
+
+.result-section h4 {
+    font-size: var(--font-size-body);
+    margin-bottom: var(--spacing-3);
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+}
+
+.success-section h4 {
+    color: var(--color-success-light);
+}
+
+.failure-section h4 {
+    color: var(--color-error-light);
+}
+
+.success-row {
+    background: rgba(74, 222, 128, 0.05);
+}
+
+.failure-row {
+    background: rgba(248, 113, 113, 0.05);
+}
+
+/* Device Detail Modal */
+.device-detail-modal {
+    max-width: 800px;
+}
+
+.detail-modal-title {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-md);
+    font-size: var(--font-size-h3);
+    color: var(--color-text-primary);
+}
+
+.detail-modal-title i {
+    color: var(--color-primary-400);
+}
+
+/* Modal Responsive */
+@media (max-width: 768px) {
+    .modal-content {
+        padding: var(--spacing-modal-sm);
+        border-radius: var(--radius-2xl);
+        width: 95%;
+    }
+}
