@@ -753,8 +753,8 @@ export default function AssetManagement() {
                           <th className="sortable" onClick={() => handlePortSort('IF_DESCR')}>
                             설명 {renderSortIcon('IF_DESCR', portSortField, portSortOrder)}
                           </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_ALIAS')}>
-                            별칭 {renderSortIcon('IF_ALIAS', portSortField, portSortOrder)}
+                          <th className="sortable" onClick={() => handlePortSort('IF_DESCRIPTION')}>
+                            Description {renderSortIcon('IF_DESCRIPTION', portSortField, portSortOrder)}
                           </th>
                           <th className="sortable" onClick={() => handlePortSort('IF_TYPE')}>
                             타입 {renderSortIcon('IF_TYPE', portSortField, portSortOrder)}
@@ -765,8 +765,8 @@ export default function AssetManagement() {
                           <th className="sortable" onClick={() => handlePortSort('IF_HIGH_SPEED')}>
                             속도 {renderSortIcon('IF_HIGH_SPEED', portSortField, portSortOrder)}
                           </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_PHYS_ADDRESS')}>
-                            MAC {renderSortIcon('IF_PHYS_ADDRESS', portSortField, portSortOrder)}
+                          <th className="sortable" onClick={() => handlePortSort('IF_MAC_ADDRESS')}>
+                            MAC {renderSortIcon('IF_MAC_ADDRESS', portSortField, portSortOrder)}
                           </th>
                           <th className="sortable" onClick={() => handlePortSort('IF_ADMIN_STATUS')}>
                             Admin {renderSortIcon('IF_ADMIN_STATUS', portSortField, portSortOrder)}
@@ -793,10 +793,10 @@ export default function AssetManagement() {
                                 <span className="tooltip-text">{port.IF_DESCR}</span>
                               )}
                             </td>
-                            <td className={`${port.IF_ALIAS && port.IF_ALIAS.length > 15 ? 'tooltip-cell truncate-cell' : ''}`}>
-                              {port.IF_ALIAS || '-'}
-                              {port.IF_ALIAS && port.IF_ALIAS.length > 15 && (
-                                <span className="tooltip-text">{port.IF_ALIAS}</span>
+                            <td className={`${port.IF_DESCRIPTION && port.IF_DESCRIPTION.length > 15 ? 'tooltip-cell truncate-cell' : ''}`}>
+                              {port.IF_DESCRIPTION || '-'}
+                              {port.IF_DESCRIPTION && port.IF_DESCRIPTION.length > 15 && (
+                                <span className="tooltip-text">{port.IF_DESCRIPTION}</span>
                               )}
                             </td>
                             <td>
@@ -806,7 +806,7 @@ export default function AssetManagement() {
                             </td>
                             <td>{port.IF_MTU || '-'}</td>
                             <td className="port-speed">{formatSpeed(port)}</td>
-                            <td className="port-mac">{port.IF_PHYS_ADDRESS || '-'}</td>
+                            <td className="port-mac">{port.IF_MAC_ADDRESS || '-'}</td>
                             <td>
                               <span className={`status-badge ${port.IF_ADMIN_STATUS === 1 ? 'up' : 'down'}`}>
                                 {port.IF_ADMIN_STATUS === 1 ? 'Up' : 'Down'}
