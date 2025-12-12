@@ -5,3 +5,4 @@ export { default as GroupManagement } from './GroupManagement';
 export { default as AssetManagement } from './AssetManagement';
 export { default as NewAssetManagement } from './NewAssetManagement';
 export { default as ModelManagement } from './ModelManagement';
+export { default as FaultMonitoring } from './FaultMonitoring';
