@@ -1,0 +1,917 @@
+/* 토폴로지 페이지 전체 래퍼 */
+.topology-page-wrapper {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 토폴로지 사이드바 래퍼 */
+.topology-sidebar-wrapper {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.topology-sidebar-wrapper.collapsed {
+  width: 0 !important;
+}
+
+.topology-sidebar-wrapper.collapsed .topology-sidebars-wrapper {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+/* 그룹 + 장비 사이드바 래퍼 */
+.topology-sidebars-wrapper {
+  display: flex;
+  height: 100%;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* 사이드바 토글 버튼 */
+.topology-sidebar-toggle {
+  position: absolute;
+  top: 50%;
+  right: -12px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 48px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0 6px 6px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  z-index: 10;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.topology-sidebar-toggle:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.topology-sidebar-wrapper.collapsed .topology-sidebar-toggle {
+  right: -24px;
+}
+
+/* 토폴로지 사이드바 공통 */
+.topology-sidebar {
+  height: 100%;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+}
+
+/* 그룹 사이드바 */
+.topology-group-sidebar {
+  width: 220px;
+  min-width: 220px;
+}
+
+/* 장비 리스트 사이드바 */
+.topology-device-sidebar {
+  width: 240px;
+  min-width: 240px;
+}
+
+/* 사이드바 헤더 */
+.topology-sidebar-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.topology-sidebar-header h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.topology-sidebar-badge {
+  font-size: 11px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.topology-sidebar-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.topology-sidebar-btn {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.topology-sidebar-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* 서브 헤더 (선택된 그룹 표시) */
+.topology-sidebar-subheader {
+  padding: 8px 14px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.topology-sidebar-subheader i {
+  color: var(--text-tertiary);
+}
+
+.topology-sidebar-subheader span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 사이드바 콘텐츠 */
+.topology-sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+/* 로딩/에러/빈 상태 */
+.topology-loading-state,
+.topology-error-state,
+.topology-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 12px;
+  color: var(--text-tertiary);
+  text-align: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.topology-loading-state i,
+.topology-error-state i,
+.topology-empty-state i {
+  font-size: 20px;
+}
+
+.topology-error-state {
+  color: #f87171;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+/* 트리 스타일 */
+.topology-tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.topology-tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  padding-left: 14px;
+}
+
+/* 그룹 노드 */
+.topology-group-node {
+  margin: 1px 0;
+}
+
+.topology-group-item-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+/* 토글 아이콘 */
+.topology-toggle-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  transition: transform 0.2s, color 0.2s;
+  flex-shrink: 0;
+  font-size: 10px;
+}
+
+.topology-toggle-icon:hover {
+  color: var(--text-primary);
+}
+
+.topology-toggle-icon.expanded {
+  transform: rotate(90deg);
+}
+
+.topology-toggle-icon.invisible {
+  visibility: hidden;
+}
+
+/* 그룹 아이템 */
+.topology-group-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background-color 0.2s, color 0.2s;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.topology-group-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.topology-group-item.selected {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.topology-group-item .group-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.topology-group-item .group-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topology-group-item .group-count {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  padding: 1px 5px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+/* 자식 목록 */
+.topology-children {
+  margin-top: 1px;
+}
+
+/* 장비 리스트 */
+.topology-device-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* 장비 아이템 */
+.topology-device-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background-color 0.2s, color 0.2s;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.topology-device-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.topology-device-item.selected {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.topology-device-item .device-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.topology-device-item.selected .device-icon {
+  color: #34d399;
+}
+
+.topology-device-item .device-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.topology-device-item .device-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.topology-device-item .device-ip {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* 메인 콘텐츠 영역 */
+.topology-main-content {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 툴바 */
+.topology-toolbar {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background-color: var(--bg-secondary);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 20;
+}
+
+.topology-link-draft-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: #92400e;
+  color: white;
+  font-size: 12px;
+}
+
+.topology-toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background-color: var(--border-color);
+  margin: 0 4px;
+}
+
+/* 토폴로지 캔버스 컨테이너 */
+.topology-canvas-container {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  position: relative;
+  background-color: #0f172a;
+}
+
+/* 스크롤바 스타일 */
+.topology-sidebar-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.topology-sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.topology-sidebar-content::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.topology-sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* 드래그 가능한 장비 아이템 */
+.topology-device-item.draggable {
+  cursor: grab;
+}
+
+.topology-device-item.draggable:active {
+  cursor: grabbing;
+}
+
+.topology-device-item .drag-handle {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  margin-right: 2px;
+  opacity: 0.6;
+}
+
+.topology-device-item.draggable:hover .drag-handle,
+.topology-group-item.draggable:hover .drag-handle {
+  opacity: 1;
+}
+
+/* 드래그 가능한 그룹 아이템 */
+.topology-group-item.draggable {
+  cursor: grab;
+}
+
+.topology-group-item.draggable:active {
+  cursor: grabbing;
+}
+
+.topology-group-item .drag-handle {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+/* 다중 선택 툴바 */
+.topology-multi-select-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  gap: 8px;
+}
+
+.topology-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.topology-checkbox-label:hover {
+  color: var(--text-primary);
+}
+
+.topology-checkbox {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.topology-add-selected-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.topology-add-selected-btn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+}
+
+.topology-add-selected-btn i {
+  font-size: 12px;
+}
+
+/* 장비 체크박스 */
+.topology-device-checkbox {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+  flex-shrink: 0;
+}
+
+/* 체크된 장비 아이템 */
+.topology-device-item.checked {
+  background: rgba(59, 130, 246, 0.1);
+  border-left: 2px solid #3b82f6;
+}
+
+/* 편집 모드 캔버스 드롭 영역 */
+.topology-canvas-container.edit-mode {
+  outline: 2px dashed transparent;
+  transition: outline-color 0.2s;
+}
+
+.topology-canvas-container.edit-mode.drag-over {
+  outline-color: rgba(59, 130, 246, 0.5);
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* 장비 상세정보 모달 */
+.topology-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.topology-modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.topology-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+}
+
+.topology-modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.topology-modal-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.topology-modal-close:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.topology-modal-content {
+  padding: 20px;
+  overflow-y: auto;
+  max-height: calc(80vh - 60px);
+}
+
+.topology-modal-loading,
+.topology-modal-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: var(--text-tertiary);
+  gap: 12px;
+}
+
+.topology-modal-loading i,
+.topology-modal-error i {
+  font-size: 24px;
+}
+
+.topology-modal-error {
+  color: #f87171;
+}
+
+.topology-modal-device-info {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.topology-modal-section {
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.topology-modal-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.topology-modal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.topology-modal-row:last-child {
+  border-bottom: none;
+}
+
+.topology-modal-row .label {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.topology-modal-row .value {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+  text-align: right;
+  max-width: 60%;
+  word-break: break-all;
+}
+
+.topology-modal-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 다중 선택 박스 (우클릭 드래그) */
+.topology-selection-box {
+  position: absolute;
+  border: 2px dashed rgba(34, 197, 94, 0.8);
+  background: rgba(34, 197, 94, 0.1);
+  pointer-events: none;
+  z-index: 100;
+  border-radius: 4px;
+}
+
+/* 현재 그룹 표시 */
+.topology-current-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 6px;
+  color: #a78bfa;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.topology-current-group i {
+  font-size: 14px;
+}
+
+.topology-current-group span {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 인터페이스 선택 모달 */
+.topology-interface-modal {
+  max-width: 550px;
+}
+
+.topology-interface-link-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.topology-interface-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.topology-interface-node i {
+  font-size: 16px;
+  color: var(--text-tertiary);
+}
+
+.topology-interface-node.active {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+}
+
+.topology-interface-node.active i {
+  color: #60a5fa;
+}
+
+.topology-interface-node.completed {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+  color: #4ade80;
+}
+
+.topology-interface-node.completed i {
+  color: #22c55e;
+}
+
+.topology-interface-selected {
+  font-size: 11px;
+  color: #22c55e;
+  margin-left: 4px;
+}
+
+.topology-interface-arrow {
+  font-size: 18px;
+  color: var(--text-tertiary);
+}
+
+.topology-interface-step-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.topology-interface-step-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border-radius: 12px;
+}
+
+.topology-interface-step-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.topology-interface-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.topology-interface-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.topology-interface-item:hover {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+  transform: translateX(4px);
+}
+
+.topology-interface-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  font-size: 18px;
+}
+
+.topology-interface-icon .text-success {
+  color: #22c55e;
+}
+
+.topology-interface-icon .text-muted {
+  color: var(--text-tertiary);
+}
+
+.topology-interface-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.topology-interface-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topology-interface-details {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.topology-interface-index {
+  color: var(--text-tertiary);
+}
+
+.topology-interface-speed {
+  color: #60a5fa;
+}
+
+.topology-interface-status {
+  font-weight: 500;
+}
+
+.topology-interface-status.up {
+  color: #22c55e;
+}
+
+.topology-interface-status.down {
+  color: #f87171;
+}
+
+.topology-interface-select-icon {
+  color: var(--text-tertiary);
+  transition: transform 0.2s, color 0.2s;
+}
+
+.topology-interface-item:hover .topology-interface-select-icon {
+  color: #3b82f6;
+  transform: translateX(4px);
+}
+
+.topology-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+}
+
+.topology-modal-footer .btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
