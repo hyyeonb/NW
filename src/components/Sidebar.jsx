@@ -35,7 +35,14 @@ export default function Sidebar({ collapsed, onToggle }) {
         { label: '리포트', path: '/dashboard/reports' },
       ],
     },
-    { icon: 'bi-display', label: '모니터링', path: '/main' },
+    {
+      icon: 'bi-display',
+      label: '모니터링',
+      children: [
+        { label: '통합 모니터링', path: '/main', icon: 'bi-grid-3x3-gap' },
+        { label: '장애 모니터링', path: '/monitoring/fault', icon: 'bi-exclamation-triangle' },
+      ],
+    },
     {
       icon: 'bi-gear',
       label: '종합분석',
