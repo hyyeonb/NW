@@ -43,6 +43,29 @@ export default function ModelManagement() {
     }
   }, [modelOids]);
 
+  // 첫 번째 벤더의 첫 번째 모델 자동 선택 (애니메이션 적용)
+  useEffect(() => {
+    if (!selectedModel && vendors.length > 0 && models.length > 0) {
+      // 벤더별 모델 찾기
+      for (const vendor of vendors) {
+        const vendorModels = models.filter(m => m.VENDOR_ID === vendor.VENDOR_ID);
+        if (vendorModels.length > 0) {
+          const vendorKey = vendor.VENDOR_ID ?? 'orphan';
+          // 약간의 딜레이 후 벤더 펼치기
+          setTimeout(() => {
+            setExpandedVendors(prev => ({ ...prev, [vendorKey]: true }));
+            setSelectedVendor(vendor);
+          }, 50);
+          // 모델 선택은 조금 더 딜레이
+          setTimeout(() => {
+            setSelectedModel(vendorModels[0]);
+          }, 100);
+          break;
+        }
+      }
+    }
+  }, [vendors, models]);
+
   // 메트릭을 타입별로 그룹화
   const metricsByType = useMemo(() => {
     const grouped = {};
@@ -266,8 +289,8 @@ export default function ModelManagement() {
                       <span className="model-count">{vendor.models.length}</span>
                     </div>
 
-                    {isExpanded && vendor.models.length > 0 && (
-                      <ul className="model-list">
+                    {vendor.models.length > 0 && (
+                      <ul className={`model-list ${isExpanded ? 'expanded' : ''}`}>
                         {vendor.models.map(model => (
                           <li
                             key={model.MODEL_ID}

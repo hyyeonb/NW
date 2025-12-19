@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 
 export default function MainLayout() {
+  const location = useLocation();
+
   // localStorage에서 초기 상태 로드
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebarCollapsed');
@@ -22,7 +24,7 @@ export default function MainLayout() {
     <div className="app-layout">
       <Sidebar collapsed={sidebarCollapsed} onToggle={handleToggle} />
       <main className={`app-main ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-        <Outlet />
+        <Outlet key={location.key} />
       </main>
     </div>
   );

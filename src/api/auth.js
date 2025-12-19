@@ -1,5 +1,18 @@
 import apiClient from './client';
 
+// UUID 생성 (crypto.randomUUID 폴백 - HTTP 환경 지원)
+const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // 폴백: Math.random 기반 UUID v4
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 // 소셜 로그인 설정 (실제 환경에서는 환경변수로 관리)
 const SOCIAL_CONFIG = {
   kakao: {
@@ -32,7 +45,7 @@ export const authApi = {
     // 마지막 로그인 시도 provider 저장
     localStorage.setItem(LAST_PROVIDER_KEY, provider);
 
-    const state = crypto.randomUUID();
+    const state = generateUUID();
     const params = new URLSearchParams({
       client_id: config.clientId,
       redirect_uri: config.redirectUri,
