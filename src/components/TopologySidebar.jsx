@@ -163,11 +163,17 @@ function GroupSidebar({ isEditMode, onGroupSelect }) {
 }
 
 // 장비 리스트 사이드바 컴포넌트
-function DeviceListSidebar({ selectedDevice, onSelectDevice, isEditMode, onAddMultipleDevices }) {
+function DeviceListSidebar({ selectedDevice, onSelectDevice, isEditMode, onAddMultipleDevices, registeredDeviceIds = new Set(), topologyLoading = false }) {
   const { selectedGroup } = useGroupStore();
   const { data: devicesData, isLoading, error } = useDevicesByGroup(selectedGroup?.GROUP_ID);
   const devices = devicesData?.content || [];
   const [checkedDevices, setCheckedDevices] = useState(new Set());
+
+  // 토폴로지에 등록되지 않은 장비인지 확인 (토폴로지 로딩 중이면 체크하지 않음)
+  const isNotRegistered = (deviceId) => {
+    if (topologyLoading) return false; // 로딩 중이면 미등록 표시 안함
+    return !registeredDeviceIds.has(String(deviceId)) && !registeredDeviceIds.has(deviceId);
+  };
 
   // 그룹 변경 시 체크 초기화
   useEffect(() => {
@@ -278,31 +284,48 @@ function DeviceListSidebar({ selectedDevice, onSelectDevice, isEditMode, onAddMu
           </div>
         ) : devices.length > 0 ? (
           <ul className="topology-device-list">
-            {devices.map((device) => (
-              <li
-                key={device.DEVICE_ID}
-                className={`topology-device-item ${selectedDevice?.DEVICE_ID === device.DEVICE_ID ? 'selected' : ''} ${isEditMode ? 'draggable' : ''} ${checkedDevices.has(device.DEVICE_ID) ? 'checked' : ''}`}
-                onClick={() => onSelectDevice(device)}
-                title={isEditMode ? `드래그하여 토폴로지에 추가: ${device.DEVICE_NAME} (${device.DEVICE_IP})` : `${device.DEVICE_NAME} (${device.DEVICE_IP})`}
-                draggable={isEditMode}
-                onDragStart={(e) => handleDragStart(e, device)}
-              >
-                {isEditMode && (
-                  <input
-                    type="checkbox"
-                    checked={checkedDevices.has(device.DEVICE_ID)}
-                    onChange={(e) => handleCheckToggle(e, device.DEVICE_ID)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="topology-device-checkbox"
-                  />
-                )}
-                <i className="bi bi-hdd-network device-icon"></i>
-                <div className="device-info">
-                  <span className="device-name">{device.DEVICE_NAME || device.DEVICE_ID}</span>
-                  <span className="device-ip">{device.DEVICE_IP || '-'}</span>
-                </div>
-              </li>
-            ))}
+            {[...devices]
+              .sort((a, b) => {
+                // 미등록 장비를 상단에 정렬
+                const aNotRegistered = isNotRegistered(a.DEVICE_ID);
+                const bNotRegistered = isNotRegistered(b.DEVICE_ID);
+                if (aNotRegistered && !bNotRegistered) return -1;
+                if (!aNotRegistered && bNotRegistered) return 1;
+                return 0;
+              })
+              .map((device) => {
+              const notRegistered = isNotRegistered(device.DEVICE_ID);
+              return (
+                <li
+                  key={device.DEVICE_ID}
+                  className={`topology-device-item ${selectedDevice?.DEVICE_ID === device.DEVICE_ID ? 'selected' : ''} ${isEditMode ? 'draggable' : ''} ${checkedDevices.has(device.DEVICE_ID) ? 'checked' : ''} ${notRegistered ? 'not-registered' : ''}`}
+                  onClick={() => onSelectDevice(device)}
+                  title={isEditMode
+                    ? `드래그하여 토폴로지에 추가: ${device.DEVICE_NAME} (${device.DEVICE_IP})${notRegistered ? ' - 미등록' : ''}`
+                    : `${device.DEVICE_NAME} (${device.DEVICE_IP})${notRegistered ? ' - 토폴로지 미등록' : ''}`}
+                  draggable={isEditMode}
+                  onDragStart={(e) => handleDragStart(e, device)}
+                >
+                  {isEditMode && (
+                    <input
+                      type="checkbox"
+                      checked={checkedDevices.has(device.DEVICE_ID)}
+                      onChange={(e) => handleCheckToggle(e, device.DEVICE_ID)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="topology-device-checkbox"
+                    />
+                  )}
+                  <i className={`bi ${notRegistered ? 'bi-exclamation-circle' : 'bi-hdd-network'} device-icon ${notRegistered ? 'not-registered-icon' : ''}`}></i>
+                  <div className="device-info">
+                    <span className={`device-name ${notRegistered ? 'not-registered-name' : ''}`}>
+                      {device.DEVICE_NAME || device.DEVICE_ID}
+                      {notRegistered && <span className="not-registered-badge">미등록</span>}
+                    </span>
+                    <span className="device-ip">{device.DEVICE_IP || '-'}</span>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <div className="topology-empty-state">
@@ -316,7 +339,7 @@ function DeviceListSidebar({ selectedDevice, onSelectDevice, isEditMode, onAddMu
 }
 
 // 메인 TopologySidebar 컴포넌트
-export default function TopologySidebar({ onSelectDevice, selectedDevice, isEditMode, onAddMultipleDevices, onGroupSelect }) {
+export default function TopologySidebar({ onSelectDevice, selectedDevice, isEditMode, onAddMultipleDevices, onGroupSelect, registeredDeviceIds, topologyLoading }) {
   return (
     <div className="topology-sidebars-wrapper">
       <GroupSidebar isEditMode={isEditMode} onGroupSelect={onGroupSelect} />
@@ -325,6 +348,8 @@ export default function TopologySidebar({ onSelectDevice, selectedDevice, isEdit
         onSelectDevice={onSelectDevice}
         isEditMode={isEditMode}
         onAddMultipleDevices={onAddMultipleDevices}
+        registeredDeviceIds={registeredDeviceIds}
+        topologyLoading={topologyLoading}
       />
     </div>
   );

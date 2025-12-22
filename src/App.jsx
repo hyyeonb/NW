@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores';
 import MainLayout from './layouts/MainLayout';
-import { Login, Main, GroupManagement, AssetManagement, NewAssetManagement, ModelManagement } from './pages';
+import { Login, Main, Dashboard, GroupManagement, AssetManagement, NewAssetManagement, ModelManagement, NetworkTopology } from './pages';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -131,6 +131,8 @@ export default function App() {
             >
               <Route index element={<Navigate to="/main" replace />} />
               <Route path="main" element={<Main />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="topology" element={<NetworkTopology />} />
               <Route path="mgmt/groups" element={<GroupManagement />} />
               <Route path="mgmt/assets" element={<AssetManagement />} />
               <Route path="mgmt/new-assets" element={<NewAssetManagement />} />
