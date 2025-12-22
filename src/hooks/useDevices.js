@@ -6,11 +6,13 @@ export const useDevicesByGroup = (groupId) => {
     queryKey: ['devices', groupId],
     queryFn: async () => {
       const response = await devicesApi.getDevicesByGroup(groupId);
-      // 응답 데이터 구조: { code, message, data: [...] }
-      const devices = response.data?.data || response.data || [];
+      // 응답 데이터 구조: { code, message, data: { content: [...], page, size, totalElements, totalPages } }
+      const data = response.data?.data || response.data || {};
+      // data가 배열이면 직접 사용, 객체면 content 추출
+      const devices = Array.isArray(data) ? data : (data.content || []);
       return { content: Array.isArray(devices) ? devices : [] };
     },
-    enabled: !!groupId,
+    enabled: groupId !== undefined && groupId !== null,
   });
 };
 
