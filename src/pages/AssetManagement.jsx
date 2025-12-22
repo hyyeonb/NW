@@ -4,11 +4,13 @@ import { useGroupStore } from '../stores';
 import {
   useDevicesByGroupPaged,
   useDeleteDevices,
+  useUpdateDevice,
   useDevicePorts,
   useUpdatePort,
   useDeviceScope,
   useUpdateDeviceScope,
 } from '../hooks';
+import { devicesApi } from '../api/devices';
 
 export default function AssetManagement() {
   const { selectedGroup } = useGroupStore();
@@ -17,6 +19,27 @@ export default function AssetManagement() {
   const [selectedDevices, setSelectedDevices] = useState([]);
   const [detailDevice, setDetailDevice] = useState(null);
   const [activeTab, setActiveTab] = useState('device-info');
+
+  // 그룹 이동 모달 상태
+  const [showMoveGroupModal, setShowMoveGroupModal] = useState(false);
+  const [targetGroup, setTargetGroup] = useState(null);
+
+  // SNMP 설정 모달 상태
+  const [showSnmpModal, setShowSnmpModal] = useState(false);
+  const [snmpConfig, setSnmpConfig] = useState({
+    SNMP_VERSION: 2,
+    SNMP_PORT: 161,
+    SNMP_COMMUNITY: 'public',
+    SNMP_USER: '',
+    SNMP_AUTH_PROTOCOL: 'MD5',
+    SNMP_AUTH_PASSWORD: '',
+    SNMP_PRIV_PROTOCOL: 'DES',
+    SNMP_PRIV_PASSWORD: ''
+  });
+  const [snmpCollecting, setSnmpCollecting] = useState(false);
+
+  // SNMP 수집 결과 모달 상태
+  const [snmpResultModal, setSnmpResultModal] = useState(null);
 
   // 장비 테이블 정렬 상태 (기본: ID 오름차순)
   const [deviceSortField, setDeviceSortField] = useState('DEVICE_ID');
@@ -40,6 +63,7 @@ export default function AssetManagement() {
   const { data: deviceScope, isLoading: scopeLoading } = useDeviceScope(detailDevice?.DEVICE_ID);
 
   const deleteDevicesMutation = useDeleteDevices();
+  const updateDeviceMutation = useUpdateDevice();
   const updatePortMutation = useUpdatePort();
   const updateDeviceScopeMutation = useUpdateDeviceScope();
 
@@ -48,6 +72,26 @@ export default function AssetManagement() {
     if (!deviceScope) return;
 
     const newValue = !deviceScope[field];
+
+    // SNMP 활성화 시 모달 표시
+    if (field === 'COLLECT_SNMP' && newValue === true) {
+      // 기존 SNMP 정보가 있으면 미리 채우기
+      if (detailDevice) {
+        setSnmpConfig({
+          SNMP_VERSION: detailDevice.SNMP_VERSION || 2,
+          SNMP_PORT: detailDevice.SNMP_PORT || 161,
+          SNMP_COMMUNITY: detailDevice.SNMP_COMMUNITY || 'public',
+          SNMP_USER: detailDevice.SNMP_USER || '',
+          SNMP_AUTH_PROTOCOL: detailDevice.SNMP_AUTH_PROTOCOL || 'MD5',
+          SNMP_AUTH_PASSWORD: detailDevice.SNMP_AUTH_PASSWORD || '',
+          SNMP_PRIV_PROTOCOL: detailDevice.SNMP_PRIV_PROTOCOL || 'DES',
+          SNMP_PRIV_PASSWORD: detailDevice.SNMP_PRIV_PASSWORD || ''
+        });
+      }
+      setShowSnmpModal(true);
+      return;
+    }
+
     try {
       await updateDeviceScopeMutation.mutateAsync({
         deviceId: detailDevice.DEVICE_ID,
@@ -57,6 +101,49 @@ export default function AssetManagement() {
       console.error('수집 설정 업데이트 오류:', error);
       alert('수집 설정 업데이트에 실패했습니다.');
     }
+  };
+
+  // SNMP 수집 시도 핸들러
+  const handleSnmpCollect = async () => {
+    if (!detailDevice) return;
+
+    setSnmpCollecting(true);
+    try {
+      const response = await devicesApi.collectSnmp(detailDevice.DEVICE_ID, snmpConfig);
+      const data = response.data?.data || response.data;
+      setShowSnmpModal(false);
+      setSnmpResultModal({
+        success: true,
+        title: 'SNMP 수집 성공',
+        deviceInfo: {
+          deviceName: detailDevice.DEVICE_NAME,
+          deviceIp: detailDevice.DEVICE_IP,
+          systemName: data?.DEVICE_SYSTEM_NAME || data?.sysName || '-',
+          vendorName: data?.VENDOR_NAME || data?.vendorName || '-',
+          modelName: data?.MODEL_NAME || data?.modelName || '-',
+          deviceDesc: data?.DEVICE_DESC || data?.sysDescr || '-',
+          portCount: data?.PORT_COUNT || data?.portCount || 0
+        }
+      });
+    } catch (error) {
+      console.error('SNMP 수집 실패:', error);
+      setShowSnmpModal(false);
+      setSnmpResultModal({
+        success: false,
+        title: 'SNMP 수집 실패',
+        message: 'PING 수집만 유지됩니다.\n' + (error.response?.data?.message || error.message)
+      });
+    } finally {
+      setSnmpCollecting(false);
+    }
+  };
+
+  // SNMP 결과 모달 닫기
+  const handleCloseSnmpResult = () => {
+    if (snmpResultModal?.success) {
+      window.location.reload();
+    }
+    setSnmpResultModal(null);
   };
 
   // 포트 감시 플래그 토글
@@ -125,6 +212,15 @@ export default function AssetManagement() {
     }
   };
 
+  // 선택된 장비들의 그룹 ID 목록 (중복 제거)
+  const selectedDeviceGroupIds = useMemo(() => {
+    const groupIds = pagedDevices
+      .filter(d => selectedDevices.includes(d.DEVICE_ID))
+      .map(d => d.GROUP_ID)
+      .filter(id => id != null);
+    return [...new Set(groupIds)];
+  }, [pagedDevices, selectedDevices]);
+
   // 정렬 아이콘 렌더링 함수
   const renderSortIcon = (field, currentSortField, currentSortOrder) => {
     if (currentSortField !== field) {
@@ -157,6 +253,35 @@ export default function AssetManagement() {
     } catch (error) {
       console.error('Delete error:', error);
       alert('삭제 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 그룹 이동 핸들러
+  const handleMoveToGroup = async () => {
+    if (!targetGroup) {
+      alert('이동할 그룹을 선택해주세요.');
+      return;
+    }
+    if (targetGroup.GROUP_ID === selectedGroup?.GROUP_ID) {
+      alert('현재 그룹과 동일한 그룹입니다.');
+      return;
+    }
+
+    try {
+      // 선택된 장비들을 하나씩 업데이트
+      for (const deviceId of selectedDevices) {
+        await updateDeviceMutation.mutateAsync({
+          deviceId,
+          data: { GROUP_ID: targetGroup.GROUP_ID }
+        });
+      }
+      alert(`${selectedDevices.length}개의 장비가 "${targetGroup.GROUP_NAME}" 그룹으로 이동되었습니다.`);
+      setSelectedDevices([]);
+      setShowMoveGroupModal(false);
+      setTargetGroup(null);
+    } catch (error) {
+      console.error('Move error:', error);
+      alert('그룹 이동 중 오류가 발생했습니다.');
     }
   };
 
@@ -233,8 +358,9 @@ export default function AssetManagement() {
         <div className="content-header">
           <h2 id="page-title">자산 목록</h2>
           {selectedGroup && (
-            <span style={{ color: '#60a5fa', fontSize: '16px', marginLeft: '20px' }}>
-              [{selectedGroup.GROUP_NAME}]
+            <span className="selected-group-badge" style={{ marginLeft: '16px' }}>
+              <i className="bi bi-folder2"></i>
+              {selectedGroup.GROUP_NAME}
             </span>
           )}
         </div>
@@ -247,6 +373,13 @@ export default function AssetManagement() {
           <div id="device-list-section" style={{ display: 'block' }}>
             {selectedDevices.length > 0 && (
               <div style={{ display: 'flex', marginBottom: '12px', gap: '8px' }}>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowMoveGroupModal(true)}
+                  style={{ padding: '6px 12px', fontSize: '12px' }}
+                >
+                  <i className="bi bi-folder-symlink"></i> 그룹 이동 ({selectedDevices.length})
+                </button>
                 <button
                   className="btn btn-danger btn-sm"
                   onClick={handleDeleteSelected}
@@ -272,6 +405,9 @@ export default function AssetManagement() {
                     </th>
                     <th className="sortable" onClick={() => handleDeviceSort('DEVICE_NAME')}>
                       이름 {renderSortIcon('DEVICE_NAME', deviceSortField, deviceSortOrder)}
+                    </th>
+                    <th className="sortable" onClick={() => handleDeviceSort('GROUP_NAME')}>
+                      그룹 {renderSortIcon('GROUP_NAME', deviceSortField, deviceSortOrder)}
                     </th>
                     <th className="sortable" onClick={() => handleDeviceSort('DEVICE_SYSTEM_NAME')}>
                       시스템명 {renderSortIcon('DEVICE_SYSTEM_NAME', deviceSortField, deviceSortOrder)}
@@ -309,6 +445,7 @@ export default function AssetManagement() {
                           />
                         </td>
                         <td>{device.DEVICE_NAME}</td>
+                        <td style={{ color: '#94a3b8', fontSize: '12px' }}>{device.GROUP_NAME || '-'}</td>
                         <td>{device.DEVICE_SYSTEM_NAME || '-'}</td>
                         <td style={{ color: '#60a5fa' }}>{device.DEVICE_IP}</td>
                         <td>{device.MODEL_NAME || '-'}</td>
@@ -323,7 +460,7 @@ export default function AssetManagement() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', color: '#94a3b8' }}>
+                      <td colSpan="9" style={{ textAlign: 'center', color: '#94a3b8' }}>
                         등록된 장비가 없습니다.
                       </td>
                     </tr>
@@ -616,8 +753,8 @@ export default function AssetManagement() {
                           <th className="sortable" onClick={() => handlePortSort('IF_DESCR')}>
                             설명 {renderSortIcon('IF_DESCR', portSortField, portSortOrder)}
                           </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_ALIAS')}>
-                            별칭 {renderSortIcon('IF_ALIAS', portSortField, portSortOrder)}
+                          <th className="sortable" onClick={() => handlePortSort('IF_DESCRIPTION')}>
+                            Description {renderSortIcon('IF_DESCRIPTION', portSortField, portSortOrder)}
                           </th>
                           <th className="sortable" onClick={() => handlePortSort('IF_TYPE')}>
                             타입 {renderSortIcon('IF_TYPE', portSortField, portSortOrder)}
@@ -628,8 +765,8 @@ export default function AssetManagement() {
                           <th className="sortable" onClick={() => handlePortSort('IF_HIGH_SPEED')}>
                             속도 {renderSortIcon('IF_HIGH_SPEED', portSortField, portSortOrder)}
                           </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_PHYS_ADDRESS')}>
-                            MAC {renderSortIcon('IF_PHYS_ADDRESS', portSortField, portSortOrder)}
+                          <th className="sortable" onClick={() => handlePortSort('IF_MAC_ADDRESS')}>
+                            MAC {renderSortIcon('IF_MAC_ADDRESS', portSortField, portSortOrder)}
                           </th>
                           <th className="sortable" onClick={() => handlePortSort('IF_ADMIN_STATUS')}>
                             Admin {renderSortIcon('IF_ADMIN_STATUS', portSortField, portSortOrder)}
@@ -656,10 +793,10 @@ export default function AssetManagement() {
                                 <span className="tooltip-text">{port.IF_DESCR}</span>
                               )}
                             </td>
-                            <td className={`${port.IF_ALIAS && port.IF_ALIAS.length > 15 ? 'tooltip-cell truncate-cell' : ''}`}>
-                              {port.IF_ALIAS || '-'}
-                              {port.IF_ALIAS && port.IF_ALIAS.length > 15 && (
-                                <span className="tooltip-text">{port.IF_ALIAS}</span>
+                            <td className={`${port.IF_DESCRIPTION && port.IF_DESCRIPTION.length > 15 ? 'tooltip-cell truncate-cell' : ''}`}>
+                              {port.IF_DESCRIPTION || '-'}
+                              {port.IF_DESCRIPTION && port.IF_DESCRIPTION.length > 15 && (
+                                <span className="tooltip-text">{port.IF_DESCRIPTION}</span>
                               )}
                             </td>
                             <td>
@@ -669,7 +806,7 @@ export default function AssetManagement() {
                             </td>
                             <td>{port.IF_MTU || '-'}</td>
                             <td className="port-speed">{formatSpeed(port)}</td>
-                            <td className="port-mac">{port.IF_PHYS_ADDRESS || '-'}</td>
+                            <td className="port-mac">{port.IF_MAC_ADDRESS || '-'}</td>
                             <td>
                               <span className={`status-badge ${port.IF_ADMIN_STATUS === 1 ? 'up' : 'down'}`}>
                                 {port.IF_ADMIN_STATUS === 1 ? 'Up' : 'Down'}
@@ -715,6 +852,284 @@ export default function AssetManagement() {
             <div className="detail-modal-footer">
               <button id="detail-modal-ok-btn" className="btn btn-primary" onClick={() => setDetailDevice(null)}>
                 <i className="bi bi-check-lg"></i> 확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 그룹 이동 모달 */}
+      {showMoveGroupModal && (
+        <div className="modal" style={{
+          display: 'flex',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          zIndex: 9999,
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div className="modal-content" style={{
+            maxWidth: '450px',
+            width: '90%',
+            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%)',
+            borderRadius: '16px',
+            padding: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            position: 'relative'
+          }}>
+            <span
+              onClick={() => { setShowMoveGroupModal(false); setTargetGroup(null); }}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                fontSize: '24px',
+                color: '#94a3b8',
+                cursor: 'pointer',
+                lineHeight: 1
+              }}
+            >&times;</span>
+            <h3 style={{ marginBottom: '16px', color: '#f1f5f9', fontSize: '18px' }}>
+              <i className="bi bi-folder-symlink" style={{ marginRight: '8px' }}></i>
+              그룹 이동
+            </h3>
+            <p style={{ color: '#94a3b8', marginBottom: '16px', fontSize: '14px' }}>
+              {selectedDevices.length}개의 장비를 이동할 그룹을 선택하세요.
+            </p>
+
+            {/* 선택된 그룹 표시 */}
+            {targetGroup && (
+              <div style={{
+                padding: '10px 14px',
+                marginBottom: '12px',
+                background: 'rgba(59, 130, 246, 0.15)',
+                borderRadius: '8px',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <i className="bi bi-folder2" style={{ color: '#60a5fa' }}></i>
+                <span style={{ color: '#e2e8f0', fontSize: '14px' }}>
+                  선택: <strong>{targetGroup.GROUP_NAME}</strong>
+                </span>
+              </div>
+            )}
+
+            {/* 그룹 트리 */}
+            <div style={{
+              maxHeight: '300px',
+              overflowY: 'auto',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '8px',
+              background: 'rgba(15, 23, 42, 0.6)',
+              marginBottom: '16px'
+            }}>
+              <GroupTree
+                compact={true}
+                autoSelectFirst={false}
+                onSelectGroup={setTargetGroup}
+                customSelectedGroup={targetGroup}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => { setShowMoveGroupModal(false); setTargetGroup(null); }}
+                style={{ padding: '8px 16px' }}
+              >
+                취소
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleMoveToGroup}
+                disabled={!targetGroup || updateDeviceMutation.isPending}
+                style={{ padding: '8px 16px' }}
+              >
+                {updateDeviceMutation.isPending ? '이동 중...' : '이동'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SNMP 설정 모달 */}
+      {showSnmpModal && (
+        <div className="modal" style={{ display: 'flex' }}>
+          <div className="modal-content" style={{ maxWidth: '500px' }}>
+            <span className="close-btn" onClick={() => setShowSnmpModal(false)}>&times;</span>
+            <h2 id="modal-title">SNMP 설정</h2>
+
+            <div className="form-grid">
+              <div className="form-group">
+                <label>SNMP 버전</label>
+                <select
+                  value={snmpConfig.SNMP_VERSION}
+                  onChange={(e) => setSnmpConfig({ ...snmpConfig, SNMP_VERSION: parseInt(e.target.value) })}
+                >
+                  <option value={1}>v1</option>
+                  <option value={2}>v2c</option>
+                  <option value={3}>v3</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>SNMP 포트</label>
+                <input
+                  type="number"
+                  value={snmpConfig.SNMP_PORT}
+                  onChange={(e) => setSnmpConfig({ ...snmpConfig, SNMP_PORT: parseInt(e.target.value) })}
+                />
+              </div>
+            </div>
+
+            {snmpConfig.SNMP_VERSION !== 3 ? (
+              <div className="form-group" style={{ marginTop: '16px' }}>
+                <label>커뮤니티</label>
+                <input
+                  type="text"
+                  value={snmpConfig.SNMP_COMMUNITY}
+                  onChange={(e) => setSnmpConfig({ ...snmpConfig, SNMP_COMMUNITY: e.target.value })}
+                  placeholder="public"
+                />
+              </div>
+            ) : (
+              <div id="snmp-v3-fields" style={{ marginTop: '16px' }}>
+                <h4 style={{ marginBottom: '12px', color: '#94a3b8', fontSize: '14px' }}>SNMPv3 설정</h4>
+                <div className="form-group" style={{ marginBottom: '12px' }}>
+                  <label>사용자명</label>
+                  <input
+                    type="text"
+                    value={snmpConfig.SNMP_USER}
+                    onChange={(e) => setSnmpConfig({ ...snmpConfig, SNMP_USER: e.target.value })}
+                  />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                  <div className="form-group">
+                    <label>인증 프로토콜</label>
+                    <select
+                      value={snmpConfig.SNMP_AUTH_PROTOCOL}
+                      onChange={(e) => setSnmpConfig({ ...snmpConfig, SNMP_AUTH_PROTOCOL: e.target.value })}
+                    >
+                      <option value="MD5">MD5</option>
+                      <option value="SHA">SHA</option>
+                      <option value="SHA256">SHA256</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>인증 비밀번호</label>
+                    <input
+                      type="password"
+                      value={snmpConfig.SNMP_AUTH_PASSWORD}
+                      onChange={(e) => setSnmpConfig({ ...snmpConfig, SNMP_AUTH_PASSWORD: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label>암호화 프로토콜</label>
+                    <select
+                      value={snmpConfig.SNMP_PRIV_PROTOCOL}
+                      onChange={(e) => setSnmpConfig({ ...snmpConfig, SNMP_PRIV_PROTOCOL: e.target.value })}
+                    >
+                      <option value="DES">DES</option>
+                      <option value="AES">AES128</option>
+                      <option value="AES256">AES256</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>암호화 비밀번호</label>
+                    <input
+                      type="password"
+                      value={snmpConfig.SNMP_PRIV_PASSWORD}
+                      onChange={(e) => setSnmpConfig({ ...snmpConfig, SNMP_PRIV_PASSWORD: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="form-actions">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowSnmpModal(false)}
+                disabled={snmpCollecting}
+              >
+                취소
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSnmpCollect}
+                disabled={snmpCollecting}
+              >
+                {snmpCollecting ? (
+                  <>
+                    <i className="bi bi-arrow-repeat spinning" style={{ marginRight: '8px' }}></i>
+                    수집 중...
+                  </>
+                ) : (
+                  'SNMP 정보 등록'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SNMP 수집 결과 모달 */}
+      {snmpResultModal && (
+        <div className="modal registration-modal" style={{ display: 'flex', zIndex: 10000 }}>
+          <div className="modal-content registration-modal-content">
+            <span className="close-btn" onClick={handleCloseSnmpResult}>&times;</span>
+            <h3>
+              {snmpResultModal.success ? 'SNMP 수집 완료' : 'SNMP 수집 실패'}
+            </h3>
+
+            {snmpResultModal.success && snmpResultModal.deviceInfo ? (
+              <div className="result-section success-section">
+                <h4><i className="bi bi-check-circle"></i> 수집 성공</h4>
+                <div className="table-wrapper">
+                  <table className="result-table">
+                    <thead>
+                      <tr>
+                        <th style={{ minWidth: '120px' }}>장비명</th>
+                        <th style={{ minWidth: '130px' }}>IP 주소</th>
+                        <th style={{ minWidth: '100px' }}>상태</th>
+                        <th style={{ minWidth: '120px' }}>시스템명</th>
+                        <th style={{ minWidth: '100px' }}>벤더</th>
+                        <th className="desc-column">장비 설명</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="success-row">
+                        <td className="device-name">{snmpResultModal.deviceInfo.deviceName}</td>
+                        <td className="device-ip">{snmpResultModal.deviceInfo.deviceIp}</td>
+                        <td className="status-text">SNMP</td>
+                        <td>{snmpResultModal.deviceInfo.systemName}</td>
+                        <td>{snmpResultModal.deviceInfo.vendorName}</td>
+                        <td className="desc-column" title={snmpResultModal.deviceInfo.deviceDesc}>{snmpResultModal.deviceInfo.deviceDesc}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="result-section failure-section">
+                <h4><i className="bi bi-x-circle"></i> 수집 실패</h4>
+                <p style={{ color: '#f87171', whiteSpace: 'pre-line', padding: '16px' }}>
+                  {snmpResultModal.message}
+                </p>
+              </div>
+            )}
+
+            <div className="modal-actions">
+              <button className="btn btn-primary" onClick={handleCloseSnmpResult}>
+                확인
               </button>
             </div>
           </div>

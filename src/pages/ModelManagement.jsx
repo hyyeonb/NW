@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useVendors, useModels, useCreateModel, useUpdateModel, useDeleteModel } from '../hooks';
+import { useState, useMemo, useEffect } from 'react';
+import { useVendors, useModels, useCreateModel, useUpdateModel, useDeleteModel, useSnmpMetrics, useModelOids, useSaveModelOids } from '../hooks';
 import '../styles/model-management.css';
 
 export default function ModelManagement() {
@@ -14,14 +14,69 @@ export default function ModelManagement() {
     VENDOR_ID: null,
   });
 
+  // OID 설정 상태
+  const [isOidModalOpen, setIsOidModalOpen] = useState(false);
+  const [oidFormValues, setOidFormValues] = useState({}); // { METRIC_ID: OID_VALUE }
+
   // 데이터 조회
   const { data: vendors = [], isLoading: vendorsLoading } = useVendors();
   const { data: models = [], isLoading: modelsLoading } = useModels();
+  const { data: metrics = [] } = useSnmpMetrics();
+  const { data: modelOids = [], refetch: refetchModelOids } = useModelOids(selectedModel?.MODEL_ID);
 
   // Mutations
   const createModelMutation = useCreateModel();
   const updateModelMutation = useUpdateModel();
   const deleteModelMutation = useDeleteModel();
+  const saveModelOidsMutation = useSaveModelOids();
+
+  // 모델 OID 데이터를 폼 값으로 변환
+  useEffect(() => {
+    if (modelOids.length > 0) {
+      const values = {};
+      modelOids.forEach(oid => {
+        values[oid.METRIC_ID] = oid.OID || '';
+      });
+      setOidFormValues(values);
+    } else {
+      setOidFormValues({});
+    }
+  }, [modelOids]);
+
+  // 첫 번째 벤더의 첫 번째 모델 자동 선택 (애니메이션 적용)
+  useEffect(() => {
+    if (!selectedModel && vendors.length > 0 && models.length > 0) {
+      // 벤더별 모델 찾기
+      for (const vendor of vendors) {
+        const vendorModels = models.filter(m => m.VENDOR_ID === vendor.VENDOR_ID);
+        if (vendorModels.length > 0) {
+          const vendorKey = vendor.VENDOR_ID ?? 'orphan';
+          // 약간의 딜레이 후 벤더 펼치기
+          setTimeout(() => {
+            setExpandedVendors(prev => ({ ...prev, [vendorKey]: true }));
+            setSelectedVendor(vendor);
+          }, 50);
+          // 모델 선택은 조금 더 딜레이
+          setTimeout(() => {
+            setSelectedModel(vendorModels[0]);
+          }, 100);
+          break;
+        }
+      }
+    }
+  }, [vendors, models]);
+
+  // 메트릭을 타입별로 그룹화
+  const metricsByType = useMemo(() => {
+    const grouped = {};
+    metrics.forEach(metric => {
+      if (!grouped[metric.TYPE]) {
+        grouped[metric.TYPE] = [];
+      }
+      grouped[metric.TYPE].push(metric);
+    });
+    return grouped;
+  }, [metrics]);
 
   // 벤더별 모델 그룹화
   const vendorModelTree = useMemo(() => {
@@ -145,6 +200,53 @@ export default function ModelManagement() {
     }
   };
 
+  // OID 설정 모달 열기
+  const handleOpenOidModal = () => {
+    refetchModelOids();
+    setIsOidModalOpen(true);
+  };
+
+  // OID 설정 모달 닫기
+  const handleCloseOidModal = () => {
+    setIsOidModalOpen(false);
+  };
+
+  // OID 값 변경 핸들러
+  const handleOidValueChange = (metricId, value) => {
+    setOidFormValues(prev => ({
+      ...prev,
+      [metricId]: value
+    }));
+  };
+
+  // OID 설정 저장
+  const handleSaveOids = async () => {
+    try {
+      const oids = Object.entries(oidFormValues)
+        .filter(([_, value]) => value && value.trim())
+        .map(([metricId, value]) => ({
+          METRIC_ID: parseInt(metricId),
+          OID: value.trim()
+        }));
+
+      await saveModelOidsMutation.mutateAsync({
+        modelId: selectedModel.MODEL_ID,
+        oids
+      });
+
+      alert('OID 설정이 저장되었습니다.');
+      handleCloseOidModal();
+    } catch (error) {
+      console.error('OID 저장 오류:', error);
+      alert('OID 저장에 실패했습니다.');
+    }
+  };
+
+  // 설정된 OID 개수 계산
+  const configuredOidCount = useMemo(() => {
+    return modelOids.filter(oid => oid.OID && oid.OID.trim()).length;
+  }, [modelOids]);
+
   return (
     <div className="model-management-container">
       {/* 좌측: 벤더-모델 트리 */}
@@ -187,8 +289,8 @@ export default function ModelManagement() {
                       <span className="model-count">{vendor.models.length}</span>
                     </div>
 
-                    {isExpanded && vendor.models.length > 0 && (
-                      <ul className="model-list">
+                    {vendor.models.length > 0 && (
+                      <ul className={`model-list ${isExpanded ? 'expanded' : ''}`}>
                         {vendor.models.map(model => (
                           <li
                             key={model.MODEL_ID}
@@ -245,6 +347,18 @@ export default function ModelManagement() {
                 </div>
               </div>
 
+              {/* OID 설정 섹션 */}
+              <div className="detail-section oid-section">
+                <div className="section-header">
+                  <h4><i className="bi bi-sliders"></i> SNMP OID 설정</h4>
+                  <span className="oid-count-badge">{configuredOidCount}개 설정됨</span>
+                </div>
+                <p className="section-desc">CPU, 메모리 등 수집 항목의 OID를 모델별로 설정합니다.</p>
+                <button className="btn btn-secondary btn-sm" onClick={handleOpenOidModal}>
+                  <i className="bi bi-gear"></i> OID 설정
+                </button>
+              </div>
+
               <div className="detail-actions">
                 <button
                   className="btn btn-primary"
@@ -263,8 +377,7 @@ export default function ModelManagement() {
           </>
         ) : (
           <div className="no-selection">
-            <i className="bi bi-hand-index"></i>
-            <p>좌측에서 모델을 선택하세요</p>
+            <p>선택 된 모델이 없습니다</p>
           </div>
         )}
       </div>
@@ -310,6 +423,67 @@ export default function ModelManagement() {
                 disabled={createModelMutation.isPending || updateModelMutation.isPending}
               >
                 {modalMode === 'create' ? '추가' : '저장'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OID 설정 모달 */}
+      {isOidModalOpen && (
+        <div className="modal" style={{ display: 'flex' }}>
+          <div className="modal-content oid-modal">
+            <span className="close-btn" onClick={handleCloseOidModal}>&times;</span>
+            <h3 className="modal-title">
+              <i className="bi bi-sliders"></i> OID 설정
+              <span className="model-name-badge">{selectedModel?.MODEL_NAME}</span>
+            </h3>
+
+            <div className="oid-form-container">
+              {Object.keys(metricsByType).length === 0 ? (
+                <div className="no-metrics">
+                  <i className="bi bi-info-circle"></i>
+                  <p>등록된 메트릭이 없습니다.</p>
+                </div>
+              ) : (
+                Object.entries(metricsByType).map(([type, typeMetrics]) => (
+                  <div key={type} className="oid-type-group">
+                    <h4 className="type-header">
+                      <i className={`bi ${type === 'CPU' ? 'bi-cpu' : 'bi-memory'}`}></i>
+                      {type}
+                    </h4>
+                    <div className="oid-items">
+                      {typeMetrics.map(metric => (
+                        <div key={metric.METRIC_ID} className="oid-item">
+                          <div className="oid-item-info">
+                            <span className="oid-name">{metric.OID_NAME}</span>
+                            <span className="oid-desc">{metric.OID_DESC}</span>
+                          </div>
+                          <input
+                            type="text"
+                            className="oid-input"
+                            value={oidFormValues[metric.METRIC_ID] || ''}
+                            onChange={(e) => handleOidValueChange(metric.METRIC_ID, e.target.value)}
+                            placeholder=".1.3.6.1.4.1..."
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={handleCloseOidModal}>
+                취소
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSaveOids}
+                disabled={saveModelOidsMutation.isPending}
+              >
+                {saveModelOidsMutation.isPending ? '저장 중...' : '저장'}
               </button>
             </div>
           </div>

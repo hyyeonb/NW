@@ -4,14 +4,18 @@ import { useGroupTree } from '../hooks';
 import { useGroupStore } from '../stores';
 
 // 그룹 노드 컴포넌트
-function GroupNode({ group, depth = 0, onContextMenu, onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop }) {
+function GroupNode({ group, depth = 0, onContextMenu, onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop, onSelectGroup, customSelectedGroup, disabledGroupIds }) {
   const { selectedGroup, setSelectedGroup, expandedNodes, toggleNode } = useGroupStore();
   const nodeRef = useRef(null);
 
   const isExpanded = expandedNodes.has(group.GROUP_ID);
-  const isSelected = selectedGroup?.GROUP_ID === group.GROUP_ID;
+  // customSelectedGroup이 있으면 그것을 사용, 없으면 store의 selectedGroup 사용
+  const isSelected = customSelectedGroup
+    ? customSelectedGroup?.GROUP_ID === group.GROUP_ID
+    : selectedGroup?.GROUP_ID === group.GROUP_ID;
   const hasChildren = group.children && group.children.length > 0;
   const childCount = group.children?.length || 0;
+  const isDisabled = disabledGroupIds?.includes(group.GROUP_ID);
 
   // 아이콘 렌더링
   const renderIcon = () => {
@@ -30,7 +34,13 @@ function GroupNode({ group, depth = 0, onContextMenu, onDragStart, onDragEnd, on
   };
 
   const handleClick = () => {
-    setSelectedGroup(group);
+    if (isDisabled) return;
+    // onSelectGroup이 있으면 그것을 호출, 없으면 store 업데이트
+    if (onSelectGroup) {
+      onSelectGroup(group);
+    } else {
+      setSelectedGroup(group);
+    }
   };
 
   const handleContextMenu = (e) => {
@@ -62,21 +72,23 @@ function GroupNode({ group, depth = 0, onContextMenu, onDragStart, onDragEnd, on
         )}
         <div
           ref={nodeRef}
-          className={`group-item depth-${depth} ${isSelected ? 'selected' : ''}`}
+          className={`group-item depth-${depth} ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
           data-group-id={group.GROUP_ID}
-          draggable={true}
+          draggable={!onSelectGroup}
           onClick={handleClick}
-          onContextMenu={handleContextMenu}
-          onDragStart={(e) => onDragStart(e, group)}
-          onDragEnd={onDragEnd}
-          onDragOver={(e) => onDragOver(e, group)}
-          onDragLeave={onDragLeave}
-          onDrop={(e) => onDrop(e, group)}
-          title={group.GROUP_NAME}
+          onContextMenu={onSelectGroup ? undefined : handleContextMenu}
+          onDragStart={onSelectGroup ? undefined : (e) => onDragStart(e, group)}
+          onDragEnd={onSelectGroup ? undefined : onDragEnd}
+          onDragOver={onSelectGroup ? undefined : (e) => onDragOver(e, group)}
+          onDragLeave={onSelectGroup ? undefined : onDragLeave}
+          onDrop={onSelectGroup ? undefined : (e) => onDrop(e, group)}
+          title={isDisabled ? `${group.GROUP_NAME} (현재 그룹)` : group.GROUP_NAME}
+          style={isDisabled ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
         >
           {renderIcon()}
           <span>{group.GROUP_NAME}</span>
-          {childCount > 0 && <span className="child-count">{childCount}</span>}
+          {isDisabled && <span style={{ marginLeft: '6px', fontSize: '11px', color: '#94a3b8' }}>(현재)</span>}
+          {!isDisabled && childCount > 0 && <span className="child-count">{childCount}</span>}
         </div>
       </div>
 
@@ -93,6 +105,9 @@ function GroupNode({ group, depth = 0, onContextMenu, onDragStart, onDragEnd, on
               onDragOver={onDragOver}
               onDragLeave={onDragLeave}
               onDrop={onDrop}
+              onSelectGroup={onSelectGroup}
+              customSelectedGroup={customSelectedGroup}
+              disabledGroupIds={disabledGroupIds}
             />
           ))}
         </ul>
@@ -168,7 +183,7 @@ function ContextMenu({ x, y, group, onClose, onEditGroup, onAddGroup, onDeleteGr
 }
 
 // 메인 GroupTree 컴포넌트
-export default function GroupTree({ onEditGroup, onAddGroup, onDeleteGroup, onSetIcon, onMoveGroup, enableContextMenu = true }) {
+export default function GroupTree({ onEditGroup, onAddGroup, onDeleteGroup, onSetIcon, onMoveGroup, enableContextMenu = true, autoSelectFirst = true, onSelectGroup, customSelectedGroup, disabledGroupIds = [], compact = false }) {
   // 컨텍스트 메뉴 기능 사용 여부 (핸들러가 하나라도 있으면 활성화)
   const hasContextMenuHandlers = Boolean(onEditGroup || onAddGroup || onDeleteGroup || onSetIcon);
   const { data: groupTree, isLoading, error, refetch } = useGroupTree();
@@ -189,10 +204,12 @@ export default function GroupTree({ onEditGroup, onAddGroup, onDeleteGroup, onSe
     if (groupTree && groupTree.length > 0) {
       setGroupTree(groupTree);
       expandAll();
-      // 첫 번째 그룹 자동 선택
-      setSelectedGroup(groupTree[0]);
+      // 첫 번째 그룹 자동 선택 (autoSelectFirst가 true일 때만)
+      if (autoSelectFirst) {
+        setSelectedGroup(groupTree[0]);
+      }
     }
-  }, [groupTree, setGroupTree, expandAll, setSelectedGroup]);
+  }, [groupTree, setGroupTree, expandAll, setSelectedGroup, autoSelectFirst]);
 
   // 컨텍스트 메뉴 핸들러 (핸들러가 있을 때만 동작)
   const handleContextMenu = useCallback((x, y, group) => {
@@ -311,45 +328,58 @@ export default function GroupTree({ onEditGroup, onAddGroup, onDeleteGroup, onSe
     };
   }, [refetch]);
 
+  // 트리 컨텐츠
+  const treeContent = (
+    <div
+      ref={containerRef}
+      id={compact ? undefined : "group-tree"}
+      className="gm-tree"
+      onContextMenu={compact ? undefined : handleContainerContextMenu}
+      onDragOver={compact ? undefined : handleContainerDragOver}
+      onDrop={compact ? undefined : handleContainerDrop}
+    >
+      {isLoading ? (
+        <p>그룹 목록을 불러오는 중...</p>
+      ) : error ? (
+        <p style={{ color: '#f87171' }}>그룹 목록을 불러오는 중 오류가 발생했습니다.</p>
+      ) : groupTree && groupTree.length > 0 ? (
+        <ul>
+          {groupTree
+            .filter(g => g.GROUP_NAME !== '미등록 장비')
+            .sort((a, b) => a.GROUP_NAME.localeCompare(b.GROUP_NAME))
+            .map((node) => (
+              <GroupNode
+                key={node.GROUP_ID}
+                group={node}
+                depth={node.DEPTH || 0}
+                onContextMenu={handleContextMenu}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onSelectGroup={onSelectGroup}
+                customSelectedGroup={customSelectedGroup}
+                disabledGroupIds={disabledGroupIds}
+              />
+            ))}
+        </ul>
+      ) : (
+        <p>등록된 그룹이 없습니다.{!compact && <><br />우클릭하여 그룹을 추가하세요.</>}</p>
+      )}
+    </div>
+  );
+
+  // compact 모드일 때는 트리만 반환
+  if (compact) {
+    return treeContent;
+  }
+
   return (
     <aside className="page-sidebar" id="group-tree-sidebar">
       <div className="sidebar-content">
         <h1>그룹 목록</h1>
-        <div
-          ref={containerRef}
-          id="group-tree"
-          className="gm-tree"
-          onContextMenu={handleContainerContextMenu}
-          onDragOver={handleContainerDragOver}
-          onDrop={handleContainerDrop}
-        >
-          {isLoading ? (
-            <p>그룹 목록을 불러오는 중...</p>
-          ) : error ? (
-            <p style={{ color: '#f87171' }}>그룹 목록을 불러오는 중 오류가 발생했습니다.</p>
-          ) : groupTree && groupTree.length > 0 ? (
-            <ul>
-              {groupTree
-                .filter(g => g.GROUP_NAME !== '미등록 장비')
-                .sort((a, b) => a.GROUP_NAME.localeCompare(b.GROUP_NAME))
-                .map((node) => (
-                  <GroupNode
-                    key={node.GROUP_ID}
-                    group={node}
-                    depth={node.DEPTH || 0}
-                    onContextMenu={handleContextMenu}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                  />
-                ))}
-            </ul>
-          ) : (
-            <p>등록된 그룹이 없습니다.<br />우클릭하여 그룹을 추가하세요.</p>
-          )}
-        </div>
+        {treeContent}
       </div>
 
       {/* 컨텍스트 메뉴 */}

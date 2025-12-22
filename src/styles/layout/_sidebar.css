@@ -149,6 +149,29 @@
     overflow-x: hidden;
 }
 
+/* Sidebar Scrollbar */
+.sidebar-menu {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.sidebar-menu::-webkit-scrollbar {
+    width: 5px;
+}
+
+.sidebar-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-menu::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-radius: 3px;
+}
+
+.sidebar-menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25) !important;
+}
+
 .sidebar-menu ul {
     list-style: none;
     padding: 0;
@@ -348,6 +371,8 @@
 .profile-avatar {
     width: 36px;
     height: 36px;
+    min-width: 36px;
+    min-height: 36px;
     border-radius: var(--radius-full);
     flex-shrink: 0;
     object-fit: cover;
@@ -386,6 +411,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 140px;
 }
 
 .profile-arrow {
@@ -404,6 +430,7 @@
     bottom: calc(100% + 8px);
     left: 16px;
     right: 16px;
+    min-width: 240px;
     background: linear-gradient(135deg, rgba(20, 20, 35, 0.98) 0%, rgba(25, 25, 45, 0.95) 100%);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
@@ -474,6 +501,9 @@
     display: block;
     font-size: var(--font-size-body-xs);
     color: var(--color-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .profile-dropdown-divider {
@@ -525,13 +555,22 @@
     padding: var(--spacing-3);
 }
 
+.app-sidebar.collapsed .profile-avatar {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    flex-shrink: 0;
+}
+
 .app-sidebar.collapsed .profile-info,
 .app-sidebar.collapsed .profile-arrow {
     display: none;
 }
 
 .app-sidebar.collapsed .profile-dropdown {
-    left: calc(100% + 12px);
+    position: fixed;
+    left: calc(var(--sidebar-collapsed-width) + 12px);
     right: auto;
     bottom: 16px;
     min-width: 220px;

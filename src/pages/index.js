@@ -7,3 +7,4 @@ export { default as AssetManagement } from './AssetManagement';
 export { default as NewAssetManagement } from './NewAssetManagement';
 export { default as ModelManagement } from './ModelManagement';
 export { default as NetworkTopology } from './NetworkTopology';
+export { default as FaultMonitoring } from './FaultMonitoring';
