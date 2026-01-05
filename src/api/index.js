@@ -3,3 +3,4 @@ export { authApi } from './auth';
 export { groupsApi } from './groups';
 export { devicesApi } from './devices';
 export { topologyApi } from './topology';
+export { dashboardApi } from './dashboard';
