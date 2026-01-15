@@ -709,15 +709,144 @@ function CustomWidgetContent({ widget, isEditMode }) {
               }));
             }
 
-            // 5. 색상 추가 및 반환
-            return selectedData.map((data, index) => ({
-              ...data,
-              value: data.values,
-              color: DEVICE_COLOR_PALETTE[index % DEVICE_COLOR_PALETTE.length],
-              unit: elementMeta?.unit || '%',
-              displayName: `${data.metric} - ${data.deviceName}`,
-              _key: `${data.metric}-${data.deviceId}-line`
-            }));
+            // 5. 메트릭별 색상 정의
+            const metricColors = {
+              // ICMP 메트릭
+              'ICMP_MAX': '#ef4444',
+              'ICMP_MIN': '#3b82f6',
+              'ICMP_AVG': '#10b981',
+              'ICMP_LOSS': '#f59e0b',
+              // TRAFFIC 메트릭
+              'TRAFFIC_IN_BPS': '#06b6d4',   // 시안
+              'TRAFFIC_OUT_BPS': '#10b981',  // 초록
+              'TRAFFIC_IN_BYTE': '#3b82f6',  // 파랑
+              'TRAFFIC_OUT_BYTE': '#eab308', // 노란색
+              'TRAFFIC_INPUT_BYTE': '#3b82f6',
+              'TRAFFIC_OUTPUT_BYTE': '#eab308',
+              'TRAFFIC_IN_ERR': '#ef4444',
+              'TRAFFIC_OUT_ERR': '#f59e0b',
+              'TRAFFIC_IN_DROP': '#a855f7',
+              'TRAFFIC_OUT_DROP': '#ec4899',
+              // CPU/MEMORY 메트릭
+              'CPU_USAGE': '#a855f7',
+              'MEMORY_USAGE': '#ec4899',
+            };
+
+            // 6. 메트릭별로 그룹화하여 색상 할당
+            const metricColorMap = new Map();
+            selectedData.forEach(data => {
+              if (!metricColorMap.has(data.metric)) {
+                metricColorMap.set(data.metric, []);
+              }
+              metricColorMap.get(data.metric).push(data);
+            });
+
+            // 7. 메트릭 이름 약어 변환
+            const metricAbbrev = {
+              'ICMP_MAX': 'MAX',
+              'ICMP_MIN': 'MIN',
+              'ICMP_AVG': 'AVG',
+              'ICMP_LOSS': 'LOSS',
+              'TRAFFIC_IN_BPS': 'IN_BPS',
+              'TRAFFIC_OUT_BPS': 'OUT_BPS',
+              'TRAFFIC_IN_BYTE': 'IN_BYTE',
+              'TRAFFIC_OUT_BYTE': 'OUT_BYTE',
+              'TRAFFIC_INPUT_BYTE': 'IN_BYTE',
+              'TRAFFIC_OUTPUT_BYTE': 'OUT_BYTE',
+              'TRAFFIC_IN_ERR': 'IN_ERR',
+              'TRAFFIC_OUT_ERR': 'OUT_ERR',
+              'TRAFFIC_IN_DROP': 'IN_DROP',
+              'TRAFFIC_OUT_DROP': 'OUT_DROP',
+              'CPU_USAGE': 'CPU',
+              'MEMORY_USAGE': 'MEM',
+            };
+
+            // 8. 색상 톤 변화 함수 (같은 메트릭 내 디바이스 구분용)
+            const adjustColorBrightness = (hexColor, index, total) => {
+              try {
+                // hex 색상인지 확인
+                if (!hexColor || typeof hexColor !== 'string') {
+                  return hexColor;
+                }
+
+                // #이 없으면 추가
+                const color = hexColor.startsWith('#') ? hexColor : `#${hexColor}`;
+
+                // hex를 RGB로 변환
+                const r = parseInt(color.slice(1, 3), 16);
+                const g = parseInt(color.slice(3, 5), 16);
+                const b = parseInt(color.slice(5, 7), 16);
+
+                // 유효성 검사
+                if (isNaN(r) || isNaN(g) || isNaN(b)) {
+                  return hexColor;
+                }
+
+                // 명도 조절 (0.7 ~ 1.2 범위)
+                const factor = 0.7 + (index / Math.max(1, total - 1)) * 0.5;
+
+                const newR = Math.min(255, Math.max(0, Math.floor(r * factor)));
+                const newG = Math.min(255, Math.max(0, Math.floor(g * factor)));
+                const newB = Math.min(255, Math.max(0, Math.floor(b * factor)));
+
+                return `rgb(${newR}, ${newG}, ${newB})`;
+              } catch (error) {
+                console.error('색상 변환 에러:', error, hexColor);
+                return hexColor;
+              }
+            };
+
+            // 9. 메트릭별 단위 정의
+            const metricUnits = {
+              'ICMP_MAX': 'ms',
+              'ICMP_MIN': 'ms',
+              'ICMP_AVG': 'ms',
+              'ICMP_LOSS': '%',
+              'TRAFFIC_IN_BPS': 'bps',
+              'TRAFFIC_OUT_BPS': 'bps',
+              'TRAFFIC_IN_BYTE': 'byte',
+              'TRAFFIC_OUT_BYTE': 'byte',
+              'TRAFFIC_INPUT_BYTE': 'byte',
+              'TRAFFIC_OUTPUT_BYTE': 'byte',
+              'TRAFFIC_IN_ERR': '개',
+              'TRAFFIC_OUT_ERR': '개',
+              'TRAFFIC_IN_DROP': '개',
+              'TRAFFIC_OUT_DROP': '개',
+              'CPU_USAGE': '%',
+              'MEMORY_USAGE': '%',
+            };
+
+            // 10. 색상 및 짧은 라벨 추가 후 반환
+            let result = [];
+            metricColorMap.forEach((devices, metric) => {
+              const baseColor = metricColors[metric] || '#14b8a6';
+              const shortMetric = metricAbbrev[metric] || metric;
+              const deviceCount = devices.length;
+              const metricUnit = metricUnits[metric] || '%';
+
+              devices.forEach((data, index) => {
+                // 디바이스 이름도 10자로 제한
+                const shortDeviceName = data.deviceName.length > 10
+                  ? data.deviceName.substring(0, 10)
+                  : data.deviceName;
+
+                // 같은 메트릭 내에서 디바이스별로 색상 톤 변화
+                const deviceColor = deviceCount > 1
+                  ? adjustColorBrightness(baseColor, index, deviceCount)
+                  : baseColor;
+
+                result.push({
+                  ...data,
+                  value: data.values,
+                  color: deviceColor,
+                  unit: metricUnit,
+                  displayName: `${shortMetric}-${shortDeviceName}`,
+                  fullDisplayName: `${data.metric} - ${data.deviceName}`, // 툴팁용
+                  _key: `${data.metric}-${data.deviceId}-line`
+                });
+              });
+            });
+            return result;
           }
 
           // 기본: deviceId별로만 그룹화 (metric 필드 없음)
@@ -832,12 +961,68 @@ function CustomWidgetContent({ widget, isEditMode }) {
         // 1. 고유한 메트릭 목록 추출
         const uniqueMetrics = [...new Set(rawChartData.map(item => item.metric))];
 
-        // 2. 메트릭별 색상 및 위치 정의
-        const metricConfig = {
-          'ICMP_MAX': { color: '#ef4444', position: { center: ['25%', '33%'], titleTop: '8%' } },    // 좌측 상단
-          'ICMP_MIN': { color: '#3b82f6', position: { center: ['75%', '33%'], titleTop: '8%' } },    // 우측 상단
-          'ICMP_AVG': { color: '#10b981', position: { center: ['25%', '77%'], titleTop: '58%' } },   // 좌측 하단
-          'ICMP_LOSS': { color: '#f59e0b', position: { center: ['75%', '77%'], titleTop: '58%' } },  // 우측 하단
+        // 2. 메트릭 개수에 따른 동적 레이아웃 생성
+        const getPositionConfig = (metricCount) => {
+          if (metricCount === 1) {
+            return [{ center: ['50%', '50%'], titleTop: '25%' }];
+          } else if (metricCount === 2) {
+            return [
+              { center: ['33%', '50%'], titleTop: '25%' },  // 좌측
+              { center: ['67%', '50%'], titleTop: '25%' },  // 우측
+            ];
+          } else if (metricCount === 3) {
+            return [
+              { center: ['33%', '50%'], titleTop: '25%' },  // 좌측
+              { center: ['67%', '50%'], titleTop: '25%' },  // 우측
+              { center: ['50%', '80%'], titleTop: '60%' },  // 하단 중앙
+            ];
+          } else if (metricCount === 4) {
+            return [
+              { center: ['25%', '30%'], titleTop: '5%' },   // 좌측 상단
+              { center: ['75%', '30%'], titleTop: '5%' },   // 우측 상단
+              { center: ['25%', '70%'], titleTop: '55%' },  // 좌측 하단
+              { center: ['75%', '70%'], titleTop: '55%' },  // 우측 하단
+            ];
+          } else if (metricCount === 5) {
+            return [
+              { center: ['25%', '25%'], titleTop: '5%' },   // 좌측 상단
+              { center: ['75%', '25%'], titleTop: '5%' },   // 우측 상단
+              { center: ['25%', '65%'], titleTop: '50%' },  // 좌측 하단
+              { center: ['75%', '65%'], titleTop: '50%' },  // 우측 하단
+              { center: ['50%', '90%'], titleTop: '78%' },  // 최하단 중앙
+            ];
+          } else {
+            // 6개 이상: 3x2 그리드
+            return [
+              { center: ['20%', '25%'], titleTop: '5%' },
+              { center: ['50%', '25%'], titleTop: '5%' },
+              { center: ['80%', '25%'], titleTop: '5%' },
+              { center: ['20%', '65%'], titleTop: '50%' },
+              { center: ['50%', '65%'], titleTop: '50%' },
+              { center: ['80%', '65%'], titleTop: '50%' },
+            ];
+          }
+        };
+
+        const positions = getPositionConfig(uniqueMetrics.length);
+
+        // 메트릭별 기본 색상 정의
+        const metricBaseColors = {
+          // ICMP 메트릭
+          'ICMP_MAX': '#ef4444',
+          'ICMP_MIN': '#3b82f6',
+          'ICMP_AVG': '#10b981',
+          'ICMP_LOSS': '#f59e0b',
+          // TRAFFIC 메트릭
+          'TRAFFIC_IN_BPS': '#06b6d4',
+          'TRAFFIC_OUT_BPS': '#10b981',
+          'TRAFFIC_IN_ERR': '#ef4444',
+          'TRAFFIC_OUT_ERR': '#f59e0b',
+          'TRAFFIC_IN_DROP': '#a855f7',
+          'TRAFFIC_OUT_DROP': '#ec4899',
+          // CPU/MEMORY 메트릭
+          'CPU_USAGE': '#a855f7',
+          'MEMORY_USAGE': '#ec4899',
         };
 
         // 3. 각 메트릭별로 시리즈 생성
@@ -854,17 +1039,16 @@ function CustomWidgetContent({ widget, isEditMode }) {
               }
             }));
 
-          const config = metricConfig[metric] || {
-            color: '#64748b',
-            position: { center: ['50%', '50%'], titleTop: '25%' }
-          };
+          // 위치 가져오기
+          const position = positions[index] || { center: ['50%', '50%'], titleTop: '25%' };
+          const baseColor = metricBaseColors[metric] || '#14b8a6';
 
           return {
             name: metric,
             type: 'pie',
             radius: ['18%', '35%'],
-            center: config.position.center,
-            avoidLabelOverlap: false,
+            center: position.center,
+            avoidLabelOverlap: true,
             itemStyle: {
               borderRadius: 6,
               borderColor: '#0f172a',
@@ -872,13 +1056,21 @@ function CustomWidgetContent({ widget, isEditMode }) {
             },
             label: {
               show: true,
-              formatter: '{d}%',
+              formatter: '{b}\n{d}%',
               color: '#94a3b8',
-              fontSize: 9,
-              position: 'inner'
+              fontSize: 10,
+              position: 'outside',
+              alignTo: 'edge',
+              margin: 8
             },
             labelLine: {
-              show: false
+              show: true,
+              length: 8,
+              length2: 8,
+              lineStyle: {
+                color: '#475569',
+                width: 1
+              }
             },
             emphasis: {
               label: { show: true, fontSize: 11, fontWeight: 'bold' },
@@ -890,13 +1082,12 @@ function CustomWidgetContent({ widget, isEditMode }) {
 
         // 4. 각 메트릭의 타이틀 표시를 위한 title 요소
         const titles = uniqueMetrics.map((metric, index) => {
-          const config = metricConfig[metric] || { position: { center: ['50%', '50%'], titleTop: '25%' } };
-          const centerPos = config.position.center;
+          const position = positions[index] || { center: ['50%', '50%'], titleTop: '25%' };
 
           return {
             text: metric,
-            left: centerPos[0],
-            top: config.position.titleTop,
+            left: position.center[0],
+            top: position.titleTop,
             textAlign: 'center',
             textStyle: {
               color: '#94a3b8',
@@ -952,7 +1143,19 @@ function CustomWidgetContent({ widget, isEditMode }) {
             show: true,
             formatter: '{b}\n{d}%',
             color: '#94a3b8',
-            fontSize: 11
+            fontSize: 11,
+            position: 'outside',
+            alignTo: 'edge',
+            margin: 10
+          },
+          labelLine: {
+            show: true,
+            length: 10,
+            length2: 10,
+            lineStyle: {
+              color: '#475569',
+              width: 1
+            }
           },
           emphasis: {
             label: { show: true, fontSize: 13, fontWeight: 'bold' },
@@ -983,11 +1186,24 @@ function CustomWidgetContent({ widget, isEditMode }) {
 
         // 3. 메트릭별 색상 정의
         const metricColors = {
+          // ICMP 메트릭
           'ICMP_MAX': '#ef4444',    // 빨강
           'ICMP_MIN': '#3b82f6',    // 파랑
           'ICMP_AVG': '#10b981',    // 초록
           'ICMP_LOSS': '#f59e0b',   // 주황
-          'CPU_USAGE': '#8b5cf6',   // 보라
+          // TRAFFIC 메트릭
+          'TRAFFIC_IN_BPS': '#06b6d4',   // 시안
+          'TRAFFIC_OUT_BPS': '#10b981',  // 초록
+          'TRAFFIC_IN_BYTE': '#3b82f6',  // 파랑
+          'TRAFFIC_OUT_BYTE': '#eab308', // 노랑
+          'TRAFFIC_INPUT_BYTE': '#3b82f6',  // 파랑
+          'TRAFFIC_OUTPUT_BYTE': '#eab308', // 노랑
+          'TRAFFIC_IN_ERR': '#ef4444',   // 빨강
+          'TRAFFIC_OUT_ERR': '#f59e0b',  // 주황
+          'TRAFFIC_IN_DROP': '#a855f7',  // 밝은 보라
+          'TRAFFIC_OUT_DROP': '#ec4899', // 핑크
+          // CPU/MEMORY 메트릭
+          'CPU_USAGE': '#a855f7',   // 밝은 보라
           'MEMORY_USAGE': '#ec4899', // 핑크
         };
 
@@ -1006,7 +1222,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
             type: 'bar',
             data: metricData,
             itemStyle: {
-              color: metricColors[metric] || '#64748b',
+              color: metricColors[metric] || '#14b8a6', // 기본: 밝은 청록색
               borderRadius: [4, 4, 0, 0]
             }
           };
@@ -1116,10 +1332,12 @@ function CustomWidgetContent({ widget, isEditMode }) {
           backgroundColor: 'rgba(30, 41, 59, 0.98)',
           borderColor: '#334155',
           borderWidth: 2,
-          textStyle: { color: '#f1f5f9' },
+          textStyle: { color: '#f1f5f9', fontSize: 11 },
           confine: true,
           enterable: true,
           hideDelay: 100,
+          appendToBody: true,
+          extraCssText: 'max-width: 350px; max-height: 80vh;',
           position: function (point, params, dom, rect, size) {
             // 마우스 위치에 따라 툴팁을 반대편에 배치 (마우스를 가리지 않음)
             const mouseX = point[0];
@@ -1138,7 +1356,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
             }
 
             // 세로 위치는 상단 고정
-            y = 5;
+            y = 10;
 
             return [x, y];
           },
@@ -1155,24 +1373,52 @@ function CustomWidgetContent({ widget, isEditMode }) {
 
             // 툴팁 아이템들 (스크롤 가능)
             let items = '';
+
             params.forEach(param => {
+              // null이나 undefined 값 필터링
+              if (param.value == null || isNaN(param.value)) {
+                return;
+              }
+
               const color = param.color;
               const marker = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:6px;"></span>`;
-              items += `<div style="margin-top: 4px; white-space: nowrap;">${marker}${param.seriesName}: <strong>${param.value?.toFixed(2)}${elementMeta?.unit || '%'}</strong></div>`;
+              // 각 시리즈의 unit 찾기
+              const dataItem = chartData.find(d => (d.displayName || d.deviceName) === param.seriesName);
+              const unit = dataItem?.unit || '%';
+              items += `<div style="margin-top: 4px; white-space: nowrap; font-size: 12px;">${marker}${param.seriesName}: <strong>${param.value?.toFixed(2)}${unit}</strong></div>`;
             });
 
-            // 스크롤 가능한 컨테이너로 감싸기
-            return `${header}<div style="max-height: 300px; overflow-y: auto; overflow-x: hidden; padding-right: 8px;">${items}</div>`;
+            // 스크롤 가능한 컨테이너로 감싸기 (스크롤바 스타일 추가)
+            return `${header}<div style="max-height: 350px; overflow-y: auto; overflow-x: hidden; padding-right: 8px; scrollbar-width: thin; scrollbar-color: #64748b #1e293b;">
+              <style>
+                ::-webkit-scrollbar { width: 6px; }
+                ::-webkit-scrollbar-track { background: #1e293b; }
+                ::-webkit-scrollbar-thumb { background: #64748b; border-radius: 3px; }
+              </style>
+              ${items}
+            </div>`;
           }
         },
         legend: {
           data: chartData.map(item => item.displayName || item.deviceName),
-          textStyle: { color: '#94a3b8', fontSize: 11 },
+          textStyle: {
+            color: '#94a3b8',
+            fontSize: 10,
+            overflow: 'truncate',
+            width: 80
+          },
           top: 0,
           type: 'scroll',
           pageIconColor: '#3b82f6',
           pageIconInactiveColor: '#475569',
-          pageTextStyle: { color: '#94a3b8' }
+          pageTextStyle: { color: '#94a3b8' },
+          tooltip: {
+            show: true,
+            formatter: (params) => {
+              const item = chartData.find(d => d.displayName === params.name);
+              return item?.fullDisplayName || params.name;
+            }
+          }
         },
         grid: {
           left: '3%',
@@ -1231,32 +1477,54 @@ function CustomWidgetContent({ widget, isEditMode }) {
         },
         yAxis: {
           type: 'value',
-          name: elementMeta?.unit || '%',
+          name: (() => {
+            // 모든 항목의 단위가 같으면 해당 단위 표시, 다르면 빈 문자열
+            const units = [...new Set(chartData.map(item => item.unit))];
+            return units.length === 1 ? units[0] : '';
+          })(),
           nameTextStyle: { color: '#94a3b8' },
           axisLabel: { color: '#94a3b8' },
           axisLine: { lineStyle: { color: '#334155' } },
           splitLine: { lineStyle: { color: '#1e293b' } }
         },
-        series: chartData.map(item => ({
-          name: item.displayName || item.deviceName,
-          type: 'line',
-          data: item.value,
-          smooth: true,
-          symbol: 'circle',
-          symbolSize: 6,
-          lineStyle: { color: item.color, width: 2 },
-          itemStyle: { color: item.color },
-          areaStyle: {
-            color: {
-              type: 'linear',
-              x: 0, y: 0, x2: 0, y2: 1,
-              colorStops: [
-                { offset: 0, color: `${item.color}40` },
-                { offset: 1, color: `${item.color}00` }
-              ]
+        series: chartData.map(item => {
+          // RGB 색상을 RGBA로 변환하는 헬퍼
+          const colorToRgba = (color, alpha) => {
+            if (!color) return `rgba(59, 130, 246, ${alpha})`;
+
+            // 이미 rgb() 형식이면 rgba로 변환
+            if (color.startsWith('rgb(')) {
+              const values = color.match(/\d+/g);
+              if (values && values.length === 3) {
+                return `rgba(${values[0]}, ${values[1]}, ${values[2]}, ${alpha})`;
+              }
             }
-          }
-        }))
+
+            // hex 색상이면 그대로 사용
+            return color;
+          };
+
+          return {
+            name: item.displayName || item.deviceName,
+            type: 'line',
+            data: item.value || item.values || [],
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: 6,
+            lineStyle: { color: item.color, width: 2 },
+            itemStyle: { color: item.color },
+            areaStyle: {
+              color: {
+                type: 'linear',
+                x: 0, y: 0, x2: 0, y2: 1,
+                colorStops: [
+                  { offset: 0, color: colorToRgba(item.color, 0.25) },
+                  { offset: 1, color: colorToRgba(item.color, 0) }
+                ]
+              }
+            }
+          };
+        })
       };
     }
 
