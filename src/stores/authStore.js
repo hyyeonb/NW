@@ -44,8 +44,16 @@ export const useAuthStore = create(
       },
 
       // 소셜 로그인 URL로 리다이렉트
-      socialLogin: (provider) => {
+      socialLogin: async (provider) => {
         try {
+          // 기존 세션 클리어 (공용 환경에서 다른 계정으로 로그인 가능하도록)
+          try {
+            await authApi.logout();
+          } catch (e) {
+            // 로그아웃 실패해도 계속 진행
+          }
+          set({ user: null, isAuthenticated: false, error: null });
+
           const response = authApi.getSocialLoginUrl(provider);
           window.location.href = response.data.url;
         } catch (error) {
@@ -96,6 +104,55 @@ export const useAuthStore = create(
         } catch {
           set({ user: null, isAuthenticated: false });
           return false;
+        }
+      },
+
+      // 로컬 로그인
+      localLogin: async (loginId, password) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await authApi.localLogin({
+            LOGIN_ID: loginId,
+            PASSWORD: password,
+          });
+
+          const loginData = response.data?.data || response.data;
+          set({
+            user: loginData,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+          return loginData;
+        } catch (error) {
+          set({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            error: error.response?.data?.message || '로그인 실패',
+          });
+          throw error;
+        }
+      },
+
+      // 회원가입
+      signup: async (signupData) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await authApi.signup(signupData);
+
+          const loginData = response.data?.data || response.data;
+          set({
+            user: loginData,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+          return loginData;
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.response?.data?.message || '회원가입 실패',
+          });
+          throw error;
         }
       },
 

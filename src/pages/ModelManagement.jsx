@@ -45,6 +45,10 @@ export default function ModelManagement() {
 
   // 첫 번째 벤더의 첫 번째 모델 자동 선택 (애니메이션 적용)
   useEffect(() => {
+    let timer1 = null;
+    let timer2 = null;
+    let isMounted = true;
+
     if (!selectedModel && vendors.length > 0 && models.length > 0) {
       // 벤더별 모델 찾기
       for (const vendor of vendors) {
@@ -52,18 +56,29 @@ export default function ModelManagement() {
         if (vendorModels.length > 0) {
           const vendorKey = vendor.VENDOR_ID ?? 'orphan';
           // 약간의 딜레이 후 벤더 펼치기
-          setTimeout(() => {
-            setExpandedVendors(prev => ({ ...prev, [vendorKey]: true }));
-            setSelectedVendor(vendor);
+          timer1 = setTimeout(() => {
+            if (isMounted) {
+              setExpandedVendors(prev => ({ ...prev, [vendorKey]: true }));
+              setSelectedVendor(vendor);
+            }
           }, 50);
           // 모델 선택은 조금 더 딜레이
-          setTimeout(() => {
-            setSelectedModel(vendorModels[0]);
+          timer2 = setTimeout(() => {
+            if (isMounted) {
+              setSelectedModel(vendorModels[0]);
+            }
           }, 100);
           break;
         }
       }
     }
+
+    // Cleanup: 컴포넌트 언마운트 시 타이머 정리
+    return () => {
+      isMounted = false;
+      if (timer1) clearTimeout(timer1);
+      if (timer2) clearTimeout(timer2);
+    };
   }, [vendors, models]);
 
   // 메트릭을 타입별로 그룹화
@@ -107,12 +122,21 @@ export default function ModelManagement() {
   // 벤더 클릭 핸들러
   const handleVendorClick = (vendor) => {
     const vendorKey = vendor.VENDOR_ID ?? 'orphan';
+    const isExpanding = !expandedVendors[vendorKey];
+
     setExpandedVendors(prev => ({
       ...prev,
       [vendorKey]: !prev[vendorKey]
     }));
     setSelectedVendor(vendor);
-    setSelectedModel(null);
+
+    // 벤더 펼칠 때 첫 번째 모델 자동 선택
+    if (isExpanding) {
+      const vendorModels = models.filter(m => m.VENDOR_ID === vendor.VENDOR_ID);
+      if (vendorModels.length > 0) {
+        setSelectedModel(vendorModels[0]);
+      }
+    }
   };
 
   // 모델 클릭 핸들러

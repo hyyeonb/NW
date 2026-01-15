@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores';
 import MainLayout from './layouts/MainLayout';
-import { Login, Main, Dashboard, GroupManagement, AssetManagement, NewAssetManagement, ModelManagement, NetworkTopology } from './pages';
+import { Login, Signup, Dashboard, SignupSuccess, FindAccount, SocialLoginLanding, Main, GroupManagement, AssetManagement, NewAssetManagement, ModelManagement, NetworkTopology } from './pages';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -97,7 +97,7 @@ function PublicRoute({ children }) {
 
   if (isAuthenticated) {
     // 로그인 전 페이지가 있으면 그곳으로, 없으면 메인으로
-    const from = location.state?.from || '/main';
+    const from = location.state?.from || '/dashboard';
     return <Navigate to={from} replace />;
   }
 
@@ -117,6 +117,38 @@ export default function App() {
                 <PublicRoute>
                   <Login />
                 </PublicRoute>
+              }
+            />
+            <Route
+              path="/signup"
+              element={
+                <PublicRoute>
+                  <Signup />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/find-account"
+              element={
+                <PublicRoute>
+                  <FindAccount />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/social-login/:provider"
+              element={
+                <PublicRoute>
+                  <SocialLoginLanding />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/signup-success"
+              element={
+                <ProtectedRoute>
+                  <SignupSuccess />
+                </ProtectedRoute>
               }
             />
 

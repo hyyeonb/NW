@@ -236,17 +236,30 @@
     min-width: 0;
 }
 
-/* 컬럼별 비율 설정 */
-.input-cell:nth-child(1) { flex: 2; }    /* 장비명 */
-.input-cell:nth-child(2) { flex: 1.2; }  /* IP 주소 - 줄임 */
-.input-cell:nth-child(3) { flex: 0.7; }  /* SNMP버전 */
-.input-cell:nth-child(4) { flex: 0.6; }  /* 포트 */
-.input-cell:nth-child(5) { flex: 0.9; }  /* 커뮤니티 */
-.input-cell:nth-child(6) { flex: 0.9; }  /* 사용자 */
-.input-cell:nth-child(7) { flex: 0.8; }  /* 인증 */
-.input-cell:nth-child(8) { flex: 0.9; }  /* 인증PW */
-.input-cell:nth-child(9) { flex: 0.8; }  /* 암호화 */
-.input-cell:nth-child(10) { flex: 0.9; } /* 암호화PW */
+/* 컬럼별 비율 설정 - 입력행 (체크박스/그룹 없음) */
+.input-row-highlight .input-cell:nth-child(1) { flex: 2; }    /* 장비명 */
+.input-row-highlight .input-cell:nth-child(2) { flex: 1.2; }  /* IP 주소 */
+.input-row-highlight .input-cell:nth-child(3) { flex: 0.7; }  /* SNMP버전 */
+.input-row-highlight .input-cell:nth-child(4) { flex: 0.6; }  /* 포트 */
+.input-row-highlight .input-cell:nth-child(5) { flex: 0.9; }  /* 커뮤니티 */
+.input-row-highlight .input-cell:nth-child(6) { flex: 0.9; }  /* 사용자 */
+.input-row-highlight .input-cell:nth-child(7) { flex: 0.8; }  /* 인증 */
+.input-row-highlight .input-cell:nth-child(8) { flex: 0.9; }  /* 인증PW */
+.input-row-highlight .input-cell:nth-child(9) { flex: 0.8; }  /* 암호화 */
+.input-row-highlight .input-cell:nth-child(10) { flex: 0.9; } /* 암호화PW */
+
+/* 컬럼별 비율 설정 - 목록행 (체크박스/그룹 포함) */
+/* 1: checkbox(32px), 2: 장비명, 3: 그룹(140px), 4: IP, 5: SNMP버전 ... */
+.device-list-row .input-cell:nth-child(2) { flex: 1.8; }   /* 장비명 */
+.device-list-row .input-cell:nth-child(4) { flex: 1.1; }   /* IP 주소 */
+.device-list-row .input-cell:nth-child(5) { flex: 0.7; }   /* SNMP버전 */
+.device-list-row .input-cell:nth-child(6) { flex: 0.5; }   /* 포트 */
+.device-list-row .input-cell:nth-child(7) { flex: 0.8; }   /* 커뮤니티 */
+.device-list-row .input-cell:nth-child(8) { flex: 0.8; }   /* 사용자 */
+.device-list-row .input-cell:nth-child(9) { flex: 0.7; }   /* 인증 */
+.device-list-row .input-cell:nth-child(10) { flex: 0.8; }  /* 인증PW */
+.device-list-row .input-cell:nth-child(11) { flex: 0.7; }  /* 암호화 */
+.device-list-row .input-cell:nth-child(12) { flex: 0.8; }  /* 암호화PW */
 
 .input-cell label {
     font-size: 11px;
@@ -360,13 +373,17 @@
     margin-bottom: 4px;
 }
 
-/* 11~13번째 컬럼 - PING, SNMP, AGENT 체크박스 */
-.input-cell:nth-child(11) { flex: 0 0 50px; }  /* PING */
-.input-cell:nth-child(12) { flex: 0 0 50px; }  /* SNMP */
-.input-cell:nth-child(13) { flex: 0 0 55px; }  /* AGENT */
+/* 입력행 - PING, SNMP, AGENT 체크박스 */
+.input-row-highlight .input-cell:nth-child(11) { flex: 0 0 50px; }  /* PING */
+.input-row-highlight .input-cell:nth-child(12) { flex: 0 0 50px; }  /* SNMP */
+.input-row-highlight .input-cell:nth-child(13) { flex: 0 0 55px; }  /* AGENT */
+.input-row-highlight .input-cell:nth-child(14) { flex: 0 0 50px; }  /* 액션 */
 
-/* 14번째 컬럼 - 액션 버튼 */
-.input-cell:nth-child(14) { flex: 0 0 50px; }
+/* 목록행 - PING, SNMP, AGENT 체크박스 (체크박스/그룹 컬럼 추가됨) */
+.device-list-row .input-cell:nth-child(13) { flex: 0 0 50px; }  /* PING */
+.device-list-row .input-cell:nth-child(14) { flex: 0 0 50px; }  /* SNMP */
+.device-list-row .input-cell:nth-child(15) { flex: 0 0 55px; }  /* AGENT */
+.device-list-row .input-cell:nth-child(16) { flex: 0 0 50px; }  /* 액션 */
 
 /* 체크박스 컬럼 스타일 */
 .input-cell.collect-cell {
@@ -416,6 +433,193 @@
     width: 5px !important;
     height: 10px !important;
     border-width: 0 2px 2px 0 !important;
+}
+
+/* 선택 체크박스 셀 (왼쪽 고정) */
+.input-cell.checkbox-cell {
+    flex: 0 0 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    padding: 0 4px !important;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 8px !important;
+}
+
+.input-cell.checkbox-cell label {
+    display: none !important;
+}
+
+.input-cell.checkbox-cell input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    margin: 0 !important;
+    cursor: pointer;
+    accent-color: var(--color-primary-500, #3b82f6);
+}
+
+/* 그룹 셀 */
+.input-cell.group-cell {
+    flex: 0 0 160px !important;
+    min-width: 160px !important;
+    max-width: 160px !important;
+}
+
+/* 그룹 선택 버튼 */
+.group-select-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: #e2e8f0;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.group-select-btn:hover {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.group-select-btn span {
+    flex: 1;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.group-select-btn .bi-folder2 {
+    color: #60a5fa;
+    font-size: 11px;
+}
+
+.group-select-btn .bi-chevron-down {
+    font-size: 10px;
+    color: #64748b;
+}
+
+.group-select-btn.no-group {
+    color: #f87171;
+    border-color: rgba(248, 113, 113, 0.3);
+}
+
+.group-select-btn.no-group .bi-folder2 {
+    color: #f87171;
+}
+
+/* 목록 헤더 */
+.list-area-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+}
+
+/* 전체 선택 라벨 (왼쪽) */
+.select-all-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: #94a3b8;
+    font-size: 13px;
+    transition: color 0.2s;
+}
+
+.select-all-label:hover {
+    color: #e2e8f0;
+}
+
+.select-all-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--color-primary-500, #3b82f6);
+}
+
+/* 오른쪽 영역 */
+.list-area-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.list-count {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.list-count i {
+    font-size: 14px;
+}
+
+/* 글래스모피즘 버튼 */
+.bulk-group-btn.glass {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #e2e8f0;
+    background: rgba(59, 130, 246, 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow:
+        0 4px 16px rgba(59, 130, 246, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.bulk-group-btn.glass:hover {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow:
+        0 8px 24px rgba(59, 130, 246, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.bulk-group-btn.glass:active {
+    transform: translateY(0);
+}
+
+.bulk-group-btn.glass i {
+    font-size: 14px;
+    color: #60a5fa;
+}
+
+/* 선택된 행 하이라이트 */
+.device-list-row.selected {
+    background: rgba(59, 130, 246, 0.1) !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+
+/* 사이드바 없는 레이아웃 */
+.new-asset-page.no-sidebar {
+    gap: 0;
+}
+
+.new-asset-page .page-main-content.full-width {
+    width: 100%;
+    max-width: 100%;
+    padding: 24px 32px;
 }
 
 /* 액션 셀 */
