@@ -1425,12 +1425,29 @@ export default function NetworkTopology() {
       });
 
       const cleanNodes = graphData.nodes.map((n) => {
-        // id를 deviceId 또는 groupId로 설정
-        const realId = n.nodeType === 'device' ? n.deviceId : n.groupId;
+        // originalId 우선 사용 (API에서 받은 원본 ID)
+        // 없으면 deviceId/groupId 사용, 그것도 없으면 id에서 접두사 제거
+        let realId = n.originalId;
+
+        if (!realId) {
+          realId = n.nodeType === 'device' ? n.deviceId : n.groupId;
+        }
+
+        if (!realId && n.id) {
+          const idStr = String(n.id);
+          if (idStr.startsWith('device_')) {
+            realId = parseInt(idStr.replace('device_', ''), 10);
+          } else if (idStr.startsWith('group_')) {
+            realId = parseInt(idStr.replace('group_', ''), 10);
+          } else {
+            realId = isNaN(Number(idStr)) ? idStr : Number(idStr);
+          }
+        }
+
         return {
-          id: realId || n.id,
-          deviceId: n.deviceId || null,
-          groupId: n.groupId || null,
+          id: realId,
+          deviceId: n.deviceId || (n.nodeType === 'device' ? realId : null),
+          groupId: n.groupId || (n.nodeType === 'group' ? realId : null),
           name: n.name || "",
           type: n.type || "",
           nodeType: n.nodeType || "device",
@@ -1443,6 +1460,17 @@ export default function NetworkTopology() {
           fy: n.fy ?? n.y
         };
       });
+
+      // ID에서 접두사 제거하는 헬퍼 함수
+      const extractRealId = (idStr, nodeType) => {
+        const str = String(idStr);
+        if (str.startsWith('device_')) {
+          return parseInt(str.replace('device_', ''), 10);
+        } else if (str.startsWith('group_')) {
+          return parseInt(str.replace('group_', ''), 10);
+        }
+        return isNaN(Number(str)) ? str : Number(str);
+      };
 
       const cleanLinks = graphData.links.map((l) => {
         // 링크 자체에 저장된 srcType, dstType 우선 사용
@@ -1460,12 +1488,21 @@ export default function NetworkTopology() {
           String(n.id) === targetNodeId && (n.nodeType || 'device') === dstType
         );
 
-        const sourceRealId = sourceNode
-          ? (srcType === 'device' ? sourceNode.deviceId : sourceNode.groupId) || sourceNodeId
-          : sourceNodeId;
-        const targetRealId = targetNode
-          ? (dstType === 'device' ? targetNode.deviceId : targetNode.groupId) || targetNodeId
-          : targetNodeId;
+        // originalId 우선 사용, 없으면 deviceId/groupId, 그것도 없으면 접두사 제거
+        let sourceRealId = sourceNode?.originalId
+          || (srcType === 'device' ? sourceNode?.deviceId : sourceNode?.groupId)
+          || null;
+        let targetRealId = targetNode?.originalId
+          || (dstType === 'device' ? targetNode?.deviceId : targetNode?.groupId)
+          || null;
+
+        // realId가 없으면 접두사 제거
+        if (!sourceRealId) {
+          sourceRealId = extractRealId(sourceNodeId, srcType);
+        }
+        if (!targetRealId) {
+          targetRealId = extractRealId(targetNodeId, dstType);
+        }
 
         return {
           source: sourceRealId,
