@@ -21,7 +21,7 @@ export default function OAuthCallback() {
 
     handleOAuthCallback(provider, code, redirectUri, state)
       .then(() => {
-        navigate('/main');
+        navigate('/dashboard');
       })
       .catch((err) => {
         console.error('OAuth callback error:', err);

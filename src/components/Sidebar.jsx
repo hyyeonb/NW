@@ -30,10 +30,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       icon: 'bi-speedometer2',
       label: '대시보드',
       children: [
-        { label: '대시보드', path: '/dashboard', icon: 'bi-grid-1x2' },
-        { label: '실시간 현황', path: '/dashboard/realtime', icon: 'bi-activity' },
-        { label: '통계 분석', path: '/dashboard/statistics', icon: 'bi-bar-chart' },
-        { label: '리포트', path: '/dashboard/reports', icon: 'bi-file-earmark-text' },
+        { label: '통합 대시보드', path: '/dashboard', icon: 'bi-grid-1x2' },
         { label: '네트워크 토폴로지', path: '/topology', icon: 'bi-diagram-3' },
       ],
     },
@@ -41,7 +38,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       icon: 'bi-display',
       label: '모니터링',
       children: [
-        { label: '통합 모니터링', path: '/main', icon: 'bi-grid-3x3-gap' },
+        { label: '성능 모니터링', path: '/dashboard', icon: 'bi-grid-3x3-gap' },
         { label: '장애 모니터링', path: '/monitoring/fault', icon: 'bi-exclamation-triangle' },
       ],
     },
@@ -95,7 +92,7 @@ export default function Sidebar({ collapsed, onToggle }) {
 
       {/* 로고 */}
       <div className="sidebar-logo">
-        <Link to="/main">
+        <Link to="/dashboard">
           <img src="/logo-single.svg" alt="Logo" className="logo-single logo-animated" />
           {!collapsed && (
             <img src="/logo-text-dark.svg" alt="InfoMap" className="logo-text" />

@@ -88,4 +88,26 @@ export const authApi = {
   // 세션 유효성 검증
   validateSession: () =>
     apiClient.get('/auth/validate'),
+
+  // ==================== 로컬 인증 ====================
+
+  // 로컬 로그인
+  localLogin: (data) =>
+    apiClient.post('/auth/login', data),
+
+  // 회원가입
+  signup: (data) =>
+    apiClient.post('/auth/signup', data),
+
+  // 로그인 ID 중복 체크
+  checkLoginId: (loginId) =>
+    apiClient.get(`/auth/check-id?loginId=${encodeURIComponent(loginId)}`),
+
+  // 아이디 찾기
+  findId: (data) =>
+    apiClient.post('/auth/find-id', data),
+
+  // 비밀번호 재설정
+  resetPassword: (data) =>
+    apiClient.post('/auth/reset-password', data),
 };

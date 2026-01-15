@@ -53,6 +53,10 @@ export const devicesApi = {
 
   // ==================== 임시 장비 (TEMP_DEVICE) 관련 ====================
 
+  // 전체 임시 장비 목록 조회
+  getAllTempDevices: () =>
+    apiClient.get('/mgmt/temp-devices/all'),
+
   // 그룹별 임시 장비 목록 조회
   getTempDevicesByGroup: (groupIds) =>
     apiClient.post('/mgmt/temp-devices/search', groupIds),
@@ -64,6 +68,10 @@ export const devicesApi = {
   // 임시 장비 대량 생성
   createTempDevices: (devices) =>
     apiClient.post('/mgmt/temp-devices/bulk', devices),
+
+  // 임시 장비 수정 (그룹 변경 등)
+  updateTempDevice: (deviceId, device) =>
+    apiClient.put(`/mgmt/temp-devices/${deviceId}`, device),
 
   // 임시 장비 삭제
   deleteTempDevices: (deviceIds) =>
@@ -82,6 +90,32 @@ export const devicesApi = {
   // SNMP 수집 시도 후 장비 정보 업데이트
   collectSnmp: (deviceId, snmpConfig) =>
     apiClient.post(`/mgmt/devices/${deviceId}/snmp-collect`, snmpConfig),
+
+  // ==================== Traffic 관련 ====================
+
+  // 장비 트래픽 데이터 조회 (차트용)
+  getDeviceTraffic: (deviceId, minutes = 60) =>
+    apiClient.get(`/mgmt/devices/${deviceId}/traffic`, { params: { minutes } }),
+
+  // 장비 트래픽 원시 데이터 조회
+  getDeviceTrafficRaw: (deviceId, minutes = 60) =>
+    apiClient.get(`/mgmt/devices/${deviceId}/traffic/raw`, { params: { minutes } }),
+
+  // 포트별 트래픽 데이터 조회
+  getPortTraffic: (deviceId, ifIndex, minutes = 60) =>
+    apiClient.get(`/mgmt/devices/${deviceId}/ports/${ifIndex}/traffic`, { params: { minutes } }),
+
+  // 차트 표시 포트 조회 (없으면 TOP 5 자동 설정)
+  getChartEnabledPorts: (deviceId) =>
+    apiClient.get(`/mgmt/devices/${deviceId}/ports/chart-enabled`),
+
+  // 포트 차트 플래그 토글
+  togglePortChartFlag: (deviceId, ifIndex) =>
+    apiClient.patch(`/mgmt/devices/${deviceId}/ports/${ifIndex}/chart-flag`),
+
+  // 차트 플래그 초기화 (TOP 5 재설정)
+  resetChartFlags: (deviceId) =>
+    apiClient.post(`/mgmt/devices/${deviceId}/ports/chart-flag/reset`),
 
   // ==================== Vendor 관련 ====================
 

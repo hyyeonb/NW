@@ -28,7 +28,7 @@ export default function Header() {
         { label: '리포트', path: '/dashboard/reports' },
       ],
     },
-    { label: '모니터링', path: '/main' },
+    { label: '모니터링', path: '/dashboard' },
     {
       label: '종합분석',
       children: [
@@ -53,7 +53,7 @@ export default function Header() {
       <div className="nav-container">
         {/* Logo */}
         <div className="logo-section">
-          <Link to="/main" className="logo-link">
+          <Link to="/dashboard" className="logo-link">
             <div className="logo-text">
               <span className="logo-main">Project</span>
               <span className="logo-sub">Management System</span>

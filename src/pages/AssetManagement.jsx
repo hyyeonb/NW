@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import GroupTree from '../components/GroupTree';
 import { useGroupStore } from '../stores';
+import ReactECharts from 'echarts-for-react';
 import {
   useDevicesByGroupPaged,
   useDeleteDevices,
@@ -9,6 +10,9 @@ import {
   useUpdatePort,
   useDeviceScope,
   useUpdateDeviceScope,
+  useDeviceTraffic,
+  useTogglePortChartFlag,
+  useResetChartFlags,
 } from '../hooks';
 import { devicesApi } from '../api/devices';
 
@@ -41,6 +45,10 @@ export default function AssetManagement() {
   // SNMP 수집 결과 모달 상태
   const [snmpResultModal, setSnmpResultModal] = useState(null);
 
+  // 장비 인라인 편집 상태
+  const [editFormData, setEditFormData] = useState({});
+  const [editSaving, setEditSaving] = useState(false);
+
   // 장비 테이블 정렬 상태 (기본: ID 오름차순)
   const [deviceSortField, setDeviceSortField] = useState('DEVICE_ID');
   const [deviceSortOrder, setDeviceSortOrder] = useState('asc');
@@ -49,18 +57,222 @@ export default function AssetManagement() {
   const [portSortField, setPortSortField] = useState('IF_INDEX');
   const [portSortOrder, setPortSortOrder] = useState('asc');
 
+  // 차트 플래그 토글/초기화 mutation
+  const toggleChartFlag = useTogglePortChartFlag();
+  const resetChartFlags = useResetChartFlags();
+
   // 그룹 변경 시 페이지 초기화
   useEffect(() => {
     setPage(1);
     setSelectedDevices([]);
   }, [selectedGroup?.GROUP_ID]);
 
+
   // 서버 측 페이지네이션 + 정렬 사용 (LIMIT OFFSET + ORDER BY)
   const { data: devicesData, isLoading } = useDevicesByGroupPaged(
     selectedGroup?.GROUP_ID, page, pageSize, deviceSortField, deviceSortOrder
   );
-  const { data: portsData, isLoading: portsLoading } = useDevicePorts(detailDevice?.DEVICE_ID);
+  const { data: portsDataRaw, isLoading: portsLoading } = useDevicePorts(detailDevice?.DEVICE_ID);
   const { data: deviceScope, isLoading: scopeLoading } = useDeviceScope(detailDevice?.DEVICE_ID);
+  const { data: trafficData, isLoading: trafficLoading } = useDeviceTraffic(detailDevice?.DEVICE_ID, 60);
+
+  // 가상 인터페이스 필터링 (docker, veth, br-, lo 등 제외)
+  const portsData = useMemo(() => {
+    if (!portsDataRaw) return [];
+    const virtualPatterns = /^(veth|docker|br-|virbr|vnet|tap|tun|dummy)/i;
+    return portsDataRaw.filter(port => {
+      const ifName = port.IF_NAME || port.IF_DESCR || '';
+      return !virtualPatterns.test(ifName);
+    });
+  }, [portsDataRaw]);
+
+  // 차트 표시할 포트 Set (IF_CHART_FLAG=true인 포트들)
+  const chartEnabledPorts = useMemo(() => {
+    if (!portsData) return new Set();
+    return new Set(
+      portsData
+        .filter(p => p.IF_CHART_FLAG === true || p.IF_CHART_FLAG === 1)
+        .map(p => p.IF_INDEX)
+    );
+  }, [portsData]);
+
+  // 트래픽 차트 데이터 (IF_CHART_FLAG 기반 필터링만 - 플래그 없으면 빈 차트)
+  const trafficChartData = useMemo(() => {
+    if (!trafficData || !trafficData.series || trafficData.series.length === 0) {
+      return { timeLabels: [], series: [] };
+    }
+
+    // IF_CHART_FLAG=true인 포트가 없으면 빈 차트 (서버에서 자동 설정될 때까지 대기)
+    if (chartEnabledPorts.size === 0) {
+      return { timeLabels: [], series: [] };
+    }
+
+    // IF_CHART_FLAG=true인 포트만 표시
+    const filteredSeries = trafficData.series.filter(item => {
+      // series에 ifIndex가 있다고 가정
+      if (item.ifIndex !== undefined) {
+        return chartEnabledPorts.has(item.ifIndex);
+      }
+      // name 기반 매칭 (포트 이름이 series name에 포함되어 있는지)
+      return Array.from(chartEnabledPorts).some(ifIndex => {
+        const port = portsData?.find(p => p.IF_INDEX === ifIndex);
+        if (port) {
+          const portName = port.IF_NAME || port.IF_DESCR || '';
+          return item.name && item.name.includes(portName);
+        }
+        return false;
+      });
+    });
+    return { timeLabels: trafficData.timeLabels, series: filteredSeries };
+  }, [trafficData, chartEnabledPorts, portsData]);
+
+  // 포트 차트 플래그 토글 핸들러 (DB 저장)
+  const handleToggleChartPort = (port) => {
+    if (detailDevice?.DEVICE_ID) {
+      toggleChartFlag.mutate({
+        deviceId: detailDevice.DEVICE_ID,
+        ifIndex: port.IF_INDEX
+      });
+    }
+  };
+
+  // 차트 플래그 초기화 (TOP 5 재설정)
+  const handleResetChartFlags = () => {
+    if (detailDevice?.DEVICE_ID) {
+      resetChartFlags.mutate(detailDevice.DEVICE_ID);
+    }
+  };
+
+  // 포트 파싱 및 스위치 레이아웃 생성
+  const switchLayout = useMemo(() => {
+    if (!portsData || portsData.length === 0) return null;
+
+    // 포트 이름에서 슬롯/포트 번호 추출
+    const parsePortName = (port) => {
+      const name = port.IF_NAME || port.IF_DESCR || '';
+
+      // 1. 관리 포트 체크 (mgmt, default, management)
+      // portNum은 나중에 순차 번호로 재할당됨
+      if (/^(mgmt|default|management)$/i.test(name)) {
+        return { interfaceType: 'management', slot: 'mgmt', portNum: 0, originalName: name };
+      }
+
+      // 2. Cisco 스타일 포트 파싱
+      const ciscoPatterns = [
+        /^(FastEthernet|Fa|Fe)(\d+)\/(\d+)$/i,           // FastEthernet0/1
+        /^(GigabitEthernet|Gi|Ge)(\d+)\/(\d+)$/i,        // GigabitEthernet0/1
+        /^(TenGigabitEthernet|Te|TenGi)(\d+)\/(\d+)$/i,  // TenGigabitEthernet0/1
+        /^(Ethernet|Eth|Et)(\d+)\/(\d+)$/i,              // Ethernet0/1
+        /^(FastEthernet|Fa|Fe)(\d+)\/(\d+)\/(\d+)$/i,    // FastEthernet1/0/1 (stacked)
+        /^(GigabitEthernet|Gi|Ge)(\d+)\/(\d+)\/(\d+)$/i, // GigabitEthernet1/0/1 (stacked)
+      ];
+
+      for (const pattern of ciscoPatterns) {
+        const match = name.match(pattern);
+        if (match) {
+          const type = match[1].toLowerCase();
+          let interfaceType = 'ethernet';
+          if (type.includes('fast') || type === 'fa' || type === 'fe') interfaceType = 'fastethernet';
+          else if (type.includes('tengig') || type === 'te' || type === 'tengi') interfaceType = 'tengigabit';
+          else if (type.includes('gig') || type === 'gi' || type === 'ge') interfaceType = 'gigabit';
+
+          const slot = match.length === 5 ? `${match[2]}/${match[3]}` : match[2];
+          const portNum = match.length === 5 ? parseInt(match[4]) : parseInt(match[3]);
+
+          return { interfaceType, slot, portNum, originalName: name };
+        }
+      }
+
+      // 3. Linux NIC 파싱 (eno1, eth0, enp0s3, ens192 등)
+      const linuxMatch = name.match(/^(eno|eth|enp|ens|em)(\d+)(s\d+)?$/i);
+      if (linuxMatch) {
+        const portNum = parseInt(linuxMatch[2]);
+        return { interfaceType: 'linux-nic', slot: 'eth', portNum, originalName: name };
+      }
+
+      // 4. 파싱 실패 시 IF_INDEX 사용
+      return { interfaceType: 'unknown', slot: '0', portNum: port.IF_INDEX, originalName: name };
+    };
+
+    // 모든 포트 파싱
+    const parsedPorts = portsData.map(port => ({
+      ...port,
+      parsed: parsePortName(port)
+    }));
+
+    // 인터페이스 타입별 그룹화
+    const groupByType = {};
+    parsedPorts.forEach(port => {
+      const key = `${port.parsed.interfaceType}_${port.parsed.slot}`;
+      if (!groupByType[key]) {
+        groupByType[key] = {
+          interfaceType: port.parsed.interfaceType,
+          slot: port.parsed.slot,
+          ports: []
+        };
+      }
+      groupByType[key].ports.push(port);
+    });
+
+    // 각 그룹 내에서 포트 번호순 정렬
+    Object.values(groupByType).forEach(group => {
+      group.ports.sort((a, b) => a.parsed.portNum - b.parsed.portNum);
+
+      // 관리 포트는 순차 번호로 재할당 (1, 2, 3...)
+      if (group.interfaceType === 'management') {
+        group.ports.forEach((port, idx) => {
+          port.parsed.portNum = idx + 1;
+        });
+      }
+    });
+
+    // 메인 포트 vs 업링크 포트 분류
+    const groups = Object.values(groupByType);
+    let mainGroups = [];
+    let uplinkGroups = [];
+
+    // 관리 포트는 항상 업링크로
+    const managementGroups = groups.filter(g => g.interfaceType === 'management');
+    const nonMgmtGroups = groups.filter(g => g.interfaceType !== 'management');
+
+    const hasFastEthernet = nonMgmtGroups.some(g => g.interfaceType === 'fastethernet');
+    const hasGigabit = nonMgmtGroups.some(g => g.interfaceType === 'gigabit');
+    const hasTenGigabit = nonMgmtGroups.some(g => g.interfaceType === 'tengigabit');
+    const hasLinuxNic = nonMgmtGroups.some(g => g.interfaceType === 'linux-nic');
+
+    if (hasFastEthernet) {
+      // Cisco 스위치: FastEthernet이 메인, Gigabit/TenGigabit이 업링크
+      mainGroups = nonMgmtGroups.filter(g => g.interfaceType === 'fastethernet');
+      uplinkGroups = nonMgmtGroups.filter(g => g.interfaceType === 'gigabit' || g.interfaceType === 'tengigabit');
+    } else if (hasGigabit && hasTenGigabit) {
+      // Gigabit이 메인, TenGigabit이 업링크
+      mainGroups = nonMgmtGroups.filter(g => g.interfaceType === 'gigabit');
+      uplinkGroups = nonMgmtGroups.filter(g => g.interfaceType === 'tengigabit');
+    } else if (hasLinuxNic) {
+      // Linux 서버: 물리 NIC가 메인
+      mainGroups = nonMgmtGroups.filter(g => g.interfaceType === 'linux-nic');
+      uplinkGroups = nonMgmtGroups.filter(g => g.interfaceType !== 'linux-nic');
+    } else if (hasGigabit) {
+      // GigabitEthernet만 있으면 메인으로
+      mainGroups = nonMgmtGroups.filter(g => g.interfaceType === 'gigabit');
+    } else {
+      // 그 외: 포트 수가 많은 그룹이 메인
+      const sortedGroups = [...nonMgmtGroups].sort((a, b) => b.ports.length - a.ports.length);
+      if (sortedGroups.length > 0) {
+        mainGroups = [sortedGroups[0]];
+        uplinkGroups = sortedGroups.slice(1);
+      }
+    }
+
+    // 관리 포트를 업링크에 추가
+    uplinkGroups = [...uplinkGroups, ...managementGroups];
+
+    // 슬롯별 정렬
+    mainGroups.sort((a, b) => a.slot.localeCompare(b.slot));
+    uplinkGroups.sort((a, b) => a.slot.localeCompare(b.slot));
+
+    return { mainGroups, uplinkGroups, totalPorts: portsData.length };
+  }, [portsData]);
 
   const deleteDevicesMutation = useDeleteDevices();
   const updateDeviceMutation = useUpdateDevice();
@@ -146,6 +358,49 @@ export default function AssetManagement() {
     setSnmpResultModal(null);
   };
 
+  // 장비 수정 저장 및 모달 닫기
+  const handleSaveAndClose = async () => {
+    if (!detailDevice) {
+      setDetailDevice(null);
+      return;
+    }
+
+    // 변경사항 체크
+    const hasChanges =
+      editFormData.DEVICE_NAME !== (detailDevice.DEVICE_NAME || '') ||
+      editFormData.DEVICE_IP !== (detailDevice.DEVICE_IP || '') ||
+      editFormData.GROUP_ID !== detailDevice.GROUP_ID ||
+      editFormData.MODEL_ID !== detailDevice.MODEL_ID ||
+      editFormData.SNMP_VERSION !== (detailDevice.SNMP_VERSION || 2) ||
+      editFormData.SNMP_PORT !== (detailDevice.SNMP_PORT || 161) ||
+      editFormData.SNMP_COMMUNITY !== (detailDevice.SNMP_COMMUNITY || '') ||
+      editFormData.SNMP_USER !== (detailDevice.SNMP_USER || '') ||
+      editFormData.SNMP_AUTH_PROTOCOL !== (detailDevice.SNMP_AUTH_PROTOCOL || 'MD5') ||
+      editFormData.SNMP_AUTH_PASSWORD !== (detailDevice.SNMP_AUTH_PASSWORD || '') ||
+      editFormData.SNMP_PRIV_PROTOCOL !== (detailDevice.SNMP_PRIV_PROTOCOL || 'DES') ||
+      editFormData.SNMP_PRIV_PASSWORD !== (detailDevice.SNMP_PRIV_PASSWORD || '');
+
+    if (!hasChanges) {
+      setDetailDevice(null);
+      return;
+    }
+
+    setEditSaving(true);
+    try {
+      await updateDeviceMutation.mutateAsync({
+        deviceId: detailDevice.DEVICE_ID,
+        data: editFormData
+      });
+      alert('장비 정보가 저장되었습니다.');
+      setDetailDevice(null);
+    } catch (error) {
+      console.error('장비 수정 오류:', error);
+      alert('장비 수정에 실패했습니다: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   // 포트 감시 플래그 토글
   const handleTogglePortFlag = async (port, field) => {
     const ifIndex = port.IF_INDEX || port.ifIndex;
@@ -179,10 +434,10 @@ export default function AssetManagement() {
     setPage(1);
   };
 
-  // 포트 테이블 정렬 로직
+  // 포트 테이블 정렬 로직 (모든 포트 - 가상 포함)
   const sortedPorts = useMemo(() => {
-    if (!portsData?.length) return [];
-    return [...portsData].sort((a, b) => {
+    if (!portsDataRaw?.length) return [];
+    return [...portsDataRaw].sort((a, b) => {
       let aVal = a[portSortField];
       let bVal = b[portSortField];
 
@@ -200,7 +455,7 @@ export default function AssetManagement() {
       }
       return strB.localeCompare(strA, 'ko');
     });
-  }, [portsData, portSortField, portSortOrder]);
+  }, [portsDataRaw, portSortField, portSortOrder]);
 
   // 포트 테이블 정렬 핸들러
   const handlePortSort = (field) => {
@@ -288,6 +543,21 @@ export default function AssetManagement() {
   const handleRowClick = (device) => {
     setDetailDevice(device);
     setActiveTab('device-info');
+    // 편집 폼 초기화
+    setEditFormData({
+      DEVICE_NAME: device.DEVICE_NAME || '',
+      DEVICE_IP: device.DEVICE_IP || '',
+      GROUP_ID: device.GROUP_ID || null,
+      MODEL_ID: device.MODEL_ID || null,
+      SNMP_VERSION: device.SNMP_VERSION || 2,
+      SNMP_PORT: device.SNMP_PORT || 161,
+      SNMP_COMMUNITY: device.SNMP_COMMUNITY || '',
+      SNMP_USER: device.SNMP_USER || '',
+      SNMP_AUTH_PROTOCOL: device.SNMP_AUTH_PROTOCOL || 'MD5',
+      SNMP_AUTH_PASSWORD: device.SNMP_AUTH_PASSWORD || '',
+      SNMP_PRIV_PROTOCOL: device.SNMP_PRIV_PROTOCOL || 'DES',
+      SNMP_PRIV_PASSWORD: device.SNMP_PRIV_PASSWORD || ''
+    });
   };
 
   const formatDate = (dateStr) => {
@@ -515,138 +785,270 @@ export default function AssetManagement() {
         <div id="device-detail-modal" className="modal" style={{ display: 'flex' }}>
           <div className="modal-content device-detail-modal">
             <span className="close-btn" onClick={() => setDetailDevice(null)}>&times;</span>
-            <h3 className="detail-modal-title">
-              <i className="bi bi-hdd-network"></i>
-              <span id="detail-device-name">{detailDevice.DEVICE_NAME}</span>
-            </h3>
 
             {/* 탭 헤더 */}
-            <div className="detail-tabs">
-              <button
-                className={`detail-tab ${activeTab === 'device-info' ? 'active' : ''}`}
-                onClick={() => setActiveTab('device-info')}
-              >
-                <i className="bi bi-info-circle"></i> 장비 정보
-              </button>
-              <button
-                className={`detail-tab ${activeTab === 'scope-settings' ? 'active' : ''}`}
-                onClick={() => setActiveTab('scope-settings')}
-              >
-                <i className="bi bi-sliders"></i> 수집 설정
-              </button>
-              <button
-                className={`detail-tab ${activeTab === 'port-info' ? 'active' : ''}`}
-                onClick={() => setActiveTab('port-info')}
-              >
-                <i className="bi bi-ethernet"></i> 포트 정보
-                {portsData?.length > 0 && (
-                  <span id="port-count-badge" className="tab-badge">{portsData.length}</span>
-                )}
-              </button>
+            <div className="detail-tabs-row">
+              <div className="detail-tabs">
+                <button className={`detail-tab ${activeTab === 'device-info' ? 'active' : ''}`} onClick={() => setActiveTab('device-info')}>
+                  <i className="bi bi-info-circle"></i> 장비 정보
+                </button>
+                <button className={`detail-tab ${activeTab === 'scope-settings' ? 'active' : ''}`} onClick={() => setActiveTab('scope-settings')}>
+                  <i className="bi bi-sliders"></i> 수집 설정
+                </button>
+                <button className={`detail-tab ${activeTab === 'port-info' ? 'active' : ''}`} onClick={() => setActiveTab('port-info')}>
+                  <i className="bi bi-ethernet"></i> 포트 정보
+                  {portsData?.length > 0 && <span className="tab-badge">{portsData.length}</span>}
+                </button>
+              </div>
             </div>
 
-            {/* 장비 정보 탭 */}
+            {/* 장비 정보 탭 - 2열 레이아웃 (인라인 편집) */}
             {activeTab === 'device-info' && (
               <div id="device-info-tab" className="detail-tab-content active">
-                <div className="detail-section-wrapper">
-                  <div className="detail-section">
-                    <div className="detail-section-header">
-                      <i className="bi bi-info-circle"></i>
-                      <span>기본 정보</span>
+                <div className="two-column-layout">
+                  {/* 좌측: 장비정보, SNMP정보, CPU/MEM */}
+                  <div className="left-column">
+                    {/* 장비 정보 */}
+                    <div className="info-box">
+                      <div className="info-box-header"><i className="bi bi-hdd-network"></i> 장비 정보</div>
+                      <div className="info-box-body">
+                        <div className="info-row">
+                          <span className="label">장비명</span>
+                          <input type="text" className="edit-input" value={editFormData.DEVICE_NAME || ''} onChange={(e) => setEditFormData({...editFormData, DEVICE_NAME: e.target.value})} />
+                        </div>
+                        <div className="info-row">
+                          <span className="label">IP</span>
+                          <input type="text" className="edit-input ip" value={editFormData.DEVICE_IP || ''} onChange={(e) => setEditFormData({...editFormData, DEVICE_IP: e.target.value})} />
+                        </div>
+                        <div className="info-row"><span className="label">시스템명</span><span className="value">{detailDevice.DEVICE_SYSTEM_NAME || '-'}</span></div>
+                        <div className="info-row">
+                          <span className="label">벤더</span>
+                          <span className="value" style={{flex: '0 0 auto', marginRight: '16px'}}>{detailDevice.VENDOR_NAME || '-'}</span>
+                          <span className="label" style={{flex: '0 0 auto', marginRight: '8px'}}>모델</span>
+                          <span className="value">{detailDevice.MODEL_NAME || '-'}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="detail-grid detail-grid-single-row">
-                      <div className={`detail-item ${needsTooltip(detailDevice.DEVICE_NAME) ? 'has-tooltip' : ''}`}>
-                        <span className="detail-label">장비명</span>
-                        <span className="detail-value">{detailDevice.DEVICE_NAME}</span>
-                        {needsTooltip(detailDevice.DEVICE_NAME) && (
-                          <span className="detail-tooltip">{detailDevice.DEVICE_NAME}</span>
+
+                    {/* SNMP 정보 */}
+                    <div className="info-box">
+                      <div className="info-box-header"><i className="bi bi-diagram-3"></i> SNMP 정보</div>
+                      <div className="info-box-body">
+                        {/* 버전 | 포트 */}
+                        <div className="info-row dual">
+                          <span className="label">버전</span>
+                          <select className="edit-select compact" value={editFormData.SNMP_VERSION || 2} onChange={(e) => setEditFormData({...editFormData, SNMP_VERSION: parseInt(e.target.value)})}>
+                            <option value={1}>v1</option>
+                            <option value={2}>v2c</option>
+                            <option value={3}>v3</option>
+                          </select>
+                          <span className="label">포트</span>
+                          <input type="number" className="edit-input compact" value={editFormData.SNMP_PORT || 161} onChange={(e) => setEditFormData({...editFormData, SNMP_PORT: parseInt(e.target.value)})} />
+                        </div>
+                        {/* 커뮤니티 or 사용자 */}
+                        <div className="info-row">
+                          <span className="label">{String(editFormData.SNMP_VERSION) === '3' ? '사용자' : '커뮤니티'}</span>
+                          {String(editFormData.SNMP_VERSION) === '3' ? (
+                            <input type="text" className="edit-input" value={editFormData.SNMP_USER || ''} onChange={(e) => setEditFormData({...editFormData, SNMP_USER: e.target.value})} />
+                          ) : (
+                            <input type="text" className="edit-input" value={editFormData.SNMP_COMMUNITY || ''} onChange={(e) => setEditFormData({...editFormData, SNMP_COMMUNITY: e.target.value})} placeholder="public" />
+                          )}
+                        </div>
+                        {/* v3 전용: 인증 | 인증 PW */}
+                        {String(editFormData.SNMP_VERSION) === '3' && (
+                          <>
+                            <div className="info-row dual">
+                              <span className="label">인증</span>
+                              <select className="edit-select compact" value={editFormData.SNMP_AUTH_PROTOCOL || 'MD5'} onChange={(e) => setEditFormData({...editFormData, SNMP_AUTH_PROTOCOL: e.target.value})}>
+                                <option value="MD5">MD5</option>
+                                <option value="SHA">SHA</option>
+                                <option value="SHA256">SHA256</option>
+                              </select>
+                              <span className="label">인증 PW</span>
+                              <input type="password" className="edit-input compact" value={editFormData.SNMP_AUTH_PASSWORD || ''} onChange={(e) => setEditFormData({...editFormData, SNMP_AUTH_PASSWORD: e.target.value})} />
+                            </div>
+                            <div className="info-row dual">
+                              <span className="label">암호화</span>
+                              <select className="edit-select compact" value={editFormData.SNMP_PRIV_PROTOCOL || 'DES'} onChange={(e) => setEditFormData({...editFormData, SNMP_PRIV_PROTOCOL: e.target.value})}>
+                                <option value="DES">DES</option>
+                                <option value="AES">AES128</option>
+                                <option value="AES256">AES256</option>
+                              </select>
+                              <span className="label">암호화 PW</span>
+                              <input type="password" className="edit-input compact" value={editFormData.SNMP_PRIV_PASSWORD || ''} onChange={(e) => setEditFormData({...editFormData, SNMP_PRIV_PASSWORD: e.target.value})} />
+                            </div>
+                          </>
                         )}
                       </div>
-                      <div className={`detail-item ${needsTooltip(detailDevice.DEVICE_SYSTEM_NAME) ? 'has-tooltip' : ''}`}>
-                        <span className="detail-label">시스템명</span>
-                        <span className="detail-value">{detailDevice.DEVICE_SYSTEM_NAME || '-'}</span>
-                        {needsTooltip(detailDevice.DEVICE_SYSTEM_NAME) && (
-                          <span className="detail-tooltip">{detailDevice.DEVICE_SYSTEM_NAME}</span>
-                        )}
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">IP 주소</span>
-                        <span className="detail-value highlight">{detailDevice.DEVICE_IP}</span>
-                      </div>
-                      <div className={`detail-item ${needsTooltip(detailDevice.VENDOR_NAME) ? 'has-tooltip' : ''}`}>
-                        <span className="detail-label">벤더</span>
-                        <span className="detail-value">{detailDevice.VENDOR_NAME || '-'}</span>
-                        {needsTooltip(detailDevice.VENDOR_NAME) && (
-                          <span className="detail-tooltip">{detailDevice.VENDOR_NAME}</span>
-                        )}
-                      </div>
-                      <div className={`detail-item ${needsTooltip(detailDevice.MODEL_NAME) ? 'has-tooltip' : ''}`}>
-                        <span className="detail-label">모델명</span>
-                        <span className="detail-value">{detailDevice.MODEL_NAME || '-'}</span>
-                        {needsTooltip(detailDevice.MODEL_NAME) && (
-                          <span className="detail-tooltip">{detailDevice.MODEL_NAME}</span>
-                        )}
-                      </div>
-                      <div className={`detail-item ${needsTooltip(detailDevice.DEVICE_DESC, 15) ? 'has-tooltip' : ''}`}>
-                        <span className="detail-label">장비 설명</span>
-                        <span className="detail-value">{detailDevice.DEVICE_DESC || '-'}</span>
-                        {needsTooltip(detailDevice.DEVICE_DESC, 15) && (
-                          <span className="detail-tooltip">{detailDevice.DEVICE_DESC}</span>
-                        )}
+                    </div>
+
+                    {/* CPU / MEM */}
+                    <div className="info-box cpu-mem-box">
+                      <div className="info-box-header"><i className="bi bi-cpu"></i> CPU / MEM</div>
+                      <div className="info-box-body pie-body">
+                        <div className="pie-wrapper">
+                          <ReactECharts
+                            option={{series:[{type:'pie',radius:['55%','80%'],center:['50%','50%'],data:[{value:45,itemStyle:{color:'#3b82f6'}},{value:55,itemStyle:{color:'rgba(255,255,255,0.1)'}}],label:{show:true,position:'center',formatter:'45%',fontSize:20,fontWeight:'bold',color:'#3b82f6'},labelLine:{show:false},silent:true}]}}
+                            style={{height:'120px',width:'120px'}}
+                          />
+                          <span className="pie-name">CPU</span>
+                        </div>
+                        <div className="pie-wrapper">
+                          <ReactECharts
+                            option={{series:[{type:'pie',radius:['55%','80%'],center:['50%','50%'],data:[{value:72,itemStyle:{color:'#10b981'}},{value:28,itemStyle:{color:'rgba(255,255,255,0.1)'}}],label:{show:true,position:'center',formatter:'72%',fontSize:20,fontWeight:'bold',color:'#10b981'},labelLine:{show:false},silent:true}]}}
+                            style={{height:'120px',width:'120px'}}
+                          />
+                          <span className="pie-name">MEM</span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="detail-section">
-                    <div className="detail-section-header">
-                      <i className="bi bi-diagram-3"></i>
-                      <span>SNMP 설정</span>
-                    </div>
-                    <div className="detail-grid">
-                      <div className="detail-item">
-                        <span className="detail-label">SNMP 버전</span>
-                        <span className="detail-value">{getSnmpVersionLabel(detailDevice.SNMP_VERSION)}</span>
+                  {/* 우측: 포트현황, 트래픽차트 */}
+                  <div className="right-column">
+                    {/* 포트 현황 - 실제 스위치 모양 */}
+                    <div className="info-box">
+                      <div className="info-box-header">
+                        <i className="bi bi-ethernet"></i> 포트 현황
+                        <span className="port-badge">
+                          <span className="up">{portsData?.filter(p => p.IF_OPER_STATUS === 1).length || 0} UP</span>
+                          <span className="sep">/</span>
+                          <span className="down">{portsData?.filter(p => p.IF_OPER_STATUS !== 1).length || 0} DOWN</span>
+                        </span>
                       </div>
-                      <div className="detail-item">
-                        <span className="detail-label">포트</span>
-                        <span className="detail-value">{detailDevice.SNMP_PORT || 161}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">커뮤니티</span>
-                        <span className="detail-value">{detailDevice.SNMP_COMMUNITY || '-'}</span>
-                      </div>
-                      {detailDevice.SNMP_VERSION === 3 && (
-                        <>
-                          <div className="detail-item">
-                            <span className="detail-label">사용자</span>
-                            <span className="detail-value">{detailDevice.SNMP_USER || '-'}</span>
-                          </div>
-                          <div className="detail-item">
-                            <span className="detail-label">인증 프로토콜</span>
-                            <span className="detail-value">{detailDevice.SNMP_AUTH_PROTOCOL || '-'}</span>
-                          </div>
-                          <div className="detail-item">
-                            <span className="detail-label">암호화 프로토콜</span>
-                            <span className="detail-value">{detailDevice.SNMP_PRIV_PROTOCOL || '-'}</span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                      <div className="info-box-body">
+                        {switchLayout ? (
+                          <div className="switch-chassis">
+                            {/* 메인 포트 영역 */}
+                            <div className="switch-main-ports">
+                              {switchLayout.mainGroups.map((group, gIdx) => (
+                                <div key={`main-${gIdx}`} className="port-group">
+                                  <div className="port-group-label">
+                                    {group.interfaceType === 'fastethernet' ? 'FastEthernet ' :
+                                     group.interfaceType === 'gigabit' ? 'GigabitEthernet ' :
+                                     group.interfaceType === 'linux-nic' ? 'Network Interface ' : 'Ethernet '}{group.slot !== 'eth' ? group.slot : ''}
+                                  </div>
+                                  <div className="port-panel">
+                                    {/* 홀수 포트 (위) */}
+                                    <div className="port-row">
+                                      {group.ports.filter(p => p.parsed.portNum % 2 === 1).map(port => (
+                                        <div
+                                          key={port.IF_INDEX}
+                                          className={`port-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartEnabledPorts.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
+                                          title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
+                                          onClick={() => handleToggleChartPort(port)}
+                                        >
+                                          <span className="port-num">{port.parsed.portNum}</span>
+                                          <div className="port-connector">
+                                            <div className="port-led"></div>
+                                          </div>
+                                          {chartEnabledPorts.has(port.IF_INDEX) && <span className="chart-icon"></span>}
+                                        </div>
+                                      ))}
+                                    </div>
+                                    {/* 짝수 포트 (아래) */}
+                                    <div className="port-row">
+                                      {group.ports.filter(p => p.parsed.portNum % 2 === 0).map(port => (
+                                        <div
+                                          key={port.IF_INDEX}
+                                          className={`port-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartEnabledPorts.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
+                                          title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
+                                          onClick={() => handleToggleChartPort(port)}
+                                        >
+                                          <span className="port-num">{port.parsed.portNum}</span>
+                                          <div className="port-connector">
+                                            <div className="port-led"></div>
+                                          </div>
+                                          {chartEnabledPorts.has(port.IF_INDEX) && <span className="chart-icon"></span>}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
 
-                  <div className="detail-section">
-                    <div className="detail-section-header">
-                      <i className="bi bi-clock-history"></i>
-                      <span>등록 정보</span>
-                    </div>
-                    <div className="detail-grid">
-                      <div className="detail-item">
-                        <span className="detail-label">등록일</span>
-                        <span className="detail-value">{formatDate(detailDevice.CREATE_AT)}</span>
+                            {/* 업링크 포트 영역 */}
+                            {switchLayout.uplinkGroups.length > 0 && (
+                              <div className="switch-uplink-ports">
+                                <div className="uplink-divider"></div>
+                                {switchLayout.uplinkGroups.map((group, gIdx) => (
+                                  <div key={`uplink-${gIdx}`} className="port-group uplink">
+                                    <div className="port-group-label">
+                                      {group.interfaceType === 'gigabit' ? 'GigabitEthernet ' :
+                                       group.interfaceType === 'tengigabit' ? 'TenGigabitEthernet ' :
+                                       group.interfaceType === 'management' ? 'Management' : 'Uplink '}{group.slot !== 'mgmt' ? group.slot : ''}
+                                    </div>
+                                    <div className="port-panel uplink-panel">
+                                      {group.ports.map(port => (
+                                        <div
+                                          key={port.IF_INDEX}
+                                          className={`port-jack uplink-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartEnabledPorts.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
+                                          title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
+                                          onClick={() => handleToggleChartPort(port)}
+                                        >
+                                          <span className="port-num">{port.parsed.portNum}</span>
+                                          <div className="port-connector sfp">
+                                            <div className="port-led"></div>
+                                          </div>
+                                          {chartEnabledPorts.has(port.IF_INDEX) && <span className="chart-icon"></span>}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="no-port">포트 정보 없음</div>
+                        )}
                       </div>
-                      <div className="detail-item">
-                        <span className="detail-label">수정일</span>
-                        <span className="detail-value">{formatDate(detailDevice.MODIFY_AT)}</span>
+                    </div>
+
+                    {/* 트래픽 차트 */}
+                    <div className="info-box traffic-box">
+                      <div className="info-box-header">
+                        <i className="bi bi-graph-up-arrow"></i> 포트별 트래픽
+                        <span className="time-label">
+                          {chartEnabledPorts.size > 0
+                            ? `선택: ${chartEnabledPorts.size}개 포트`
+                            : 'TOP 5 (포트 클릭으로 선택)'}
+                        </span>
+                        {chartEnabledPorts.size > 0 && (
+                          <button
+                            className="chart-clear-btn"
+                            onClick={handleResetChartFlags}
+                            title="선택 초기화"
+                          >
+                            <i className="bi bi-x-circle"></i> 초기화
+                          </button>
+                        )}
+                        {trafficLoading && <i className="bi bi-arrow-repeat spinning" style={{marginLeft:'8px',fontSize:'11px'}}></i>}
+                      </div>
+                      <div className="info-box-body">
+                        <ReactECharts
+                          key={`traffic-${Array.from(chartEnabledPorts).join('-')}`}
+                          notMerge={true}
+                          option={{
+                            tooltip:{trigger:'axis',backgroundColor:'rgba(15,23,42,0.95)',borderColor:'rgba(59,130,246,0.3)',textStyle:{color:'#e2e8f0',fontSize:11},formatter:(params)=>{
+                              if(!params||params.length===0)return'';
+                              let result=`<div style="font-weight:600;margin-bottom:4px">${params[0].axisValue}</div>`;
+                              params.forEach(p=>{
+                                const val=p.value||0;
+                                const formattedVal=val>=1000000?(val/1000000).toFixed(2)+' Mbps':val>=1000?(val/1000).toFixed(2)+' Kbps':val.toFixed(2)+' bps';
+                                result+=`<div style="display:flex;justify-content:space-between;gap:16px"><span>${p.marker}${p.seriesName}</span><span style="font-weight:500">${formattedVal}</span></div>`;
+                              });
+                              return result;
+                            }},
+                            legend:{show:true,bottom:0,left:'center',textStyle:{color:'#94a3b8',fontSize:10},itemWidth:12,itemHeight:8,itemGap:12},
+                            grid:{left:'3%',right:'3%',bottom:'20%',top:'5%',containLabel:true},
+                            xAxis:{type:'category',boundaryGap:false,data:trafficChartData.timeLabels||[],axisLabel:{color:'#64748b',fontSize:9},axisLine:{lineStyle:{color:'rgba(255,255,255,0.1)'}},splitLine:{show:false}},
+                            yAxis:{type:'value',axisLabel:{color:'#64748b',fontSize:9,formatter:v=>v>=1000000?(v/1000000).toFixed(0)+'M':v>=1000?(v/1000).toFixed(0)+'K':v},axisLine:{show:false},splitLine:{lineStyle:{color:'rgba(255,255,255,0.05)'}}},
+                            series:trafficChartData.series&&trafficChartData.series.length>0?trafficChartData.series.map(item=>({name:item.name,type:'line',smooth:true,symbol:'circle',symbolSize:4,showSymbol:false,lineStyle:{width:2},areaStyle:{opacity:0.05},data:item.data})):[{name:'데이터 없음',type:'line',data:[]}]
+                          }}
+                          style={{height:'100%',width:'100%'}}
+                        />
                       </div>
                     </div>
                   </div>
@@ -850,8 +1252,11 @@ export default function AssetManagement() {
             )}
 
             <div className="detail-modal-footer">
-              <button id="detail-modal-ok-btn" className="btn btn-primary" onClick={() => setDetailDevice(null)}>
-                <i className="bi bi-check-lg"></i> 확인
+              <button className="btn btn-secondary" onClick={() => setDetailDevice(null)} disabled={editSaving}>
+                취소
+              </button>
+              <button id="detail-modal-ok-btn" className="btn btn-primary" onClick={handleSaveAndClose} disabled={editSaving}>
+                {editSaving ? <><i className="bi bi-arrow-repeat spinning"></i> 저장 중...</> : <><i className="bi bi-check-lg"></i> 확인</>}
               </button>
             </div>
           </div>

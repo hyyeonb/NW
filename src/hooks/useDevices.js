@@ -13,6 +13,8 @@ export const useDevicesByGroup = (groupId) => {
       return { content: Array.isArray(devices) ? devices : [] };
     },
     enabled: groupId !== undefined && groupId !== null,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
 
@@ -33,6 +35,8 @@ export const useDevicesByGroupPaged = (groupId, page = 1, size = 10, sort = 'DEV
       };
     },
     enabled: !!groupId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
 
@@ -177,6 +181,8 @@ export const useVendors = () => {
       const response = await devicesApi.getVendors();
       return response.data?.data || response.data || [];
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
 
@@ -189,6 +195,8 @@ export const useModels = (vendorId) => {
       const response = await devicesApi.getModels(vendorId);
       return response.data?.data || response.data || [];
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
 
@@ -221,6 +229,88 @@ export const useDeleteModel = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['models'] });
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
+    },
+  });
+};
+
+// ==================== Traffic Hooks ====================
+
+export const useDeviceTraffic = (deviceId, minutes = 60) => {
+  return useQuery({
+    queryKey: ['deviceTraffic', deviceId, minutes],
+    queryFn: async () => {
+      const response = await devicesApi.getDeviceTraffic(deviceId, minutes);
+      return response.data?.data || response.data || { timeLabels: [], series: [] };
+    },
+    enabled: !!deviceId,
+    staleTime: 30000, // 30초 동안 캐시 유지
+    refetchInterval: 60000, // 1분마다 자동 리페치
+  });
+};
+
+export const useDeviceTrafficRaw = (deviceId, minutes = 60) => {
+  return useQuery({
+    queryKey: ['deviceTrafficRaw', deviceId, minutes],
+    queryFn: async () => {
+      const response = await devicesApi.getDeviceTrafficRaw(deviceId, minutes);
+      return response.data?.data || response.data || [];
+    },
+    enabled: !!deviceId,
+    staleTime: 30000,
+  });
+};
+
+export const usePortTraffic = (deviceId, ifIndex, minutes = 60) => {
+  return useQuery({
+    queryKey: ['portTraffic', deviceId, ifIndex, minutes],
+    queryFn: async () => {
+      const response = await devicesApi.getPortTraffic(deviceId, ifIndex, minutes);
+      return response.data?.data || response.data || [];
+    },
+    enabled: !!deviceId && !!ifIndex,
+    staleTime: 30000,
+  });
+};
+
+// 차트 표시 포트 조회 (없으면 TOP 5 자동 설정)
+export const useChartEnabledPorts = (deviceId) => {
+  return useQuery({
+    queryKey: ['chartEnabledPorts', deviceId],
+    queryFn: async () => {
+      const response = await devicesApi.getChartEnabledPorts(deviceId);
+      return response.data?.data || response.data || [];
+    },
+    enabled: !!deviceId,
+    staleTime: 30000,
+  });
+};
+
+// 포트 차트 플래그 토글
+export const useTogglePortChartFlag = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ deviceId, ifIndex }) => {
+      const response = await devicesApi.togglePortChartFlag(deviceId, ifIndex);
+      return response.data;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['chartEnabledPorts', variables.deviceId] });
+      queryClient.invalidateQueries({ queryKey: ['devicePorts', variables.deviceId] });
+    },
+  });
+};
+
+// 차트 플래그 초기화 (TOP 5 재설정)
+export const useResetChartFlags = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (deviceId) => {
+      const response = await devicesApi.resetChartFlags(deviceId);
+      return response.data;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['chartEnabledPorts', variables] });
+      queryClient.invalidateQueries({ queryKey: ['devicePorts', variables] });
     },
   });
 };

@@ -1,29 +1,27 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import GroupTree from '../components/GroupTree';
-import { useGroupStore } from '../stores';
 import apiClient from '../api/client';
-import { devicesApi } from '../api';
+import { devicesApi, groupsApi } from '../api';
 
 export default function NewAssetManagement() {
   const queryClient = useQueryClient();
-  const { selectedGroup } = useGroupStore();
   const [devices, setDevices] = useState([]);
-  const [existingDevices, setExistingDevices] = useState([]); // 기존 등록된 장비 목록
-  const [isGroupTreeCollapsed, setIsGroupTreeCollapsed] = useState(false); // 그룹트리 접힘 상태
+  const [allGroups, setAllGroups] = useState([]); // 전체 그룹 목록 (flat)
+  const [selectedDeviceIds, setSelectedDeviceIds] = useState(new Set()); // 선택된 장비 ID
+
+  // 그룹 선택 모달 상태
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [groupModalTarget, setGroupModalTarget] = useState(null); // 'bulk' 또는 device.id
+  const [tempSelectedGroup, setTempSelectedGroup] = useState(null);
 
   // 페이지 이탈 시 저장을 위한 ref (최신 상태 참조)
   const devicesRef = useRef(devices);
-  const selectedGroupRef = useRef(selectedGroup);
 
   // ref 최신화
   useEffect(() => {
     devicesRef.current = devices;
   }, [devices]);
-
-  useEffect(() => {
-    selectedGroupRef.current = selectedGroup;
-  }, [selectedGroup]);
 
   const [formData, setFormData] = useState({
     DEVICE_NAME: '',
@@ -55,144 +53,91 @@ export default function NewAssetManagement() {
   const [failureSortField, setFailureSortField] = useState('deviceName');
   const [failureSortOrder, setFailureSortOrder] = useState('asc');
 
-  // 기존 장비 목록 로드
-  const loadExistingDevices = useCallback(async (groupId) => {
-    if (!groupId || groupId === 'UNREGISTERED') {
-      setExistingDevices([]);
-      return;
+  // 그룹 트리를 flat 배열로 변환
+  const flattenGroups = useCallback((groups, result = []) => {
+    if (!groups) return result;
+    for (const group of groups) {
+      result.push({ GROUP_ID: group.GROUP_ID, GROUP_NAME: group.GROUP_NAME });
+      if (group.children && group.children.length > 0) {
+        flattenGroups(group.children, result);
+      }
     }
-
-    try {
-      const response = await apiClient.post('/mgmt/devices/search', [groupId]);
-      const data = response.data?.data || response.data || [];
-      setExistingDevices(Array.isArray(data) ? data : []);
-      console.log(`기존 장비 ${data.length}개 로드됨`);
-    } catch (error) {
-      console.error('기존 장비 로드 오류:', error);
-      setExistingDevices([]);
-    }
+    return result;
   }, []);
 
-  // 임시 장비 목록 로드 (TEMP_DEVICE 테이블)
-  const loadTempDevices = useCallback(async (groupId) => {
-    if (!groupId || groupId === 'UNREGISTERED') {
-      setDevices([]);
-      return;
-    }
-
+  // 전체 그룹 목록 로드
+  const loadAllGroups = useCallback(async () => {
     try {
-      const response = await devicesApi.getTempDevicesByGroup([groupId]);
+      const response = await groupsApi.getGroupTree();
+      const tree = response.data?.data || response.data || [];
+      const flat = flattenGroups(tree);
+      setAllGroups(flat);
+    } catch (error) {
+      console.error('그룹 목록 로드 오류:', error);
+      setAllGroups([]);
+    }
+  }, [flattenGroups]);
+
+  // 전체 임시 장비 목록 로드
+  const loadAllTempDevices = useCallback(async () => {
+    try {
+      const response = await devicesApi.getAllTempDevices();
       const data = response.data?.data || response.data || [];
-      // 임시 장비에 고유 id 부여
       const tempDevices = (Array.isArray(data) ? data : []).map((d) => ({
         ...d,
         id: d.TEMP_DEVICE_ID || Date.now() + Math.random(),
       }));
       setDevices(tempDevices);
-      console.log(`임시 장비 ${tempDevices.length}개 로드됨`);
     } catch (error) {
       console.error('임시 장비 로드 오류:', error);
       setDevices([]);
     }
   }, []);
 
-  // 그룹 선택 시 기존 장비 및 임시 장비 로드 + 그룹트리 접기
+  // 페이지 마운트 시 전체 임시 장비 + 그룹 목록 로드
   useEffect(() => {
-    if (selectedGroup) {
-      loadExistingDevices(selectedGroup.GROUP_ID);
-      loadTempDevices(selectedGroup.GROUP_ID);
-      setIsGroupTreeCollapsed(true);
+    loadAllTempDevices();
+    loadAllGroups();
+  }, [loadAllTempDevices, loadAllGroups]);
+
+  // 단일 장비 즉시 서버 저장 (추가 시 바로 DB 저장)
+  const saveDeviceToServer = useCallback(async (device) => {
+    try {
+      const deviceToSave = {
+        GROUP_ID: device.GROUP_ID || null,
+        DEVICE_NAME: device.DEVICE_NAME,
+        DEVICE_IP: device.DEVICE_IP,
+        SNMP_VERSION: device.SNMP_VERSION,
+        SNMP_PORT: device.SNMP_PORT,
+        SNMP_COMMUNITY: device.SNMP_COMMUNITY || null,
+        SNMP_USER: device.SNMP_USER || null,
+        SNMP_AUTH_PROTOCOL: device.SNMP_AUTH_PROTOCOL || null,
+        SNMP_AUTH_PASSWORD: device.SNMP_AUTH_PASSWORD || null,
+        SNMP_PRIV_PROTOCOL: device.SNMP_PRIV_PROTOCOL || null,
+        SNMP_PRIV_PASSWORD: device.SNMP_PRIV_PASSWORD || null,
+      };
+      const response = await devicesApi.createTempDevices([deviceToSave]);
+      const savedDevices = response.data?.data || response.data || [];
+      return savedDevices.length > 0 ? savedDevices[0].TEMP_DEVICE_ID : null;
+    } catch (error) {
+      console.error('임시 장비 저장 오류:', error);
+      return null;
     }
-  }, [selectedGroup, loadExistingDevices, loadTempDevices]);
+  }, []);
 
-  // 페이지 이탈 시 임시 장비 자동 저장
+  // 페이지 이탈 시 (다른 페이지 이동 - cleanup만)
   useEffect(() => {
-    // 저장 함수 (새로 추가된 장비만 저장)
-    const saveTempDevices = async () => {
-      const currentDevices = devicesRef.current;
-      const currentGroup = selectedGroupRef.current;
-
-      // 새로 추가된 장비만 필터 (TEMP_DEVICE_ID가 없는 것)
-      const newDevices = currentDevices.filter((d) => !d.TEMP_DEVICE_ID);
-
-      if (newDevices.length === 0 || !currentGroup?.GROUP_ID) {
-        return;
-      }
-
-      try {
-        const devicesToSave = newDevices.map((d) => ({
-          GROUP_ID: d.GROUP_ID || currentGroup.GROUP_ID,
-          DEVICE_NAME: d.DEVICE_NAME,
-          DEVICE_IP: d.DEVICE_IP,
-          SNMP_VERSION: d.SNMP_VERSION,
-          SNMP_PORT: d.SNMP_PORT,
-          SNMP_COMMUNITY: d.SNMP_COMMUNITY || null,
-          SNMP_USER: d.SNMP_USER || null,
-          SNMP_AUTH_PROTOCOL: d.SNMP_AUTH_PROTOCOL || null,
-          SNMP_AUTH_PASSWORD: d.SNMP_AUTH_PASSWORD || null,
-          SNMP_PRIV_PROTOCOL: d.SNMP_PRIV_PROTOCOL || null,
-          SNMP_PRIV_PASSWORD: d.SNMP_PRIV_PASSWORD || null,
-        }));
-
-        await devicesApi.createTempDevices(devicesToSave);
-        console.log(`${newDevices.length}개 임시 장비 저장됨`);
-      } catch (error) {
-        console.error('임시 장비 저장 오류:', error);
-      }
-    };
-
-    // 브라우저 닫기/새로고침 시 (sendBeacon 사용)
-    const handleBeforeUnload = () => {
-      const currentDevices = devicesRef.current;
-      const currentGroup = selectedGroupRef.current;
-
-      const newDevices = currentDevices.filter((d) => !d.TEMP_DEVICE_ID);
-
-      if (newDevices.length > 0 && currentGroup?.GROUP_ID) {
-        const devicesToSave = newDevices.map((d) => ({
-          GROUP_ID: d.GROUP_ID || currentGroup.GROUP_ID,
-          DEVICE_NAME: d.DEVICE_NAME,
-          DEVICE_IP: d.DEVICE_IP,
-          SNMP_VERSION: d.SNMP_VERSION,
-          SNMP_PORT: d.SNMP_PORT,
-          SNMP_COMMUNITY: d.SNMP_COMMUNITY || null,
-          SNMP_USER: d.SNMP_USER || null,
-          SNMP_AUTH_PROTOCOL: d.SNMP_AUTH_PROTOCOL || null,
-          SNMP_AUTH_PASSWORD: d.SNMP_AUTH_PASSWORD || null,
-          SNMP_PRIV_PROTOCOL: d.SNMP_PRIV_PROTOCOL || null,
-          SNMP_PRIV_PASSWORD: d.SNMP_PRIV_PASSWORD || null,
-        }));
-
-        // sendBeacon으로 비동기 저장 (페이지 닫혀도 전송됨)
-        navigator.sendBeacon(
-          '/api/mgmt/temp-devices/bulk',
-          new Blob([JSON.stringify(devicesToSave)], { type: 'application/json' })
-        );
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    // 컴포넌트 언마운트 시 (다른 페이지로 이동)
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      saveTempDevices();
+      // 컴포넌트 언마운트 시 추가 작업 필요 없음 (이미 즉시 저장됨)
     };
   }, []);
 
-  // 그룹트리 펼치기/접기 토글
-  const toggleGroupTree = () => {
-    setIsGroupTreeCollapsed((prev) => !prev);
-  };
-
-  // 중복 검증 함수
-  const isDuplicateDevice = (deviceIp) => {
-    // 기존 DB 장비와 중복 체크
-    const existsInDb = existingDevices.some((d) => d.DEVICE_IP === deviceIp);
-    // 현재 추가된 목록과 중복 체크
-    const existsInList = devices.some((d) => d.DEVICE_IP === deviceIp);
-    return existsInDb || existsInList;
-  };
+  // 그룹명 조회
+  const getGroupName = useCallback((groupId) => {
+    if (!groupId) return '미지정';
+    const group = allGroups.find((g) => g.GROUP_ID === groupId);
+    return group?.GROUP_NAME || '미지정';
+  }, [allGroups]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -204,10 +149,6 @@ export default function NewAssetManagement() {
 
   // 장비 추가 (서버 측 중복 검증 포함)
   const handleAddDevice = async () => {
-    if (!selectedGroup) {
-      alert('그룹을 먼저 선택해주세요.');
-      return;
-    }
     if (!formData.DEVICE_NAME || !formData.DEVICE_IP) {
       alert('장비명과 IP 주소는 필수입니다.');
       return;
@@ -234,8 +175,14 @@ export default function NewAssetManagement() {
     const newDevice = {
       ...formData,
       id: Date.now(),
-      GROUP_ID: selectedGroup.GROUP_ID,
+      GROUP_ID: null, // 그룹은 목록에서 설정
     };
+
+    // 즉시 서버에 저장
+    const tempDeviceId = await saveDeviceToServer(newDevice);
+    if (tempDeviceId) {
+      newDevice.TEMP_DEVICE_ID = tempDeviceId;
+    }
 
     setDevices((prev) => [...prev, newDevice]);
     setFormData((prev) => ({
@@ -292,16 +239,109 @@ export default function NewAssetManagement() {
     );
   };
 
+  // 장비 선택 토글
+  const toggleDeviceSelection = (id) => {
+    setSelectedDeviceIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  // 전체 선택/해제
+  const toggleSelectAll = () => {
+    if (selectedDeviceIds.size === devices.length) {
+      setSelectedDeviceIds(new Set());
+    } else {
+      setSelectedDeviceIds(new Set(devices.map((d) => d.id)));
+    }
+  };
+
+  // 그룹 선택 모달 열기 (일괄)
+  const openBulkGroupModal = () => {
+    if (selectedDeviceIds.size === 0) {
+      alert('장비를 선택해주세요.');
+      return;
+    }
+    setGroupModalTarget('bulk');
+    setTempSelectedGroup(null);
+    setShowGroupModal(true);
+  };
+
+  // 그룹 선택 모달 열기 (개별)
+  const openSingleGroupModal = (deviceId) => {
+    const device = devices.find((d) => d.id === deviceId);
+    setGroupModalTarget(deviceId);
+    setTempSelectedGroup(device?.GROUP_ID ? { GROUP_ID: device.GROUP_ID, GROUP_NAME: getGroupName(device.GROUP_ID) } : null);
+    setShowGroupModal(true);
+  };
+
+  // 그룹 선택 확인
+  const handleGroupModalConfirm = async () => {
+    if (!tempSelectedGroup) {
+      alert('그룹을 선택해주세요.');
+      return;
+    }
+
+    const groupId = tempSelectedGroup.GROUP_ID;
+
+    if (groupModalTarget === 'bulk') {
+      // 일괄 지정
+      const selectedDevicesList = devices.filter((d) => selectedDeviceIds.has(d.id));
+
+      setDevices((prev) =>
+        prev.map((d) => (selectedDeviceIds.has(d.id) ? { ...d, GROUP_ID: groupId } : d))
+      );
+
+      // 서버에 저장된 장비들 업데이트
+      const serverDevices = selectedDevicesList.filter((d) => d.TEMP_DEVICE_ID);
+      for (const device of serverDevices) {
+        try {
+          await devicesApi.updateTempDevice(device.TEMP_DEVICE_ID, { ...device, GROUP_ID: groupId });
+        } catch (error) {
+          console.error(`그룹 변경 오류 (${device.DEVICE_NAME}):`, error);
+        }
+      }
+
+      alert(`${selectedDeviceIds.size}개 장비의 그룹이 변경되었습니다.`);
+      setSelectedDeviceIds(new Set());
+    } else {
+      // 개별 지정
+      const device = devices.find((d) => d.id === groupModalTarget);
+
+      setDevices((prev) =>
+        prev.map((d) => (d.id === groupModalTarget ? { ...d, GROUP_ID: groupId } : d))
+      );
+
+      if (device?.TEMP_DEVICE_ID) {
+        try {
+          await devicesApi.updateTempDevice(device.TEMP_DEVICE_ID, { ...device, GROUP_ID: groupId });
+        } catch (error) {
+          console.error('그룹 변경 오류:', error);
+        }
+      }
+    }
+
+    setShowGroupModal(false);
+    setGroupModalTarget(null);
+    setTempSelectedGroup(null);
+  };
+
+  // 그룹 선택 모달 닫기
+  const closeGroupModal = () => {
+    setShowGroupModal(false);
+    setGroupModalTarget(null);
+    setTempSelectedGroup(null);
+  };
+
   // 엑셀 업로드
   const handleExcelUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (!selectedGroup) {
-      alert('그룹을 먼저 선택해주세요.');
-      e.target.value = '';
-      return;
-    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -358,7 +398,7 @@ export default function NewAssetManagement() {
         DEVICE_IP: deviceIp,
         SNMP_VERSION: snmpVersion,
         SNMP_PORT: parseInt(cols[3]) || 161,
-        GROUP_ID: selectedGroup.GROUP_ID,
+        GROUP_ID: null, // 그룹은 목록에서 설정
         SNMP_COMMUNITY: '',
         SNMP_USER: '',
         SNMP_AUTH_PROTOCOL: '',
@@ -405,11 +445,25 @@ export default function NewAssetManagement() {
         return;
       }
 
-      // 유효한 장비에 고유 id 부여
+      // 유효한 장비에 고유 id 부여 후 서버에 즉시 저장
       const devicesToAdd = validDevices.map((d, idx) => ({
         ...d,
         id: Date.now() + idx,
       }));
+
+      // 서버에 일괄 저장
+      try {
+        const saveResponse = await devicesApi.createTempDevices(devicesToAdd);
+        const savedDevices = saveResponse.data?.data || saveResponse.data || [];
+        // 저장된 TEMP_DEVICE_ID를 매핑
+        devicesToAdd.forEach((d, idx) => {
+          if (savedDevices[idx]?.TEMP_DEVICE_ID) {
+            d.TEMP_DEVICE_ID = savedDevices[idx].TEMP_DEVICE_ID;
+          }
+        });
+      } catch (saveError) {
+        console.error('CSV 장비 저장 오류:', saveError);
+      }
 
       setDevices((prev) => [...prev, ...devicesToAdd]);
 
@@ -429,12 +483,15 @@ export default function NewAssetManagement() {
 
   // 일괄 등록 (실시간 진행 표시)
   const handleRegisterAll = async () => {
-    if (!selectedGroup) {
-      alert('그룹을 먼저 선택해주세요.');
-      return;
-    }
     if (devices.length === 0) {
       alert('등록할 장비가 없습니다.');
+      return;
+    }
+
+    // 그룹 미지정 장비 체크
+    const devicesWithoutGroup = devices.filter((d) => !d.GROUP_ID);
+    if (devicesWithoutGroup.length > 0) {
+      alert(`그룹이 지정되지 않은 장비가 ${devicesWithoutGroup.length}개 있습니다.\n모든 장비에 그룹을 지정해주세요.`);
       return;
     }
 
@@ -531,14 +588,8 @@ export default function NewAssetManagement() {
       }
     }
 
-    // 서버에서 임시 장비 목록 다시 로드 (실패한 장비들이 TEMP_DEVICE_ID를 갖도록)
-    // 이렇게 하면 페이지 새로고침 시 중복 INSERT 방지됨
-    if (selectedGroup?.GROUP_ID) {
-      await loadTempDevices(selectedGroup.GROUP_ID);
-    } else {
-      // 그룹이 없으면 성공한 장비만 제거
-      setDevices((prev) => prev.filter((d) => !processedIps.has(d.DEVICE_IP)));
-    }
+    // 서버에서 전체 임시 장비 목록 다시 로드 (실패한 장비들이 TEMP_DEVICE_ID를 갖도록)
+    await loadAllTempDevices();
 
     // 완료 표시
     setRegistrationProgress((prev) => ({
@@ -677,28 +728,10 @@ export default function NewAssetManagement() {
   };
 
   return (
-    <div className="page-container new-asset-page">
-      {/* 접기/펼치기 가능한 그룹트리 사이드바 */}
-      <div className={`group-tree-wrapper ${isGroupTreeCollapsed ? 'collapsed' : ''}`}>
-        <button className="group-tree-toggle" onClick={toggleGroupTree} title={isGroupTreeCollapsed ? '그룹 목록 펼치기' : '그룹 목록 접기'}>
-          <i className={`bi bi-chevron-${isGroupTreeCollapsed ? 'right' : 'left'}`}></i>
-        </button>
-        <div className="group-tree-content">
-          <GroupTree autoSelectFirst={false} />
-        </div>
-      </div>
-
-      <main className={`page-main-content ${isGroupTreeCollapsed ? 'expanded' : ''}`}>
+    <div className="page-container new-asset-page no-sidebar">
+      <main className="page-main-content full-width">
         <div className="content-header">
-          <h2>
-            신규자산관리
-            {selectedGroup && isGroupTreeCollapsed && (
-              <span className="current-group-name" onClick={toggleGroupTree} title="클릭하여 그룹 목록 펼치기">
-                <i className="bi bi-folder2"></i> {selectedGroup.GROUP_NAME}
-                <i className="bi bi-chevron-down expand-icon"></i>
-              </span>
-            )}
-          </h2>
+          <h2>신규자산관리</h2>
           <button type="button" className="template-download-link" onClick={downloadCsvTemplate}>
             CSV 양식 다운로드
           </button>
@@ -709,19 +742,13 @@ export default function NewAssetManagement() {
           <div className="section-header-row">
             <div className="section-title">장비 목록 ({devices.length})</div>
             <div className="section-actions">
-              {selectedGroup && (
-                <span className="selected-group-badge">
-                  <i className="bi bi-folder2"></i>
-                  {selectedGroup.GROUP_NAME}
-                </span>
-              )}
               <button type="button" className="btn btn-secondary" onClick={() => fileInputRef.current?.click()}>
                 <i className="bi bi-file-earmark-spreadsheet"></i>
                 CSV 업로드
               </button>
               <button
                 className="btn btn-success"
-                disabled={devices.length === 0 || !selectedGroup || isRegistering}
+                disabled={devices.length === 0 || isRegistering}
                 onClick={handleRegisterAll}
               >
                 {isRegistering ? '등록 중...' : '일괄 등록'}
@@ -898,14 +925,44 @@ export default function NewAssetManagement() {
           {devices.length > 0 && (
             <div className="device-list-area">
               <div className="list-area-label">
-                <i className="bi bi-list-ul"></i>
-                등록 대기 장비 ({devices.length})
+                <label className="select-all-label">
+                  <input
+                    type="checkbox"
+                    checked={devices.length > 0 && selectedDeviceIds.size === devices.length}
+                    onChange={toggleSelectAll}
+                  />
+                  <span>전체 선택</span>
+                </label>
+                <div className="list-area-right">
+                  {selectedDeviceIds.size > 0 && (
+                    <button
+                      type="button"
+                      className="bulk-group-btn glass"
+                      onClick={openBulkGroupModal}
+                    >
+                      <i className="bi bi-folder-symlink"></i>
+                      그룹 지정 ({selectedDeviceIds.size})
+                    </button>
+                  )}
+                  <span className="list-count">
+                    <i className="bi bi-list-ul"></i>
+                    등록 대기 장비 ({devices.length})
+                  </span>
+                </div>
               </div>
               {devices.map((device, index) => {
                 const isV3 = device.SNMP_VERSION === 3;
                 const showLabel = index === 0;
                 return (
-                  <div key={device.id} className="device-input-row device-list-row">
+                  <div key={device.id} className={`device-input-row device-list-row ${selectedDeviceIds.has(device.id) ? 'selected' : ''}`}>
+                    <div className="input-cell checkbox-cell">
+                      {showLabel && <label>&nbsp;</label>}
+                      <input
+                        type="checkbox"
+                        checked={selectedDeviceIds.has(device.id)}
+                        onChange={() => toggleDeviceSelection(device.id)}
+                      />
+                    </div>
                     <div className="input-cell">
                       {showLabel && <label>장비명</label>}
                       <input
@@ -913,6 +970,18 @@ export default function NewAssetManagement() {
                         value={device.DEVICE_NAME}
                         onChange={(e) => handleDeviceChange(device.id, 'DEVICE_NAME', e.target.value)}
                       />
+                    </div>
+                    <div className="input-cell group-cell">
+                      {showLabel && <label>그룹</label>}
+                      <button
+                        type="button"
+                        className={`group-select-btn ${!device.GROUP_ID ? 'no-group' : ''}`}
+                        onClick={() => openSingleGroupModal(device.id)}
+                      >
+                        <i className="bi bi-folder2"></i>
+                        <span>{getGroupName(device.GROUP_ID)}</span>
+                        <i className="bi bi-chevron-down"></i>
+                      </button>
                     </div>
                     <div className="input-cell">
                       {showLabel && <label>IP 주소</label>}
@@ -1180,6 +1249,105 @@ export default function NewAssetManagement() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 그룹 선택 모달 */}
+      {showGroupModal && (
+        <div className="modal" style={{
+          display: 'flex',
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          zIndex: 1000,
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div style={{
+            background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
+            borderRadius: '16px',
+            padding: '24px',
+            width: '400px',
+            maxHeight: '80vh',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            position: 'relative'
+          }}>
+            <span
+              onClick={closeGroupModal}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                fontSize: '24px',
+                cursor: 'pointer',
+                color: '#94a3b8'
+              }}
+            >&times;</span>
+            <h3 style={{ marginBottom: '16px', color: '#f1f5f9', fontSize: '18px' }}>
+              <i className="bi bi-folder-symlink" style={{ marginRight: '8px' }}></i>
+              {groupModalTarget === 'bulk' ? '일괄 그룹 지정' : '그룹 선택'}
+            </h3>
+            <p style={{ color: '#94a3b8', marginBottom: '16px', fontSize: '14px' }}>
+              {groupModalTarget === 'bulk'
+                ? `${selectedDeviceIds.size}개의 장비에 적용할 그룹을 선택하세요.`
+                : '장비에 적용할 그룹을 선택하세요.'}
+            </p>
+
+            {/* 선택된 그룹 표시 */}
+            {tempSelectedGroup && (
+              <div style={{
+                padding: '10px 14px',
+                marginBottom: '12px',
+                background: 'rgba(59, 130, 246, 0.15)',
+                borderRadius: '8px',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <i className="bi bi-folder2" style={{ color: '#60a5fa' }}></i>
+                <span style={{ color: '#e2e8f0', fontSize: '14px' }}>
+                  선택: <strong>{tempSelectedGroup.GROUP_NAME}</strong>
+                </span>
+              </div>
+            )}
+
+            {/* 그룹 트리 */}
+            <div style={{
+              maxHeight: '300px',
+              overflowY: 'auto',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '8px',
+              background: 'rgba(15, 23, 42, 0.6)',
+              marginBottom: '16px'
+            }}>
+              <GroupTree
+                compact={true}
+                autoSelectFirst={false}
+                onSelectGroup={setTempSelectedGroup}
+                customSelectedGroup={tempSelectedGroup}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={closeGroupModal}
+                style={{ padding: '8px 16px' }}
+              >
+                취소
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleGroupModalConfirm}
+                disabled={!tempSelectedGroup}
+                style={{ padding: '8px 16px' }}
+              >
+                확인
+              </button>
+            </div>
           </div>
         </div>
       )}

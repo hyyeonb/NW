@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores';
 import { authApi } from '../api';
 
@@ -7,8 +7,14 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { isAuthenticated, isLoading, error, socialLogin, handleOAuthCallback, clearError } = useAuthStore();
+  const { isAuthenticated, isLoading, error, socialLogin, handleOAuthCallback, localLogin, clearError } = useAuthStore();
   const callbackProcessed = useRef(false);
+
+  // 로컬 로그인 폼 상태
+  const [loginMode, setLoginMode] = useState('local'); // 'local' | 'social'
+  const [loginId, setLoginId] = useState('');
+  const [password, setPassword] = useState('');
+  const [suggestedProvider, setSuggestedProvider] = useState(null); // 추천 소셜 로그인
 
   // 로그인 후 이동할 경로 결정
   const getRedirectPath = () => {
@@ -67,8 +73,32 @@ export default function Login() {
     return () => clearError();
   }, [clearError]);
 
+  // 회원가입에서 이메일 중복으로 리다이렉트된 경우
+  useEffect(() => {
+    const socialType = location.state?.suggestedSocialType;
+    if (socialType) {
+      if (socialType === 'LOCAL') {
+        setLoginMode('local');
+      } else {
+        setLoginMode('social');
+        setSuggestedProvider(socialType.toLowerCase());
+      }
+    }
+  }, [location.state]);
+
   const handleSocialLogin = (provider) => {
-    socialLogin(provider);
+    navigate(`/social-login/${provider}`);
+  };
+
+  const handleLocalLogin = async (e) => {
+    e.preventDefault();
+    try {
+      await localLogin(loginId, password);
+      const redirectPath = getRedirectPath();
+      navigate(redirectPath, { replace: true });
+    } catch (err) {
+      console.error('Local login error:', err);
+    }
   };
 
   return (
@@ -108,49 +138,113 @@ export default function Login() {
             </div>
           )}
 
-          {/* Login Buttons */}
-          <div className="login-buttons">
+          {/* Login Mode Toggle */}
+          <div className="login-mode-toggle">
             <button
-              className="btn-social btn-kakao"
-              onClick={() => handleSocialLogin('kakao')}
-              disabled={isLoading}
+              className={`toggle-btn ${loginMode === 'local' ? 'active' : ''}`}
+              onClick={() => setLoginMode('local')}
             >
-              <span className="btn-icon">💬</span>
-              <span className="btn-text">카카오 로그인</span>
-              <span className="btn-arrow">→</span>
+              일반 로그인
             </button>
-
             <button
-              className="btn-social btn-naver"
-              onClick={() => handleSocialLogin('naver')}
-              disabled={isLoading}
+              className={`toggle-btn ${loginMode === 'social' ? 'active' : ''}`}
+              onClick={() => setLoginMode('social')}
             >
-              <span className="btn-icon">N</span>
-              <span className="btn-text">네이버 로그인</span>
-              <span className="btn-arrow">→</span>
-            </button>
-
-            <button
-              className="btn-social btn-google"
-              onClick={() => handleSocialLogin('google')}
-              disabled={isLoading}
-            >
-              <span className="btn-icon">G</span>
-              <span className="btn-text">구글 로그인</span>
-              <span className="btn-arrow">→</span>
+              소셜 로그인
             </button>
           </div>
 
-          {/* Loading */}
-          {isLoading && (
-            <div style={{
-              marginTop: '20px',
-              textAlign: 'center',
-              color: '#94a3b8',
-              fontSize: '14px'
-            }}>
-              로그인 처리 중...
-            </div>
+          {loginMode === 'local' ? (
+            <>
+              {/* Local Login Form */}
+              <form className="login-form" onSubmit={handleLocalLogin}>
+                <div className="form-group">
+                  <input
+                    type="text"
+                    placeholder="아이디"
+                    value={loginId}
+                    onChange={(e) => setLoginId(e.target.value)}
+                    disabled={isLoading}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <input
+                    type="password"
+                    placeholder="비밀번호"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                    required
+                  />
+                </div>
+                <button type="submit" className="btn-login" disabled={isLoading}>
+                  {isLoading ? '로그인 중...' : '로그인'}
+                </button>
+              </form>
+
+              {/* Links */}
+              <div className="login-links">
+                <Link to="/signup">회원가입</Link>
+                <span className="divider">|</span>
+                <Link to="/find-account">아이디/비밀번호 찾기</Link>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* 추천 소셜 로그인 메시지 */}
+              {suggestedProvider && (
+                <div className={`suggested-login-message ${suggestedProvider}`}>
+                  이미 가입된 이메일입니다.<br />
+                  아래 {suggestedProvider.toUpperCase()} 로그인을 이용해주세요.
+                </div>
+              )}
+
+              {/* Social Login Buttons */}
+              <div className="login-buttons">
+                <button
+                  className={`btn-social btn-kakao ${suggestedProvider === 'kakao' ? 'suggested' : ''}`}
+                  onClick={() => handleSocialLogin('kakao')}
+                  disabled={isLoading}
+                >
+                  <span className="btn-icon">💬</span>
+                  <span className="btn-text">카카오 로그인</span>
+                  <span className="btn-arrow">→</span>
+                </button>
+
+                <button
+                  className={`btn-social btn-naver ${suggestedProvider === 'naver' ? 'suggested' : ''}`}
+                  onClick={() => handleSocialLogin('naver')}
+                  disabled={isLoading}
+                >
+                  <span className="btn-icon">N</span>
+                  <span className="btn-text">네이버 로그인</span>
+                  <span className="btn-arrow">→</span>
+                </button>
+
+                <button
+                  className={`btn-social btn-google ${suggestedProvider === 'google' ? 'suggested' : ''}`}
+                  onClick={() => handleSocialLogin('google')}
+                  disabled={isLoading}
+                >
+                  <span className="btn-icon">G</span>
+                  <span className="btn-text">구글 로그인</span>
+                  <span className="btn-arrow">→</span>
+                </button>
+              </div>
+
+              {/* Loading */}
+              {isLoading && (
+                <div style={{
+                  marginTop: '20px',
+                  textAlign: 'center',
+                  color: '#94a3b8',
+                  fontSize: '14px'
+                }}>
+                  로그인 처리 중...
+                </div>
+              )}
+            </>
           )}
         </div>
 
