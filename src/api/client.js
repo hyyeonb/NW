@@ -54,7 +54,7 @@ apiClient.interceptors.response.use(
         if (!window.location.pathname.startsWith('/login')) {
           // 현재 경로 저장 (로그인 후 돌아오기 위해)
           const currentPath = window.location.pathname;
-          if (currentPath !== '/' && currentPath !== '/main') {
+          if (currentPath !== '/' && currentPath !== '/dashboard') {
             sessionStorage.setItem('redirectAfterLogin', currentPath);
           }
           window.location.href = '/login';

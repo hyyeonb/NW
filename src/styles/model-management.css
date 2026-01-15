@@ -115,12 +115,25 @@
   font-weight: 600;
 }
 
-/* 모델 리스트 */
+/* 모델 리스트 - max-height 트랜지션으로 부드러운 펼침 */
 .model-list {
   list-style: none;
   padding: 0;
   margin: 4px 0 0 24px;
   border-left: 1px solid rgba(255, 255, 255, 0.1);
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease-out,
+              margin 0.3s ease;
+  margin-top: 0;
+}
+
+.model-list.expanded {
+  max-height: 500px;
+  opacity: 1;
+  margin-top: 4px;
 }
 
 .model-item {
@@ -201,6 +214,18 @@
   flex: 1;
   padding: 24px;
   overflow-y: auto;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .detail-section {
@@ -376,6 +401,171 @@
 @keyframes model-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* OID 설정 섹션 */
+.oid-section {
+  margin-top: 20px;
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+.oid-section .section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.oid-section .section-header h4 {
+  margin: 0;
+  font-size: 14px;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.oid-section .section-header h4 i {
+  color: #60a5fa;
+}
+
+.oid-count-badge {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.oid-section .section-desc {
+  margin: 0 0 16px 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+/* OID 설정 모달 */
+.oid-modal {
+  max-width: 600px !important;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.oid-modal .modal-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.model-name-badge {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.oid-form-container {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 50vh;
+  padding-right: 8px;
+}
+
+.no-metrics {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: #64748b;
+  gap: 12px;
+}
+
+.no-metrics i {
+  font-size: 32px;
+}
+
+.oid-type-group {
+  margin-bottom: 24px;
+}
+
+.oid-type-group:last-child {
+  margin-bottom: 0;
+}
+
+.type-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 14px;
+  color: #e2e8f0;
+}
+
+.type-header i {
+  color: #f59e0b;
+}
+
+.oid-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.oid-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+
+.oid-item-info {
+  flex: 0 0 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.oid-item-info .oid-name {
+  font-size: 13px;
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+.oid-item-info .oid-desc {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.oid-item .oid-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #60a5fa;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.oid-item .oid-input:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.oid-item .oid-input::placeholder {
+  color: #475569;
 }
 
 /* 반응형 */
