@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores';
 import MainLayout from './layouts/MainLayout';
 import { Login, Signup, Dashboard, SignupSuccess, FindAccount, SocialLoginLanding, Main, GroupManagement, AssetManagement, NewAssetManagement, ModelManagement, NetworkTopology } from './pages';
+import AlertToast from './components/AlertToast';
+import { useAlertWebSocket } from './hooks';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -77,6 +79,16 @@ function AuthProvider({ children }) {
   return children;
 }
 
+// Alert WebSocket 연결 (인증된 사용자만)
+function AlertWebSocketProvider({ children }) {
+  const { isAuthenticated } = useAuthStore();
+
+  // 인증된 경우에만 WebSocket 연결
+  useAlertWebSocket({ autoConnect: isAuthenticated });
+
+  return children;
+}
+
 // 보호된 라우트 - 인증되지 않으면 로그인 페이지로 리다이렉트
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuthStore();
@@ -109,7 +121,10 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
+          <AlertWebSocketProvider>
+            {/* 전역 Toast 알림 */}
+            <AlertToast />
+            <Routes>
             {/* Public Routes - 로그인된 사용자는 메인으로 리다이렉트 */}
             <Route
               path="/login"
@@ -174,6 +189,7 @@ export default function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/main" replace />} />
           </Routes>
+          </AlertWebSocketProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
