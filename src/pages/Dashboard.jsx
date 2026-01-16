@@ -18,6 +18,7 @@ const DEFAULT_WIDGET_TYPES = {
     category: 'network',
     defaultW: 2,
     defaultH: 2,
+    defaultConfig: {},
   },
   CPU_MEM_TOPN: {
     id: 'CPU_MEM_TOPN',
@@ -26,6 +27,11 @@ const DEFAULT_WIDGET_TYPES = {
     category: 'chart',
     defaultW: 1,
     defaultH: 1,
+    defaultConfig: {
+      group: 'CPU_MEM',
+      elements: ['CPU', 'MEMORY'],
+      chartType: 'pie',
+    },
   },
   TRAFFIC_TOPN: {
     id: 'TRAFFIC_TOPN',
@@ -34,6 +40,11 @@ const DEFAULT_WIDGET_TYPES = {
     category: 'chart',
     defaultW: 1,
     defaultH: 1,
+    defaultConfig: {
+      group: 'TRAFFIC',
+      elements: ['TRAFFIC_IN_BPS', 'TRAFFIC_OUT_BPS'],
+      chartType: 'bar',
+    },
   },
   ALERT_LIST: {
     id: 'ALERT_LIST',
@@ -42,6 +53,7 @@ const DEFAULT_WIDGET_TYPES = {
     category: 'monitoring',
     defaultW: 2,
     defaultH: 1,
+    defaultConfig: {},
   },
   FILESYSTEM_TOPN: {
     id: 'FILESYSTEM_TOPN',
@@ -50,6 +62,11 @@ const DEFAULT_WIDGET_TYPES = {
     category: 'chart',
     defaultW: 1,
     defaultH: 1,
+    defaultConfig: {
+      group: 'FILE',
+      elements: ['FILESYSTEM'],
+      chartType: 'pie',
+    },
   },
   TRAFFIC_TREND: {
     id: 'TRAFFIC_TREND',
@@ -58,6 +75,11 @@ const DEFAULT_WIDGET_TYPES = {
     category: 'chart',
     defaultW: 2,
     defaultH: 1,
+    defaultConfig: {
+      group: 'TRAFFIC',
+      elements: ['TRAFFIC_IN_BPS', 'TRAFFIC_OUT_BPS'],
+      chartType: 'line',
+    },
   },
   CUSTOM: {
     id: 'CUSTOM',
@@ -66,6 +88,34 @@ const DEFAULT_WIDGET_TYPES = {
     category: 'custom',
     defaultW: 2,
     defaultH: 1,
+    defaultConfig: {},
+  },
+  REALTIME_ALERT: {
+    id: 'REALTIME_ALERT',
+    name: '실시간 장애 현황',
+    icon: 'bi-exclamation-triangle',
+    category: 'monitoring',
+    defaultW: 2,
+    defaultH: 2,
+    defaultConfig: {},
+  },
+  ALERT_SUMMARY: {
+    id: 'ALERT_SUMMARY',
+    name: '장애 현황',
+    icon: 'bi-bell-fill',
+    category: 'monitoring',
+    defaultW: 1,
+    defaultH: 1,
+    defaultConfig: {},
+  },
+  DEVICE_SUMMARY: {
+    id: 'DEVICE_SUMMARY',
+    name: '종합 현황',
+    icon: 'bi-grid-3x3-gap-fill',
+    category: 'monitoring',
+    defaultW: 1,
+    defaultH: 1,
+    defaultConfig: {},
   },
 };
 
@@ -119,11 +169,13 @@ const MONITORING_GROUPS = {
     color: '#06b6d4',
     elements: [
       { id: 'TRAFFIC_IN_BPS', name: 'Traffic IN (bps)', icon: 'bi-arrow-down', color: '#06b6d4' },
+      { id: 'TRAFFIC_IN_BYTE', name: 'Traffic IN (byte)', icon: 'bi-arrow-down-circle', color: '#3b82f6' },
       { id: 'TRAFFIC_IN_PKT', name: 'Traffic IN (pkt)', icon: 'bi-arrow-down-square', color: '#0891b2' },
       { id: 'TRAFFIC_IN_ERR', name: 'Traffic IN (err)', icon: 'bi-x-circle', color: '#0e7490' },
       { id: 'TRAFFIC_OUT_BPS', name: 'Traffic OUT (bps)', icon: 'bi-arrow-up', color: '#22d3ee' },
-      { id: 'TRAFFIC_OUT_PKT', name: 'Traffic OUT (pkt)', icon: 'bi-arrow-up-square', color: '#67e8f9' },
       { id: 'TRAFFIC_OUT_BYTE', name: 'Traffic OUT (byte)', icon: 'bi-arrow-up-circle', color: '#a5f3fc' },
+      { id: 'TRAFFIC_OUT_PKT', name: 'Traffic OUT (pkt)', icon: 'bi-arrow-up-square', color: '#67e8f9' },
+      { id: 'TRAFFIC_OUT_ERR', name: 'Traffic OUT (err)', icon: 'bi-x-circle-fill', color: '#f59e0b' },
     ]
   },
   ICMP: {
@@ -150,12 +202,12 @@ Object.values(MONITORING_GROUPS).forEach(group => {
 
 // 초기 위젯 배치
 const initialWidgets = [
-  { id: 'w0', type: 'TOPOLOGY', title: '토폴로지 Map', config: {} },
-  { id: 'w1', type: 'CPU_MEM_TOPN', title: 'CPU/MEM TOPN', config: {} },
-  { id: 'w2', type: 'TRAFFIC_TOPN', title: 'Traffic IN/OUT TOPN', config: {} },
-  { id: 'w3', type: 'ALERT_LIST', title: '알람 리스트', config: {} },
-  { id: 'w4', type: 'FILESYSTEM_TOPN', title: '파일시스템 TOPN', config: {} },
-  { id: 'w5', type: 'TRAFFIC_TREND', title: 'Traffic IN/OUT 추이', config: {} },
+  { id: 'w0', type: 'TOPOLOGY', title: '토폴로지 Map', config: DEFAULT_WIDGET_TYPES.TOPOLOGY.defaultConfig },
+  { id: 'w1', type: 'CPU_MEM_TOPN', title: 'CPU/MEM TOPN', config: DEFAULT_WIDGET_TYPES.CPU_MEM_TOPN.defaultConfig },
+  { id: 'w2', type: 'TRAFFIC_TOPN', title: 'Traffic IN/OUT TOPN', config: DEFAULT_WIDGET_TYPES.TRAFFIC_TOPN.defaultConfig },
+  { id: 'w3', type: 'ALERT_LIST', title: '알람 리스트', config: DEFAULT_WIDGET_TYPES.ALERT_LIST.defaultConfig },
+  { id: 'w4', type: 'FILESYSTEM_TOPN', title: '파일시스템 TOPN', config: DEFAULT_WIDGET_TYPES.FILESYSTEM_TOPN.defaultConfig },
+  { id: 'w5', type: 'TRAFFIC_TREND', title: 'Traffic IN/OUT 추이', config: DEFAULT_WIDGET_TYPES.TRAFFIC_TREND.defaultConfig },
 ];
 
 // 초기 레이아웃
@@ -492,6 +544,29 @@ function TopologyWidget({ onExpand }) {
     }
   }, [groupHistory]);
 
+  // 현재 그룹 정보 찾기
+  const findGroupInfo = (groupId) => {
+    if (!groupTree || !groupId) return null;
+
+    const searchTree = (groups) => {
+      for (const group of groups) {
+        if (group.GROUP_ID === groupId) {
+          return group;
+        }
+        if (group.children && group.children.length > 0) {
+          const found = searchTree(group.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    return searchTree(groupTree);
+  };
+
+  const currentGroup = findGroupInfo(displayGroupId);
+  const currentGroupName = currentGroup?.GROUP_NAME || '전체';
+
   const renderOverlay = () => {
     if (isLoading) {
       return (
@@ -515,6 +590,13 @@ function TopologyWidget({ onExpand }) {
   return (
     <div className="topology-graph-container" ref={containerRef}>
       {renderOverlay()}
+      {/* 현재 그룹 표시 */}
+      {!isLoading && defaultGroupId && (
+        <div className="topology-current-group">
+          <i className="bi bi-folder"></i>
+          <span>{currentGroupName}</span>
+        </div>
+      )}
       {dimensionsReady && !isLoading && defaultGroupId && (
         <ForceGraph2D
           ref={graphRef}
@@ -554,7 +636,7 @@ function TopologyWidget({ onExpand }) {
         />
       )}
       {/* 뒤로 가기 버튼 (하위 그룹에 있을 때만 표시) */}
-      {currentGroupId && (
+      {currentGroupId && groupHistory.length > 0 && (
         <button className="topology-back-btn" onClick={handleBackClick} title="뒤로 가기">
           <i className="bi bi-arrow-left"></i>
         </button>
@@ -576,18 +658,33 @@ const DEVICE_COLOR_PALETTE = [
 
 // 사용자 정의 위젯 차트 컨텐츠 (백엔드 데이터 사용)
 function CustomWidgetContent({ widget, isEditMode }) {
-  // config 파싱
+  // config 파싱 및 기본값 적용
   const config = useMemo(() => {
-    if (!widget.config) return {};
-    try {
-      return typeof widget.config === 'string'
-        ? JSON.parse(widget.config)
-        : widget.config;
-    } catch (e) {
-      console.error('CONFIG 파싱 실패:', e);
-      return {};
+    let parsedConfig = {};
+
+    // config 파싱
+    if (widget.config) {
+      try {
+        parsedConfig = typeof widget.config === 'string'
+          ? JSON.parse(widget.config)
+          : widget.config;
+      } catch (e) {
+        console.error('CONFIG 파싱 실패:', e);
+      }
     }
-  }, [widget.config]);
+
+    // config가 비어있으면 widget.type에 따른 기본 config 적용
+    const hasConfigData = parsedConfig.elements && parsedConfig.elements.length > 0;
+    if (!hasConfigData && widget.type) {
+      const defaultType = DEFAULT_WIDGET_TYPES[widget.type];
+      if (defaultType?.defaultConfig) {
+        console.log(`[${widget.type}] 기본 config 적용:`, defaultType.defaultConfig);
+        parsedConfig = { ...defaultType.defaultConfig, ...parsedConfig };
+      }
+    }
+
+    return parsedConfig;
+  }, [widget.config, widget.type]);
 
   const elements = config.elements || [];
   const chartType = config.chartType || 'bar';
@@ -670,9 +767,12 @@ function CustomWidgetContent({ widget, isEditMode }) {
               metricGroups.get(data.metric).push({ ...data, avgValue: avg });
             });
 
-            // 각 메트릭별로 상위 5개만 선택
+            // 각 메트릭별로 상위 5개만 선택 (elements에 포함된 것만)
             let selectedData = [];
             metricGroups.forEach((devices, metric) => {
+              // elements에 포함된 메트릭만 처리
+              if (!elements.includes(metric)) return;
+
               const top5 = devices
                 .sort((a, b) => b.avgValue - a.avgValue)
                 .slice(0, 5);
@@ -723,8 +823,10 @@ function CustomWidgetContent({ widget, isEditMode }) {
               'TRAFFIC_OUT_BYTE': '#eab308', // 노란색
               'TRAFFIC_INPUT_BYTE': '#3b82f6',
               'TRAFFIC_OUTPUT_BYTE': '#eab308',
-              'TRAFFIC_IN_ERR': '#ef4444',
-              'TRAFFIC_OUT_ERR': '#f59e0b',
+              'TRAFFIC_IN_PKT': '#0891b2',   // 진한 시안
+              'TRAFFIC_OUT_PKT': '#67e8f9',  // 밝은 시안
+              'TRAFFIC_IN_ERR': '#ef4444',   // 빨강
+              'TRAFFIC_OUT_ERR': '#f59e0b',  // 주황
               'TRAFFIC_IN_DROP': '#a855f7',
               'TRAFFIC_OUT_DROP': '#ec4899',
               // CPU/MEMORY 메트릭
@@ -753,6 +855,8 @@ function CustomWidgetContent({ widget, isEditMode }) {
               'TRAFFIC_OUT_BYTE': 'OUT_BYTE',
               'TRAFFIC_INPUT_BYTE': 'IN_BYTE',
               'TRAFFIC_OUTPUT_BYTE': 'OUT_BYTE',
+              'TRAFFIC_IN_PKT': 'IN_PKT',
+              'TRAFFIC_OUT_PKT': 'OUT_PKT',
               'TRAFFIC_IN_ERR': 'IN_ERR',
               'TRAFFIC_OUT_ERR': 'OUT_ERR',
               'TRAFFIC_IN_DROP': 'IN_DROP',
@@ -808,6 +912,8 @@ function CustomWidgetContent({ widget, isEditMode }) {
               'TRAFFIC_OUT_BYTE': 'byte',
               'TRAFFIC_INPUT_BYTE': 'byte',
               'TRAFFIC_OUTPUT_BYTE': 'byte',
+              'TRAFFIC_IN_PKT': 'pkt',
+              'TRAFFIC_OUT_PKT': 'pkt',
               'TRAFFIC_IN_ERR': '개',
               'TRAFFIC_OUT_ERR': '개',
               'TRAFFIC_IN_DROP': '개',
@@ -958,8 +1064,9 @@ function CustomWidgetContent({ widget, isEditMode }) {
       if (hasMetricField) {
         // Multiple Pie Charts: 각 메트릭별로 작은 파이 차트 표시
 
-        // 1. 고유한 메트릭 목록 추출
-        const uniqueMetrics = [...new Set(rawChartData.map(item => item.metric))];
+        // 1. 고유한 메트릭 목록 추출 (elements에 포함된 것만)
+        const uniqueMetrics = [...new Set(rawChartData.map(item => item.metric))]
+          .filter(metric => elements.includes(metric));
 
         // 2. 메트릭 개수에 따른 동적 레이아웃 생성
         const getPositionConfig = (metricCount) => {
@@ -1016,6 +1123,10 @@ function CustomWidgetContent({ widget, isEditMode }) {
           // TRAFFIC 메트릭
           'TRAFFIC_IN_BPS': '#06b6d4',
           'TRAFFIC_OUT_BPS': '#10b981',
+          'TRAFFIC_IN_BYTE': '#3b82f6',
+          'TRAFFIC_OUT_BYTE': '#eab308',
+          'TRAFFIC_IN_PKT': '#0891b2',
+          'TRAFFIC_OUT_PKT': '#67e8f9',
           'TRAFFIC_IN_ERR': '#ef4444',
           'TRAFFIC_OUT_ERR': '#f59e0b',
           'TRAFFIC_IN_DROP': '#a855f7',
@@ -1102,7 +1213,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
           title: titles,
           tooltip: {
             trigger: 'item',
-            formatter: '{a}<br/>{b}: {c}%',
+            formatter: '{a}<br/>{b}: {d}%',
             backgroundColor: '#1e293b',
             borderColor: '#334155',
             textStyle: { color: '#f1f5f9' }
@@ -1116,7 +1227,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
         backgroundColor: 'transparent',
         tooltip: {
           trigger: 'item',
-          formatter: '{b}: {c}{d}%',
+          formatter: '{b}: {d}%',
           backgroundColor: '#1e293b',
           borderColor: '#334155',
           textStyle: { color: '#f1f5f9' }
@@ -1181,8 +1292,9 @@ function CustomWidgetContent({ widget, isEditMode }) {
         // 1. 고유한 디바이스 목록 추출 (x축)
         const uniqueDevices = [...new Set(rawChartData.map(item => item.deviceName))];
 
-        // 2. 고유한 메트릭 목록 추출 (각 시리즈)
-        const uniqueMetrics = [...new Set(rawChartData.map(item => item.metric))];
+        // 2. 고유한 메트릭 목록 추출 (각 시리즈, elements에 포함된 것만)
+        const uniqueMetrics = [...new Set(rawChartData.map(item => item.metric))]
+          .filter(metric => elements.includes(metric));
 
         // 3. 메트릭별 색상 정의
         const metricColors = {
@@ -1198,6 +1310,8 @@ function CustomWidgetContent({ widget, isEditMode }) {
           'TRAFFIC_OUT_BYTE': '#eab308', // 노랑
           'TRAFFIC_INPUT_BYTE': '#3b82f6',  // 파랑
           'TRAFFIC_OUTPUT_BYTE': '#eab308', // 노랑
+          'TRAFFIC_IN_PKT': '#0891b2',   // 진한 시안
+          'TRAFFIC_OUT_PKT': '#67e8f9',  // 밝은 시안
           'TRAFFIC_IN_ERR': '#ef4444',   // 빨강
           'TRAFFIC_OUT_ERR': '#f59e0b',  // 주황
           'TRAFFIC_IN_DROP': '#a855f7',  // 밝은 보라
@@ -1385,7 +1499,9 @@ function CustomWidgetContent({ widget, isEditMode }) {
               // 각 시리즈의 unit 찾기
               const dataItem = chartData.find(d => (d.displayName || d.deviceName) === param.seriesName);
               const unit = dataItem?.unit || '%';
-              items += `<div style="margin-top: 4px; white-space: nowrap; font-size: 12px;">${marker}${param.seriesName}: <strong>${param.value?.toFixed(2)}${unit}</strong></div>`;
+              // 절대값으로 표시 (TRAFFIC 미러 차트 대응)
+              const displayValue = Math.abs(param.value)?.toFixed(2);
+              items += `<div style="margin-top: 4px; white-space: nowrap; font-size: 12px;">${marker}${param.seriesName}: <strong>${displayValue}${unit}</strong></div>`;
             });
 
             // 스크롤 가능한 컨테이너로 감싸기 (스크롤바 스타일 추가)
@@ -1405,10 +1521,12 @@ function CustomWidgetContent({ widget, isEditMode }) {
             color: '#94a3b8',
             fontSize: 10,
             overflow: 'truncate',
-            width: 80
+            width: 100
           },
-          top: 0,
+          bottom: 0,
+          left: 'center',
           type: 'scroll',
+          orient: 'horizontal',
           pageIconColor: '#3b82f6',
           pageIconInactiveColor: '#475569',
           pageTextStyle: { color: '#94a3b8' },
@@ -1423,23 +1541,21 @@ function CustomWidgetContent({ widget, isEditMode }) {
         grid: {
           left: '3%',
           right: '4%',
-          bottom: '15%',
-          top: '15%',
+          bottom: '18%',
+          top: '10%',
           containLabel: true
         },
         toolbox: {
+          show: true,
+          right: 10,
+          top: 0,
           feature: {
             dataZoom: {
               yAxisIndex: 'none',
-              icon: {
-                zoom: 'path://M4 9h16v2H4zm0-4h16v2H4z',
-                back: 'path://M12 5v14l-7-7z'
-              },
-              title: { zoom: '영역 확대', back: '확대 복원' }
+              title: { zoom: '드래그 확대', back: '확대 복원' }
             },
             restore: {
-              title: '복원',
-              icon: 'path://M3.8 6.4L11.2 4 18.6 6.4 11.2 8.8z'
+              title: '복원'
             },
             saveAsImage: {
               title: '이미지 저장',
@@ -1451,22 +1567,12 @@ function CustomWidgetContent({ widget, isEditMode }) {
         },
         dataZoom: [
           {
-            type: 'slider',
+            type: 'inside',
             start: timeRange === 'all' ? 0 : 70,
             end: 100,
-            handleStyle: { color: '#3b82f6' },
-            textStyle: { color: '#94a3b8' },
-            borderColor: '#334155',
-            fillerColor: 'rgba(59, 130, 246, 0.2)',
-            labelFormatter: (value, valueStr) => {
-              const timestamps = chartData[0]?.timestamps || [];
-              if (timestamps[value]) {
-                return timestamps[value].split(' ')[1]?.substring(0, 5) || '';
-              }
-              return '';
-            }
-          },
-          { type: 'inside' }
+            zoomOnMouseWheel: 'shift',
+            moveOnMouseMove: true
+          }
         ],
         xAxis: {
           type: 'category',
@@ -1478,53 +1584,119 @@ function CustomWidgetContent({ widget, isEditMode }) {
         yAxis: {
           type: 'value',
           name: (() => {
-            // 모든 항목의 단위가 같으면 해당 단위 표시, 다르면 빈 문자열
             const units = [...new Set(chartData.map(item => item.unit))];
             return units.length === 1 ? units[0] : '';
           })(),
           nameTextStyle: { color: '#94a3b8' },
-          axisLabel: { color: '#94a3b8' },
+          axisLabel: {
+            color: '#94a3b8',
+            formatter: (value) => {
+              // TRAFFIC 미러 차트: 절대값으로 표시
+              if (selectedGroup === 'TRAFFIC') {
+                return Math.abs(value).toFixed(1);
+              }
+              return value;
+            }
+          },
           axisLine: { lineStyle: { color: '#334155' } },
           splitLine: { lineStyle: { color: '#1e293b' } }
         },
-        series: chartData.map(item => {
+        series: (() => {
           // RGB 색상을 RGBA로 변환하는 헬퍼
           const colorToRgba = (color, alpha) => {
             if (!color) return `rgba(59, 130, 246, ${alpha})`;
-
-            // 이미 rgb() 형식이면 rgba로 변환
             if (color.startsWith('rgb(')) {
               const values = color.match(/\d+/g);
               if (values && values.length === 3) {
                 return `rgba(${values[0]}, ${values[1]}, ${values[2]}, ${alpha})`;
               }
             }
-
-            // hex 색상이면 그대로 사용
             return color;
           };
 
-          return {
-            name: item.displayName || item.deviceName,
-            type: 'line',
-            data: item.value || item.values || [],
-            smooth: true,
-            symbol: 'circle',
-            symbolSize: 6,
-            lineStyle: { color: item.color, width: 2 },
-            itemStyle: { color: item.color },
-            areaStyle: {
-              color: {
-                type: 'linear',
-                x: 0, y: 0, x2: 0, y2: 1,
-                colorStops: [
-                  { offset: 0, color: colorToRgba(item.color, 0.25) },
-                  { offset: 1, color: colorToRgba(item.color, 0) }
-                ]
+          // 전체 차트에서 최대값 찾기
+          let globalMax = { value: -Infinity, seriesIndex: -1, dataIndex: -1, unit: '%' };
+          chartData.forEach((item, seriesIdx) => {
+            const values = item.value || item.values || [];
+            values.forEach((val, dataIdx) => {
+              const numVal = typeof val === 'number' ? val : parseFloat(val);
+              if (!isNaN(numVal) && numVal > globalMax.value) {
+                globalMax = { value: numVal, seriesIndex: seriesIdx, dataIndex: dataIdx, unit: item.unit || '%' };
               }
-            }
-          };
-        })
+            });
+          });
+
+          return chartData.map((item, seriesIdx) => {
+            const rawValues = item.value || item.values || [];
+            const isMaxSeries = seriesIdx === globalMax.seriesIndex;
+
+            // TRAFFIC 미러 차트: OUT 데이터는 음수로 변환
+            const isOutMetric = selectedGroup === 'TRAFFIC' && item.metric && item.metric.includes('OUT');
+            const dataValues = isOutMetric
+              ? rawValues.map(v => (v != null ? -Math.abs(v) : v))
+              : rawValues;
+
+            return {
+              name: item.displayName || item.deviceName,
+              type: 'line',
+              data: dataValues,
+              smooth: true,
+              symbol: 'circle',
+              symbolSize: 4,
+              lineStyle: { color: item.color, width: 2 },
+              itemStyle: { color: item.color },
+              areaStyle: {
+                color: {
+                  type: 'linear',
+                  x: 0, y: 0, x2: 0, y2: 1,
+                  colorStops: isOutMetric
+                    ? [
+                        { offset: 0, color: colorToRgba(item.color, 0) },
+                        { offset: 1, color: colorToRgba(item.color, 0.25) }
+                      ]
+                    : [
+                        { offset: 0, color: colorToRgba(item.color, 0.25) },
+                        { offset: 1, color: colorToRgba(item.color, 0) }
+                      ]
+                }
+              },
+              // 최대값이 있는 시리즈에만 markPoint 표시 (TRAFFIC 미러 차트에서는 제외)
+              ...(!isOutMetric && isMaxSeries && globalMax.value !== -Infinity ? {
+                markPoint: {
+                  data: [{
+                    coord: [globalMax.dataIndex, globalMax.value],
+                    value: globalMax.value,
+                    symbol: 'circle',
+                    symbolSize: 12,
+                    itemStyle: {
+                      color: '#fff',
+                      borderColor: item.color,
+                      borderWidth: 3,
+                      shadowColor: item.color,
+                      shadowBlur: 8
+                    },
+                    label: {
+                      show: true,
+                      position: 'top',
+                      distance: 8,
+                      formatter: `{value|${globalMax.value.toFixed(1)}${globalMax.unit}}`,
+                      rich: {
+                        value: {
+                          fontSize: 12,
+                          fontWeight: 'bold',
+                          color: '#f1f5f9',
+                          backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                          padding: [4, 8],
+                          borderRadius: 4
+                        }
+                      }
+                    }
+                  }]
+                }
+              } : {})
+            };
+          });
+        })()
       };
     }
 
@@ -2007,93 +2179,16 @@ function CustomWidgetModal({ onClose, onSave, initialData = null }) {
 }
 
 // 일반 위젯 컨텐츠 렌더링
-function WidgetContent({ widget, widgetTypes }) {
+function WidgetContent({ widget, widgetTypes, isEditMode }) {
   const type = widgetTypes[widget.type];
 
   switch (widget.type) {
     case 'CPU_MEM_TOPN':
-      return (
-        <div className="widget-content-inner">
-          <div className="topn-chart">
-            <div className="topn-header">
-              <button className="chart-type-btn active">
-                <i className="bi bi-bar-chart-fill"></i>
-              </button>
-              <button className="chart-type-btn">
-                <i className="bi bi-pie-chart-fill"></i>
-              </button>
-            </div>
-            <div className="topn-list">
-              <div className="topn-item">
-                <span className="topn-rank">1</span>
-                <span className="topn-name">Server-01</span>
-                <div className="topn-bar">
-                  <div className="topn-bar-fill" style={{ width: '85%', background: '#ef4444' }}></div>
-                </div>
-                <span className="topn-value">85%</span>
-              </div>
-              <div className="topn-item">
-                <span className="topn-rank">2</span>
-                <span className="topn-name">Server-02</span>
-                <div className="topn-bar">
-                  <div className="topn-bar-fill" style={{ width: '72%', background: '#f59e0b' }}></div>
-                </div>
-                <span className="topn-value">72%</span>
-              </div>
-              <div className="topn-item">
-                <span className="topn-rank">3</span>
-                <span className="topn-name">Server-03</span>
-                <div className="topn-bar">
-                  <div className="topn-bar-fill" style={{ width: '58%', background: '#3b82f6' }}></div>
-                </div>
-                <span className="topn-value">58%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-
     case 'TRAFFIC_TOPN':
-      return (
-        <div className="widget-content-inner">
-          <div className="topn-chart">
-            <div className="topn-header">
-              <button className="chart-type-btn active">
-                <i className="bi bi-bar-chart-fill"></i>
-              </button>
-              <button className="chart-type-btn">
-                <i className="bi bi-pie-chart-fill"></i>
-              </button>
-            </div>
-            <div className="topn-list">
-              <div className="topn-item">
-                <span className="topn-rank">1</span>
-                <span className="topn-name">Port-1</span>
-                <div className="topn-bar">
-                  <div className="topn-bar-fill" style={{ width: '92%', background: '#22c55e' }}></div>
-                </div>
-                <span className="topn-value">920 Mbps</span>
-              </div>
-              <div className="topn-item">
-                <span className="topn-rank">2</span>
-                <span className="topn-name">Port-2</span>
-                <div className="topn-bar">
-                  <div className="topn-bar-fill" style={{ width: '76%', background: '#3b82f6' }}></div>
-                </div>
-                <span className="topn-value">760 Mbps</span>
-              </div>
-              <div className="topn-item">
-                <span className="topn-rank">3</span>
-                <span className="topn-name">Port-3</span>
-                <div className="topn-bar">
-                  <div className="topn-bar-fill" style={{ width: '54%', background: '#3b82f6' }}></div>
-                </div>
-                <span className="topn-value">540 Mbps</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
+    case 'FILESYSTEM_TOPN':
+    case 'TRAFFIC_TREND':
+      // 차트 위젯은 CustomWidgetContent로 통합
+      return <CustomWidgetContent widget={widget} isEditMode={isEditMode} />;
 
     case 'ALERT_LIST':
       return (
@@ -2133,93 +2228,139 @@ function WidgetContent({ widget, widgetTypes }) {
         </div>
       );
 
-    case 'FILESYSTEM_TOPN':
-      return (
-        <div className="widget-content-inner">
-          <div className="topn-chart">
-            <div className="topn-header">
-              <button className="chart-type-btn active">
-                <i className="bi bi-bar-chart-fill"></i>
-              </button>
-              <button className="chart-type-btn">
-                <i className="bi bi-pie-chart-fill"></i>
-              </button>
-            </div>
-            <div className="topn-list">
-              <div className="topn-item">
-                <span className="topn-rank">1</span>
-                <span className="topn-name">/data</span>
-                <div className="topn-bar">
-                  <div className="topn-bar-fill" style={{ width: '88%', background: '#ef4444' }}></div>
-                </div>
-                <span className="topn-value">88%</span>
-              </div>
-              <div className="topn-item">
-                <span className="topn-rank">2</span>
-                <span className="topn-name">/var</span>
-                <div className="topn-bar">
-                  <div className="topn-bar-fill" style={{ width: '65%', background: '#f59e0b' }}></div>
-                </div>
-                <span className="topn-value">65%</span>
-              </div>
-              <div className="topn-item">
-                <span className="topn-rank">3</span>
-                <span className="topn-name">/home</span>
-                <div className="topn-bar">
-                  <div className="topn-bar-fill" style={{ width: '42%', background: '#3b82f6' }}></div>
-                </div>
-                <span className="topn-value">42%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-
-    case 'TRAFFIC_TREND':
-      return (
-        <div className="widget-content-inner">
-          <div className="trend-chart">
-            <div className="trend-legend">
-              <div className="legend-item">
-                <span className="legend-dot" style={{ background: '#3b82f6' }}></span>
-                <span>Traffic IN</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-dot" style={{ background: '#22c55e' }}></span>
-                <span>Traffic OUT</span>
-              </div>
-            </div>
-            <svg className="line-chart" viewBox="0 0 300 100" preserveAspectRatio="none">
-              <polyline
-                points="0,80 50,60 100,70 150,45 200,55 250,35 300,40"
-                fill="none"
-                stroke="#3b82f6"
-                strokeWidth="2"
-              />
-              <polyline
-                points="0,90 50,85 100,80 150,70 200,75 250,60 300,65"
-                fill="none"
-                stroke="#22c55e"
-                strokeWidth="2"
-              />
-            </svg>
-            <div className="trend-stats">
-              <div className="stat-item">
-                <span className="stat-label">평균 IN</span>
-                <span className="stat-value">450 Mbps</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">평균 OUT</span>
-                <span className="stat-value">320 Mbps</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-
     case 'CUSTOM':
       // 실제 데이터를 사용하는 별도 컴포넌트 사용
       return null; // WidgetContent 외부에서 처리
+
+    case 'REALTIME_ALERT':
+      return (
+        <div className="widget-content-inner">
+          <div className="realtime-alert-list">
+            <div className="alert-item critical">
+              <div className="alert-icon"><i className="bi bi-exclamation-circle-fill"></i></div>
+              <div className="alert-info">
+                <div className="alert-title">Server-DB-01 서버 다운</div>
+                <div className="alert-meta">
+                  <span className="alert-badge critical">Critical</span>
+                  <span className="alert-time">방금 전</span>
+                </div>
+              </div>
+            </div>
+            <div className="alert-item critical">
+              <div className="alert-icon"><i className="bi bi-exclamation-circle-fill"></i></div>
+              <div className="alert-info">
+                <div className="alert-title">Switch-Core-01 포트 다운</div>
+                <div className="alert-meta">
+                  <span className="alert-badge critical">Critical</span>
+                  <span className="alert-time">2분 전</span>
+                </div>
+              </div>
+            </div>
+            <div className="alert-item major">
+              <div className="alert-icon"><i className="bi bi-exclamation-triangle-fill"></i></div>
+              <div className="alert-info">
+                <div className="alert-title">Server-Web-02 CPU 95%</div>
+                <div className="alert-meta">
+                  <span className="alert-badge major">Major</span>
+                  <span className="alert-time">5분 전</span>
+                </div>
+              </div>
+            </div>
+            <div className="alert-item minor">
+              <div className="alert-icon"><i className="bi bi-info-circle-fill"></i></div>
+              <div className="alert-info">
+                <div className="alert-title">Router-01 메모리 사용률 80%</div>
+                <div className="alert-meta">
+                  <span className="alert-badge minor">Minor</span>
+                  <span className="alert-time">10분 전</span>
+                </div>
+              </div>
+            </div>
+            <div className="alert-item warning">
+              <div className="alert-icon"><i className="bi bi-exclamation-diamond-fill"></i></div>
+              <div className="alert-info">
+                <div className="alert-title">NAS-01 디스크 사용률 75%</div>
+                <div className="alert-meta">
+                  <span className="alert-badge warning">Warning</span>
+                  <span className="alert-time">15분 전</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'ALERT_SUMMARY':
+      return (
+        <div className="widget-content-inner">
+          <div className="alert-summary-grid">
+            <div className="summary-card critical">
+              <div className="summary-icon"><i className="bi bi-exclamation-circle-fill"></i></div>
+              <div className="summary-content">
+                <div className="summary-count">12</div>
+                <div className="summary-label">Critical</div>
+              </div>
+            </div>
+            <div className="summary-card major">
+              <div className="summary-icon"><i className="bi bi-exclamation-triangle-fill"></i></div>
+              <div className="summary-content">
+                <div className="summary-count">28</div>
+                <div className="summary-label">Major</div>
+              </div>
+            </div>
+            <div className="summary-card minor">
+              <div className="summary-icon"><i className="bi bi-info-circle-fill"></i></div>
+              <div className="summary-content">
+                <div className="summary-count">45</div>
+                <div className="summary-label">Minor</div>
+              </div>
+            </div>
+            <div className="summary-card warning">
+              <div className="summary-icon"><i className="bi bi-exclamation-diamond-fill"></i></div>
+              <div className="summary-content">
+                <div className="summary-count">67</div>
+                <div className="summary-label">Warning</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'DEVICE_SUMMARY':
+      return (
+        <div className="widget-content-inner">
+          <div className="device-summary-grid">
+            <div className="device-card">
+              <div className="device-icon network"><i className="bi bi-diagram-3-fill"></i></div>
+              <div className="device-content">
+                <div className="device-count">89</div>
+                <div className="device-label">네트워크</div>
+              </div>
+            </div>
+            <div className="device-card">
+              <div className="device-icon server"><i className="bi bi-hdd-stack-fill"></i></div>
+              <div className="device-content">
+                <div className="device-count">156</div>
+                <div className="device-label">서버</div>
+              </div>
+            </div>
+            <div className="device-card">
+              <div className="device-icon transfer"><i className="bi bi-arrow-left-right"></i></div>
+              <div className="device-content">
+                <div className="device-count">34</div>
+                <div className="device-label">전송</div>
+              </div>
+            </div>
+            <div className="device-card">
+              <div className="device-icon fms"><i className="bi bi-building-fill"></i></div>
+              <div className="device-content">
+                <div className="device-count">21</div>
+                <div className="device-label">FMS</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
 
     default:
       return (
@@ -2267,28 +2408,31 @@ export default function Dashboard() {
   const { mutate: saveUserDashboard, isPending: isSaving } = useSaveUserDashboard(userId);
   const { mutate: resetUserDashboard, isPending: isResetting } = useResetUserDashboard(userId);
 
-  // API 데이터를 WIDGET_TYPES 형태로 변환
-  // 응답 형식: { widgetId, widgetCode, name, icon, category, defaultW, defaultH, minW, minH }
+  // API 데이터를 WIDGET_TYPES 형태로 변환 (DEFAULT_WIDGET_TYPES와 병합)
   const WIDGET_TYPES = useMemo(() => {
-    if (!apiWidgetList || apiWidgetList.length === 0) {
-      return DEFAULT_WIDGET_TYPES;
-    }
+    // 기본 위젯 타입으로 시작
+    const types = { ...DEFAULT_WIDGET_TYPES };
 
-    const types = {};
-    apiWidgetList.forEach(widget => {
-      const code = widget.widgetCode;
-      types[code] = {
-        id: widget.widgetId,
-        code: code,
-        name: widget.name,
-        icon: widget.icon || 'bi-grid',
-        category: widget.category || 'info',
-        defaultW: widget.defaultW || 1,
-        defaultH: widget.defaultH || 1,
-        minW: widget.minW || 1,
-        minH: widget.minH || 1,
-      };
-    });
+    // API 데이터가 있으면 병합
+    if (apiWidgetList && apiWidgetList.length > 0) {
+      apiWidgetList.forEach(widget => {
+        const code = widget.widgetCode;
+        const defaultType = DEFAULT_WIDGET_TYPES[code];
+
+        types[code] = {
+          id: widget.widgetId,
+          code: code,
+          name: widget.name,
+          icon: widget.icon || defaultType?.icon || 'bi-grid',
+          category: widget.category || defaultType?.category || 'info',
+          defaultW: widget.defaultW || defaultType?.defaultW || 1,
+          defaultH: widget.defaultH || defaultType?.defaultH || 1,
+          minW: widget.minW || 1,
+          minH: widget.minH || 1,
+          defaultConfig: defaultType?.defaultConfig || {},
+        };
+      });
+    }
     return types;
   }, [apiWidgetList]);
 
@@ -2355,14 +2499,44 @@ export default function Dashboard() {
       const width = Math.min(item.width ?? 1, maxCols);
       const posX = Math.min(item.posX ?? item.x ?? 0, maxCols - width);
 
+      // 기본 위젯인지 사용자 위젯인지 구분
+      const isDefaultWidget = !!item.defaultDashboardWidgetId;
+      const isUserWidget = !!item.userDashboardWidgetId;
+
+      // config 파싱
+      let parsedConfig = item.config ? (typeof item.config === 'string' ? JSON.parse(item.config) : item.config) : {};
+
+      // config가 비어있으면 위젯 타입의 기본 config 사용
+      const widgetType = WIDGET_TYPES[item.widgetCode];
+      const isEmptyConfig = !parsedConfig || Object.keys(parsedConfig).length === 0;
+
+      if (isEmptyConfig && widgetType?.defaultConfig) {
+        parsedConfig = { ...widgetType.defaultConfig };
+      }
+
+      // config에 위젯 구분 정보 추가
+      const configWithMetadata = {
+        ...parsedConfig,
+        // 위젯 소스 정보
+        source: isUserWidget ? 'user' : 'default',
+        // 위젯 마스터 정보
+        widgetId: item.widgetId,
+        widgetCode: item.widgetCode,
+        widgetName: item.name || item.widgetCode,
+        // 대시보드 위젯 ID
+        defaultDashboardWidgetId: item.defaultDashboardWidgetId,
+        userDashboardWidgetId: item.userDashboardWidgetId,
+      };
+
       newWidgets.push({
         id: id,
         widgetId: item.widgetId,
         userDashboardWidgetId: item.userDashboardWidgetId, // DB: USER_DASHBOARD_WIDGET_ID
+        defaultDashboardWidgetId: item.defaultDashboardWidgetId, // DB: DEFAULT_DASHBOARD_WIDGET_ID
         type: item.widgetCode,
         title: item.title || item.name || item.widgetCode, // DB: TITLE
         sortOrder: item.sortOrder ?? index, // DB: SORT_ORDER
-        config: item.config ? (typeof item.config === 'string' ? JSON.parse(item.config) : item.config) : {}, // DB: CONFIG
+        config: configWithMetadata, // 메타데이터가 추가된 CONFIG
         chartData: item.chartData || [], // 백엔드에서 받은 차트 데이터
       });
 
@@ -2388,7 +2562,7 @@ export default function Dashboard() {
     setWidgets(newWidgets);
     setLayout(newLayout);
     setIsInitialized(true);
-  }, [defaultDashboard, userDashboard, widgetsLoading, defaultDashboardLoading, userDashboardLoading, isInitialized, isSaving, isResetting, isEditMode]);
+  }, [defaultDashboard, userDashboard, widgetsLoading, defaultDashboardLoading, userDashboardLoading, isInitialized, isSaving, isResetting, isEditMode, WIDGET_TYPES]);
 
   // 컨테이너 너비 감지
   useEffect(() => {
@@ -2531,7 +2705,7 @@ export default function Dashboard() {
       type: typeCode,
       title: type.name,
       sortOrder: maxSortOrder + 1,
-      config: {},
+      config: type.defaultConfig || {},
     };
 
     const newLayoutItem = {
@@ -2661,6 +2835,23 @@ export default function Dashboard() {
     navigate('/topology');
   }, [navigate]);
 
+  // config에서 메타데이터 제거 (저장용)
+  const removeConfigMetadata = useCallback((config) => {
+    if (!config || typeof config !== 'object') return config;
+
+    const {
+      source,
+      widgetId,
+      widgetCode,
+      widgetName,
+      defaultDashboardWidgetId,
+      userDashboardWidgetId,
+      ...cleanConfig
+    } = config;
+
+    return cleanConfig;
+  }, []);
+
   // 기본 대시보드를 사용자 대시보드로 복사
   const handleCopyToUserDashboard = useCallback(() => {
     if (!confirm('기본 대시보드를 복사하여 나만의 대시보드를 만드시겠습니까?\n이후 자유롭게 편집할 수 있습니다.')) {
@@ -2670,6 +2861,7 @@ export default function Dashboard() {
     // 기본 대시보드를 사용자 대시보드로 복사
     const widgetsToSave = widgets.map((widget, index) => {
       const layoutItem = layout.find(l => l.i === widget.id);
+      const cleanConfig = removeConfigMetadata(widget.config);
       return {
         // userDashboardWidgetId 없음 → 새로 생성
         widgetId: widget.widgetId,
@@ -2679,7 +2871,7 @@ export default function Dashboard() {
         width: layoutItem?.w ?? 1,
         height: layoutItem?.h ?? 1,
         sortOrder: index,
-        config: typeof widget.config === 'string' ? widget.config : JSON.stringify(widget.config || {}),
+        config: typeof cleanConfig === 'string' ? cleanConfig : JSON.stringify(cleanConfig || {}),
       };
     });
 
@@ -2698,7 +2890,7 @@ export default function Dashboard() {
         alert('대시보드 복사에 실패했습니다.');
       }
     });
-  }, [widgets, layout, saveUserDashboard, refetchUserDashboard]);
+  }, [widgets, layout, saveUserDashboard, refetchUserDashboard, removeConfigMetadata]);
 
   // 편집 모드 토글 및 저장 (사용자 대시보드만)
   const handleToggleEditMode = useCallback(() => {
@@ -2708,14 +2900,16 @@ export default function Dashboard() {
 
       const widgetsToSave = widgets.map((widget, index) => {
         const layoutItem = layout.find(l => l.i === widget.id);
+        const cleanConfig = removeConfigMetadata(widget.config);
 
         console.log(`=== 위젯 ${index} 저장 준비 ===`, {
           id: widget.id,
           type: widget.type,
           title: widget.title,
           config: widget.config,
+          cleanConfig: cleanConfig,
           configType: typeof widget.config,
-          configStringified: typeof widget.config === 'string' ? widget.config : JSON.stringify(widget.config || {})
+          configStringified: typeof cleanConfig === 'string' ? cleanConfig : JSON.stringify(cleanConfig || {})
         });
 
         return {
@@ -2727,7 +2921,7 @@ export default function Dashboard() {
           width: layoutItem?.w ?? 1,
           height: layoutItem?.h ?? 1,
           sortOrder: widget.sortOrder ?? index,
-          config: typeof widget.config === 'string' ? widget.config : JSON.stringify(widget.config || {}),
+          config: typeof cleanConfig === 'string' ? cleanConfig : JSON.stringify(cleanConfig || {}),
         };
       });
 
@@ -2736,16 +2930,31 @@ export default function Dashboard() {
       // 즉시 UI 업데이트 (사용자에게 빠른 피드백)
       setIsEditMode(false);
 
-      // 백그라운드에서 저장 (invalidateQueries가 자동으로 refetch 처리)
+      // 백그라운드에서 저장
       saveUserDashboard(widgetsToSave, {
-        onSuccess: () => {
+        onSuccess: async () => {
           console.log('대시보드가 성공적으로 저장되었습니다.');
-          // invalidateQueries가 자동으로 refetch 처리
+          // 새 위젯 ID만 업데이트 (전체 재초기화 없이)
+          const { data } = await refetchUserDashboard();
+          if (data && data.length > 0) {
+            setWidgets(prev => prev.map(widget => {
+              // 새로 추가된 위젯(userDashboardWidgetId가 없는)에 대해 ID 매핑
+              if (!widget.userDashboardWidgetId) {
+                const matched = data.find(d =>
+                  d.widgetId === widget.widgetId &&
+                  d.title === widget.title
+                );
+                if (matched) {
+                  return { ...widget, userDashboardWidgetId: matched.userDashboardWidgetId };
+                }
+              }
+              return widget;
+            }));
+          }
         },
         onError: (error) => {
           console.error('대시보드 저장 실패:', error);
           alert('대시보드 저장에 실패했습니다.');
-          // 실패 시 편집 모드로 되돌리기
           setIsEditMode(true);
         }
       });
@@ -2754,7 +2963,7 @@ export default function Dashboard() {
       setInitialWidgetCount(widgets.length);
       setIsEditMode(true);
     }
-  }, [isEditMode, widgets, layout, saveUserDashboard, refetchUserDashboard]);
+  }, [isEditMode, widgets, layout, saveUserDashboard, refetchUserDashboard, removeConfigMetadata]);
 
   // 기본 대시보드로 초기화
   const handleResetDashboard = useCallback(() => {
@@ -2777,11 +2986,26 @@ export default function Dashboard() {
     });
   }, [resetUserDashboard, refetchUserDashboard]);
 
+  // 허용할 위젯 코드 목록 (화이트리스트)
+  const ALLOWED_WIDGET_CODES = [
+    'TOPOLOGY',
+    'CPU_MEM_TOPN',
+    'TRAFFIC_TOPN',
+    'FILESYSTEM_TOPN',
+    'TRAFFIC_TREND',
+    'CUSTOM',
+    'REALTIME_ALERT',
+    'ALERT_SUMMARY',
+    'DEVICE_SUMMARY'
+  ];
+
   // 필터링된 위젯 타입
   const filteredWidgetTypes = Object.values(WIDGET_TYPES).filter(type => {
+    const widgetCode = type.code || type.id;
+    const isAllowed = ALLOWED_WIDGET_CODES.includes(widgetCode);
     const matchesSearch = type.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || type.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    return isAllowed && matchesSearch && matchesCategory;
   });
 
   const cols = 12;
@@ -2939,7 +3163,7 @@ export default function Dashboard() {
                   ) : widget.type === 'CUSTOM' ? (
                     <MemoizedCustomWidgetContent widget={widget} isEditMode={isEditMode} />
                   ) : (
-                    <WidgetContent widget={widget} widgetTypes={WIDGET_TYPES} />
+                    <WidgetContent widget={widget} widgetTypes={WIDGET_TYPES} isEditMode={isEditMode} />
                   )}
                 </div>
               </div>

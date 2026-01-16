@@ -270,17 +270,19 @@
 
 /* 위젯 카드 기본 */
 .widget-card {
-  background: #1e293b;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 12px;
-  border: 1px solid #334155;
+  border: 1px solid rgba(71, 85, 105, 0.4);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 .widget-card:hover {
-  border-color: #475569;
+  border-color: rgba(71, 85, 105, 0.6);
 }
 
 /* 편집 모드 스타일 */
@@ -361,9 +363,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  background: #0f172a;
-  border-bottom: 1px solid #334155;
+  padding: 10px 14px;
+  background: transparent;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.3);
   flex-shrink: 0;
 }
 
@@ -566,6 +568,29 @@
   background: #8b5cf6;
   border-color: #8b5cf6;
   color: white;
+}
+
+.topology-graph-container .topology-current-group {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid #475569;
+  border-radius: 8px;
+  color: #f1f5f9;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+}
+
+.topology-graph-container .topology-current-group i {
+  color: #3b82f6;
+  font-size: 14px;
 }
 
 .topology-loading {
@@ -2072,4 +2097,286 @@
 
 .alert-modal .btn-confirm:active {
   transform: translateY(0);
+}
+
+/* ==================== 실시간 장애 현황 위젯 ==================== */
+.realtime-alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.realtime-alert-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.realtime-alert-list::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 2px;
+}
+
+.realtime-alert-list::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 2px;
+}
+
+.alert-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #1e293b;
+  border-radius: 8px;
+  border-left: 3px solid;
+  transition: all 0.2s ease;
+}
+
+.alert-item:hover {
+  background: #334155;
+  transform: translateX(4px);
+}
+
+.alert-item.critical {
+  border-left-color: #ef4444;
+}
+
+.alert-item.major {
+  border-left-color: #f97316;
+}
+
+.alert-item.minor {
+  border-left-color: #eab308;
+}
+
+.alert-item.warning {
+  border-left-color: #3b82f6;
+}
+
+.alert-item .alert-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.alert-item.critical .alert-icon {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.alert-item.major .alert-icon {
+  background: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+}
+
+.alert-item.minor .alert-icon {
+  background: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+}
+
+.alert-item.warning .alert-icon {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.alert-item .alert-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.alert-item .alert-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.alert-item .alert-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.alert-item .alert-time {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* ==================== 장애 현황 위젯 ==================== */
+.alert-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  height: 100%;
+  padding: 8px;
+}
+
+.summary-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #1e293b;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.summary-card.critical {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: linear-gradient(135deg, #1e293b 0%, rgba(239, 68, 68, 0.1) 100%);
+}
+
+.summary-card.major {
+  border-color: rgba(249, 115, 22, 0.3);
+  background: linear-gradient(135deg, #1e293b 0%, rgba(249, 115, 22, 0.1) 100%);
+}
+
+.summary-card.minor {
+  border-color: rgba(234, 179, 8, 0.3);
+  background: linear-gradient(135deg, #1e293b 0%, rgba(234, 179, 8, 0.1) 100%);
+}
+
+.summary-card.warning {
+  border-color: rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, #1e293b 0%, rgba(59, 130, 246, 0.1) 100%);
+}
+
+.summary-card .summary-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.summary-card.critical .summary-icon {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.summary-card.major .summary-icon {
+  background: rgba(249, 115, 22, 0.2);
+  color: #f97316;
+}
+
+.summary-card.minor .summary-icon {
+  background: rgba(234, 179, 8, 0.2);
+  color: #eab308;
+}
+
+.summary-card.warning .summary-icon {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.summary-card .summary-content {
+  flex: 1;
+}
+
+.summary-card .summary-count {
+  font-size: 28px;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.summary-card .summary-label {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* ==================== 종합 현황 위젯 ==================== */
+.device-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  height: 100%;
+  padding: 8px;
+}
+
+.device-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #1e293b;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  transition: all 0.2s ease;
+}
+
+.device-card:hover {
+  transform: translateY(-2px);
+  border-color: #475569;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.device-card .device-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.device-card .device-icon.server {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.device-card .device-icon.network {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.device-card .device-icon.transfer {
+  background: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+}
+
+.device-card .device-icon.fms {
+  background: rgba(236, 72, 153, 0.2);
+  color: #ec4899;
+}
+
+.device-card .device-content {
+  flex: 1;
+}
+
+.device-card .device-count {
+  font-size: 28px;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.device-card .device-label {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
 }
