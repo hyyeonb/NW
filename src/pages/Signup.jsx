@@ -40,8 +40,9 @@ export default function Signup() {
 
     try {
       const response = await authApi.checkLoginId(formData.LOGIN_ID);
-      const isDuplicate = response.data?.data;
-      setIdCheckResult(isDuplicate ? 'duplicate' : 'available');
+      // data가 true면 사용 가능 (available), false면 중복 (duplicate)
+      const isAvailable = response.data?.data;
+      setIdCheckResult(isAvailable ? 'available' : 'duplicate');
     } catch (err) {
       setFormError('중복 확인 중 오류가 발생했습니다.');
     }
