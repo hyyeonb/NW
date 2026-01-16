@@ -9,6 +9,34 @@ import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import '../styles/dashboard.css';
 
+// 값 포맷팅 함수 (K, M, G 단위 적용)
+const formatLargeValue = (value, unit = '') => {
+  if (value == null || isNaN(value)) return '-';
+  const absValue = Math.abs(value);
+
+  // bps, byte 관련 단위인 경우
+  if (unit.toLowerCase().includes('bps') || unit.toLowerCase().includes('byte')) {
+    if (absValue >= 1000000000) {
+      return (value / 1000000000).toFixed(1) + 'G';
+    } else if (absValue >= 1000000) {
+      return (value / 1000000).toFixed(1) + 'M';
+    } else if (absValue >= 1000) {
+      return (value / 1000).toFixed(1) + 'K';
+    }
+  }
+
+  // 일반 숫자
+  if (absValue >= 1000000000) {
+    return (value / 1000000000).toFixed(1) + 'G';
+  } else if (absValue >= 1000000) {
+    return (value / 1000000).toFixed(1) + 'M';
+  } else if (absValue >= 1000) {
+    return (value / 1000).toFixed(1) + 'K';
+  }
+
+  return value.toFixed(1);
+};
+
 // 기본 위젯 타입 (API 실패 시 폴백)
 const DEFAULT_WIDGET_TYPES = {
   TOPOLOGY: {
@@ -1349,20 +1377,39 @@ function CustomWidgetContent({ widget, isEditMode }) {
             axisPointer: { type: 'shadow' },
             backgroundColor: '#1e293b',
             borderColor: '#334155',
-            textStyle: { color: '#f1f5f9' }
+            textStyle: { color: '#f1f5f9' },
+            formatter: (params) => {
+              if (!params || params.length === 0) return '';
+              let result = `<div style="font-weight: bold; margin-bottom: 4px;">${params[0].name}</div>`;
+              params.forEach(param => {
+                if (param.value == null) return;
+                // 메트릭별 단위 결정
+                let unit = '';
+                if (param.seriesName.includes('BPS')) unit = 'bps';
+                else if (param.seriesName.includes('BYTE')) unit = 'byte';
+                else if (param.seriesName.includes('PKT')) unit = 'pkt';
+                else if (param.seriesName.includes('ERR') || param.seriesName.includes('DROP')) unit = '';
+                else if (param.seriesName.includes('LOSS')) unit = '%';
+                else unit = 'ms';
+                const displayValue = formatLargeValue(param.value, unit);
+                const marker = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${param.color};margin-right:6px;"></span>`;
+                result += `<div style="margin-top: 2px;">${marker}${param.seriesName}: <strong>${displayValue}${unit}</strong></div>`;
+              });
+              return result;
+            }
           },
           legend: {
             data: uniqueMetrics,
             textStyle: { color: '#94a3b8', fontSize: 11 },
-            top: '5%',
+            bottom: '0%',
             itemWidth: 14,
             itemHeight: 14
           },
           grid: {
             left: '3%',
             right: '4%',
-            bottom: '15%',
-            top: '18%',
+            bottom: '18%',
+            top: '8%',
             containLabel: true
           },
           xAxis: {
@@ -1380,7 +1427,10 @@ function CustomWidgetContent({ widget, isEditMode }) {
             type: 'value',
             name: 'ms / %',
             nameTextStyle: { color: '#94a3b8' },
-            axisLabel: { color: '#94a3b8' },
+            axisLabel: {
+              color: '#94a3b8',
+              formatter: (value) => formatLargeValue(value, '')
+            },
             axisLine: { lineStyle: { color: '#334155' } },
             splitLine: { lineStyle: { color: '#1e293b' } }
           },
@@ -1389,6 +1439,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
       }
 
       // 기본 Bar Chart: 단일 메트릭
+      const barUnit = elementMeta?.unit || '%';
       return {
         backgroundColor: 'transparent',
         tooltip: {
@@ -1396,7 +1447,13 @@ function CustomWidgetContent({ widget, isEditMode }) {
           axisPointer: { type: 'shadow' },
           backgroundColor: '#1e293b',
           borderColor: '#334155',
-          textStyle: { color: '#f1f5f9' }
+          textStyle: { color: '#f1f5f9' },
+          formatter: (params) => {
+            const param = params[0];
+            if (!param) return '';
+            const displayValue = formatLargeValue(param.value, barUnit);
+            return `${param.name}<br/>${param.seriesName}: <strong>${displayValue}${barUnit}</strong>`;
+          }
         },
         grid: {
           left: '3%',
@@ -1420,7 +1477,10 @@ function CustomWidgetContent({ widget, isEditMode }) {
           type: 'value',
           name: elementMeta?.unit || '%',
           nameTextStyle: { color: '#94a3b8' },
-          axisLabel: { color: '#94a3b8' },
+          axisLabel: {
+            color: '#94a3b8',
+            formatter: (value) => formatLargeValue(value, elementMeta?.unit || '%')
+          },
           axisLine: { lineStyle: { color: '#334155' } },
           splitLine: { lineStyle: { color: '#1e293b' } }
         },
@@ -1499,8 +1559,8 @@ function CustomWidgetContent({ widget, isEditMode }) {
               // 각 시리즈의 unit 찾기
               const dataItem = chartData.find(d => (d.displayName || d.deviceName) === param.seriesName);
               const unit = dataItem?.unit || '%';
-              // 절대값으로 표시 (TRAFFIC 미러 차트 대응)
-              const displayValue = Math.abs(param.value)?.toFixed(2);
+              // 절대값으로 표시 + K/M/G 단위 적용
+              const displayValue = formatLargeValue(Math.abs(param.value), unit);
               items += `<div style="margin-top: 4px; white-space: nowrap; font-size: 12px;">${marker}${param.seriesName}: <strong>${displayValue}${unit}</strong></div>`;
             });
 
@@ -1591,11 +1651,9 @@ function CustomWidgetContent({ widget, isEditMode }) {
           axisLabel: {
             color: '#94a3b8',
             formatter: (value) => {
-              // TRAFFIC 미러 차트: 절대값으로 표시
-              if (selectedGroup === 'TRAFFIC') {
-                return Math.abs(value).toFixed(1);
-              }
-              return value;
+              const absValue = Math.abs(value);
+              const unit = chartData[0]?.unit || '';
+              return formatLargeValue(absValue, unit);
             }
           },
           axisLine: { lineStyle: { color: '#334155' } },
@@ -1679,7 +1737,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
                       show: true,
                       position: 'top',
                       distance: 8,
-                      formatter: `{value|${globalMax.value.toFixed(1)}${globalMax.unit}}`,
+                      formatter: `{value|${formatLargeValue(globalMax.value, globalMax.unit)}${globalMax.unit}}`,
                       rich: {
                         value: {
                           fontSize: 12,
