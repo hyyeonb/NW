@@ -266,12 +266,12 @@ const initialWidgets = [
 
 // 초기 레이아웃
 const initialLayout = [
-  { i: 'w0', x: 0, y: 0, w: 2, h: 2, minW: 1, minH: 1 },  // 토폴로지 (좌측 상단)
-  { i: 'w1', x: 2, y: 0, w: 1, h: 1, minW: 1, minH: 1 },  // CPU/MEM TOPN
-  { i: 'w2', x: 3, y: 0, w: 1, h: 1, minW: 1, minH: 1 },  // Traffic TOPN
-  { i: 'w3', x: 0, y: 2, w: 2, h: 1, minW: 1, minH: 1 },  // 알람 리스트
-  { i: 'w4', x: 2, y: 1, w: 1, h: 1, minW: 1, minH: 1 },  // 파일시스템 TOPN
-  { i: 'w5', x: 0, y: 3, w: 2, h: 1, minW: 1, minH: 1 },  // Traffic 추이
+  { i: 'w0', x: 0, y: 0, w: 2, h: 2, minW: 1, minH: 1, maxH: 5 },  // 토폴로지 (좌측 상단)
+  { i: 'w1', x: 2, y: 0, w: 1, h: 1, minW: 1, minH: 1, maxH: 5 },  // CPU/MEM TOPN
+  { i: 'w2', x: 3, y: 0, w: 1, h: 1, minW: 1, minH: 1, maxH: 5 },  // Traffic TOPN
+  { i: 'w3', x: 0, y: 2, w: 2, h: 1, minW: 1, minH: 1, maxH: 5 },  // 알람 리스트
+  { i: 'w4', x: 2, y: 1, w: 1, h: 1, minW: 1, minH: 1, maxH: 5 },  // 파일시스템 TOPN
+  { i: 'w5', x: 0, y: 3, w: 2, h: 1, minW: 1, minH: 1, maxH: 5 },  // Traffic 추이
 ];
 
 // 토폴로지 위젯 컴포넌트
@@ -2625,6 +2625,7 @@ export default function Dashboard() {
         minW: 1,
         minH: 1,
         maxW: maxCols,                   // 최대 너비 제한
+        maxH: 5,                         // 최대 높이 제한
       });
     });
 
@@ -2682,24 +2683,31 @@ export default function Dashboard() {
 
   // 레이아웃 변경 핸들러
   const handleLayoutChange = useCallback((newLayout) => {
-    // 화면 경계 체크 및 조정
     const cols = 12;
     const maxRows = 5;
 
+    // 5칸을 초과하는 위젯이 있는지 체크
+    const exceedsMaxRows = newLayout.some(item => (item.y + item.h) > maxRows);
+
+    // 5칸 초과 시 레이아웃 변경 거부 (이전 레이아웃 유지)
+    if (exceedsMaxRows) {
+      return;
+    }
+
+    // 화면 경계 체크 및 조정
     const boundedLayout = newLayout.map(item => {
       // 너비를 최대 칼럼 수로 제한
       const adjustedW = Math.min(item.w, cols);
       // x + w가 cols를 넘지 않도록
       const adjustedX = Math.min(item.x, cols - adjustedW);
-      // y + h가 maxRows를 넘지 않도록
-      const adjustedY = Math.min(item.y, maxRows - item.h);
 
       return {
         ...item,
         w: adjustedW,
         x: Math.max(0, adjustedX),
-        y: Math.max(0, adjustedY),
+        y: item.y,
         maxW: cols,
+        maxH: 5,
       };
     });
 
@@ -2793,6 +2801,7 @@ export default function Dashboard() {
       minW: 1,
       minH: 1,
       maxW: maxCols,
+      maxH: 5,
     };
 
     // 로컬 state 업데이트만 (API 호출 없음)
@@ -2835,6 +2844,8 @@ export default function Dashboard() {
       h: type.defaultH || 1,
       minW: 1,
       minH: 1,
+      maxW: 12,
+      maxH: 5,
     };
 
     setWidgets(prev => {
@@ -3118,6 +3129,7 @@ export default function Dashboard() {
               minW: 1,
               minH: 1,
               maxW: maxCols,
+              maxH: 5,
             });
           });
 
@@ -3239,10 +3251,14 @@ export default function Dashboard() {
           cols={cols}
           rowHeight={rowHeight}
           width={containerWidth}
+          maxRows={5}
           onLayoutChange={handleLayoutChange}
           isDraggable={isEditMode}
           isResizable={isEditMode}
           isDroppable={isEditMode}
+          isBounded={true}
+          compactType="vertical"
+          preventCollision={false}
           draggableHandle={isEditMode ? ".widget-drag-handle" : ""}
           resizeHandles={isEditMode ? ['se'] : []}
           margin={[margin, margin]}
