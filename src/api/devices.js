@@ -4,8 +4,19 @@ export const devicesApi = {
   getDevicesByGroup: (groupId, includeChildren = true) =>
     apiClient.get(`/mgmt/devices/by-group/${groupId}?includeChildren=${includeChildren}`),
 
-  getDevicesByGroupPaged: (groupId, page = 1, size = 10, sort = 'DEVICE_ID', order = 'asc', includeChildren = true) =>
-    apiClient.get(`/mgmt/devices/by-group/${groupId}?includeChildren=${includeChildren}&page=${page}&size=${size}&sort=${sort}&order=${order}`),
+  getDevicesByGroupPaged: (groupId, page = 1, size = 10, sort = 'DEVICE_ID', order = 'asc', includeChildren = true, search = {}) => {
+    const params = new URLSearchParams({
+      includeChildren,
+      page,
+      size,
+      sort,
+      order
+    });
+    if (search.deviceName) params.append('deviceName', search.deviceName);
+    if (search.deviceIp) params.append('deviceIp', search.deviceIp);
+    if (search.groupName) params.append('groupName', search.groupName);
+    return apiClient.get(`/mgmt/devices/by-group/${groupId}?${params.toString()}`);
+  },
 
   // 전체 장비 목록 조회
   getAllDevices: () =>

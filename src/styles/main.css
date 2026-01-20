@@ -1862,3 +1862,115 @@ select:disabled {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     transform: rotate(45deg);
 }
+
+/* ==================
+   Global Tooltip System (0.5s delay)
+   For all elements with title attribute and text-overflow: ellipsis
+   ================== */
+[title][class*="-name"],
+[title][class*="-message"],
+[title][class*="-value"],
+[title][class*="truncate"],
+[title][class*="ellipsis"],
+[title].alert-message,
+[title].alert-title,
+[title].topn-name,
+[title].device-name,
+[title].value-device,
+[title].detail-value,
+[title].topology-detail-value,
+[title].model-name,
+[title].group-name,
+[title].profile-name,
+[title].profile-email,
+[title].desc-column,
+[title].topology-interface-name,
+.topology-current-group span[title],
+.topology-sidebar-subheader span[title],
+.profile-dropdown-info span[title],
+.group-item[title],
+.device-table td[title],
+.port-table td[title],
+.result-table td[title],
+table td[title] {
+    position: relative;
+}
+
+[title][class*="-name"]::after,
+[title][class*="-message"]::after,
+[title][class*="-value"]::after,
+[title][class*="truncate"]::after,
+[title][class*="ellipsis"]::after,
+[title].alert-message::after,
+[title].alert-title::after,
+[title].topn-name::after,
+[title].device-name::after,
+[title].value-device::after,
+[title].detail-value::after,
+[title].topology-detail-value::after,
+[title].model-name::after,
+[title].group-name::after,
+[title].profile-name::after,
+[title].profile-email::after,
+[title].desc-column::after,
+[title].topology-interface-name::after,
+.topology-current-group span[title]::after,
+.topology-sidebar-subheader span[title]::after,
+.profile-dropdown-info span[title]::after,
+.group-item[title]::after,
+.device-table td[title]::after,
+.port-table td[title]::after,
+.result-table td[title]::after,
+table td[title]::after {
+    content: attr(title);
+    position: absolute;
+    left: 0;
+    top: 100%;
+    z-index: 9999;
+    background: rgba(15, 15, 35, 0.98);
+    color: #f8fafc;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 400;
+    white-space: nowrap;
+    max-width: 400px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    transition-delay: 0s;
+    pointer-events: none;
+}
+
+[title][class*="-name"]:hover::after,
+[title][class*="-message"]:hover::after,
+[title][class*="-value"]:hover::after,
+[title][class*="truncate"]:hover::after,
+[title][class*="ellipsis"]:hover::after,
+[title].alert-message:hover::after,
+[title].alert-title:hover::after,
+[title].topn-name:hover::after,
+[title].device-name:hover::after,
+[title].value-device:hover::after,
+[title].detail-value:hover::after,
+[title].topology-detail-value:hover::after,
+[title].model-name:hover::after,
+[title].group-name:hover::after,
+[title].profile-name:hover::after,
+[title].profile-email:hover::after,
+[title].desc-column:hover::after,
+[title].topology-interface-name:hover::after,
+.topology-current-group span[title]:hover::after,
+.topology-sidebar-subheader span[title]:hover::after,
+.profile-dropdown-info span[title]:hover::after,
+.group-item[title]:hover::after,
+.device-table td[title]:hover::after,
+.port-table td[title]:hover::after,
+.result-table td[title]:hover::after,
+table td[title]:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0.5s;
+}

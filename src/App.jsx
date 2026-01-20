@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores';
 import MainLayout from './layouts/MainLayout';
-import { Login, Signup, Dashboard, SignupSuccess, FindAccount, SocialLoginLanding, Main, GroupManagement, AssetManagement, NewAssetManagement, ModelManagement, NetworkTopology } from './pages';
+import { Login, Signup, Dashboard, SignupSuccess, FindAccount, SocialLoginLanding, Main, GroupManagement, AssetManagement, NewAssetManagement, ModelManagement, NetworkTopology, RealtimeFault, FaultHistory } from './pages';
 import AlertToast from './components/AlertToast';
 import { useAlertWebSocket } from './hooks';
 
@@ -184,6 +184,8 @@ export default function App() {
               <Route path="mgmt/assets" element={<AssetManagement />} />
               <Route path="mgmt/new-assets" element={<NewAssetManagement />} />
               <Route path="mgmt/models" element={<ModelManagement />} />
+              <Route path="fault/realtime" element={<RealtimeFault />} />
+              <Route path="fault/history" element={<FaultHistory />} />
             </Route>
 
             {/* Fallback */}

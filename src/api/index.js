@@ -5,3 +5,4 @@ export { devicesApi } from './devices';
 export { topologyApi } from './topology';
 export { dashboardApi } from './dashboard';
 export { snmpApi } from './snmp';
+export { faultApi } from './fault';

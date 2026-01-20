@@ -4,9 +4,29 @@
 
 .model-management-container {
   display: flex;
-  gap: 24px;
+  flex-direction: column;
+  gap: 20px;
   height: calc(100vh - 120px);
   padding: 24px;
+}
+
+.model-management-container > .page-header {
+  flex-shrink: 0;
+  margin-bottom: 0;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.model-management-container > .page-header + .model-tree-panel {
+  /* 헤더 다음에 오는 패널들을 위한 래퍼가 필요 */
+}
+
+/* 트리와 상세 패널 래퍼 */
+.model-panels-wrapper {
+  display: flex;
+  gap: 24px;
+  flex: 1;
+  min-height: 0;
 }
 
 /* 좌측 트리 패널 */

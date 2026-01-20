@@ -18,12 +18,15 @@ export const useDevicesByGroup = (groupId) => {
   });
 };
 
-// 페이지네이션 + 정렬 지원 조회 (LIMIT OFFSET)
-export const useDevicesByGroupPaged = (groupId, page = 1, size = 10, sort = 'DEVICE_ID', order = 'asc') => {
+// 페이지네이션 + 정렬 + 검색 지원 조회 (LIMIT OFFSET)
+export const useDevicesByGroupPaged = (groupId, page = 1, size = 10, sort = 'DEVICE_ID', order = 'asc', search = {}) => {
+  // queryKey에 객체 대신 직렬화된 문자열 사용 (안정적인 비교를 위해)
+  const searchKey = JSON.stringify(search);
+
   return useQuery({
-    queryKey: ['devices', groupId, 'paged', page, size, sort, order],
+    queryKey: ['devices', groupId, 'paged', page, size, sort, order, searchKey],
     queryFn: async () => {
-      const response = await devicesApi.getDevicesByGroupPaged(groupId, page, size, sort, order);
+      const response = await devicesApi.getDevicesByGroupPaged(groupId, page, size, sort, order, true, search);
       // 응답 데이터 구조: { code, message, data: { content, page, size, totalElements, totalPages } }
       const pageData = response.data?.data || response.data || {};
       return {
@@ -37,6 +40,7 @@ export const useDevicesByGroupPaged = (groupId, page = 1, size = 10, sort = 'DEV
     enabled: !!groupId,
     staleTime: 0,
     refetchOnMount: 'always',
+    placeholderData: (previousData) => previousData, // 이전 데이터 유지하여 깜빡임 방지
   });
 };
 

@@ -6,15 +6,15 @@
 /* Page Container */
 .page-container {
     max-width: 100%;
-    margin: var(--spacing-5) 0;
+    margin: var(--spacing-3) 0;
     padding: 0 var(--spacing-5);
     display: grid;
     grid-template-columns: var(--page-sidebar-width) 1fr;
-    gap: var(--spacing-6);
+    gap: var(--spacing-5);
     align-items: stretch;
     animation: fadeInUp 0.6s ease;
     position: relative;
-    min-height: calc(100vh - 120px);
+    height: calc(100vh - 80px);
 }
 
 @keyframes fadeInUp {
@@ -105,16 +105,17 @@
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
-    padding: var(--spacing-8);
+    padding: var(--spacing-5);
     border-radius: var(--radius-3xl);
     border: 1px solid var(--glass-border);
     box-shadow:
         var(--glass-shadow),
         inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    min-height: 500px;
     transition: all var(--transition-normal);
     position: relative;
-    overflow: hidden;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
 }
 
 .page-main-content::before {
@@ -137,6 +138,64 @@
     margin-bottom: var(--spacing-6);
     padding-bottom: var(--spacing-4);
     border-bottom: none;
+}
+
+/* Page Header (통합 헤더 스타일) */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-3);
+    padding-bottom: var(--spacing-3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    flex-shrink: 0;
+}
+
+.page-header-left {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-4);
+    flex-wrap: wrap;
+}
+
+.page-title {
+    font-size: var(--font-size-h2);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    margin: 0;
+}
+
+.page-title i {
+    color: var(--color-primary-400);
+}
+
+.page-subtitle {
+    font-size: var(--font-size-body);
+    color: var(--color-text-muted);
+}
+
+.page-header-right {
+    display: flex;
+    gap: var(--spacing-2);
+}
+
+.selected-group-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 20px;
+    font-size: 13px;
+    color: #a5b4fc;
+}
+
+.selected-group-badge i {
+    font-size: 12px;
 }
 
 /* Content Header */

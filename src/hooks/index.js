@@ -4,3 +4,4 @@ export * from './useTopology';
 export * from './useDashboard';
 export * from './useSnmp';
 export * from './useAlertWebSocket';
+export * from './useFaults';

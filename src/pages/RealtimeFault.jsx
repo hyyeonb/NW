@@ -1,0 +1,420 @@
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { faultApi } from '../api';
+import { useAlertStore } from '../stores/alertStore';
+import { DataTable } from '../components';
+import '../styles/fault-monitoring.css';
+
+// 장애 등급 설정
+const ERROR_LEVELS = [
+  { id: 'C', label: 'Cr', color: '#ef4444' },
+  { id: 'M', label: 'Mj', color: '#f97316' },
+  { id: 'N', label: 'Mn', color: '#eab308' },
+  { id: 'W', label: 'Wr', color: '#3b82f6' },
+];
+
+export default function RealtimeFault() {
+  // 등급 체크박스 (기본 전체 선택)
+  const [selectedLevels, setSelectedLevels] = useState(['C', 'M', 'N', 'W']);
+  const [errors, setErrors] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedError, setSelectedError] = useState(null);
+  const [showAckModal, setShowAckModal] = useState(false);
+  const [ackMessage, setAckMessage] = useState('');
+
+  // 검색 필터
+  const [searchDeviceName, setSearchDeviceName] = useState('');
+  const [searchErrorMessage, setSearchErrorMessage] = useState('');
+  const [searchIp, setSearchIp] = useState('');
+  const [searchGroupName, setSearchGroupName] = useState('');
+
+  // 정렬
+  const [sortConfig, setSortConfig] = useState({ key: 'OCCUR_AT', direction: 'desc' });
+
+  // WebSocket 알림 구독 (새 알림 시 리렌더링)
+  const alerts = useAlertStore((state) => state.alerts);
+
+  // 등급 체크박스 토글
+  const toggleLevel = (levelId) => {
+    setSelectedLevels(prev => {
+      if (prev.includes(levelId)) {
+        // 최소 1개는 선택되어야 함
+        if (prev.length === 1) return prev;
+        return prev.filter(l => l !== levelId);
+      } else {
+        return [...prev, levelId];
+      }
+    });
+  };
+
+  // 장애 목록 조회
+  const fetchErrors = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params = {};
+      if (searchDeviceName.trim()) params.deviceName = searchDeviceName.trim();
+      if (searchErrorMessage.trim()) params.errorMessage = searchErrorMessage.trim();
+      if (searchIp.trim()) params.deviceIp = searchIp.trim();
+      if (searchGroupName.trim()) params.groupName = searchGroupName.trim();
+
+      const response = await faultApi.getErrors(params);
+      const data = response.data?.data || {};
+
+      // 클라이언트에서 선택된 등급만 필터링
+      const filteredList = (data.list || []).filter(e => selectedLevels.includes(e.ERROR_LEVEL));
+      setErrors(filteredList);
+    } catch (error) {
+      console.error('장애 목록 조회 실패:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedLevels, searchDeviceName, searchErrorMessage, searchIp, searchGroupName]);
+
+  // 초기화 버튼
+  const handleReset = () => {
+    setSearchDeviceName('');
+    setSearchErrorMessage('');
+    setSearchIp('');
+    setSearchGroupName('');
+    setSelectedLevels(['C', 'M', 'N', 'W']);
+  };
+
+  // 초기 로드 및 필터 변경 시
+  useEffect(() => {
+    fetchErrors();
+  }, [fetchErrors]);
+
+  // WebSocket 알림 수신 시 자동 새로고침
+  useEffect(() => {
+    if (alerts.length > 0) {
+      fetchErrors();
+    }
+  }, [alerts, fetchErrors]);
+
+  // 장애 인지 처리
+  const handleAcknowledge = async () => {
+    if (!selectedError) return;
+
+    try {
+      await faultApi.acknowledgeError(selectedError.ERROR_ID, ackMessage);
+      setShowAckModal(false);
+      setAckMessage('');
+      setSelectedError(null);
+      fetchErrors();
+    } catch (error) {
+      console.error('인지 처리 실패:', error);
+      alert('인지 처리에 실패했습니다.');
+    }
+  };
+
+  // 장애 등급 라벨
+  const getLevelLabel = (level) => {
+    switch (level) {
+      case 'C': return 'Cr';
+      case 'M': return 'Mj';
+      case 'N': return 'Mn';
+      case 'W': return 'Wr';
+      default: return level;
+    }
+  };
+
+  // 장애 등급 클래스
+  const getLevelClass = (level) => {
+    switch (level) {
+      case 'C': return 'critical';
+      case 'M': return 'major';
+      case 'N': return 'minor';
+      case 'W': return 'warning';
+      default: return '';
+    }
+  };
+
+  // 날짜 포맷
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return '-';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // 정렬 처리
+  const handleSort = (key) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  // 등급 우선순위 (정렬용)
+  const levelPriority = { 'C': 1, 'M': 2, 'N': 3, 'W': 4 };
+
+  // 정렬된 데이터
+  const sortedErrors = useMemo(() => {
+    if (!sortConfig.key) return errors;
+
+    return [...errors].sort((a, b) => {
+      let aVal = a[sortConfig.key];
+      let bVal = b[sortConfig.key];
+
+      // 등급 정렬은 우선순위 기준
+      if (sortConfig.key === 'ERROR_LEVEL') {
+        aVal = levelPriority[aVal] || 99;
+        bVal = levelPriority[bVal] || 99;
+      }
+      // 날짜 정렬
+      else if (sortConfig.key === 'OCCUR_AT') {
+        aVal = aVal ? new Date(aVal).getTime() : 0;
+        bVal = bVal ? new Date(bVal).getTime() : 0;
+      }
+      // 문자열 정렬
+      else {
+        aVal = (aVal || '').toString().toLowerCase();
+        bVal = (bVal || '').toString().toLowerCase();
+      }
+
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [errors, sortConfig]);
+
+  // 인지 버튼 클릭 핸들러
+  const handleAckClick = (error, e) => {
+    e.stopPropagation();
+    setSelectedError(error);
+    setShowAckModal(true);
+  };
+
+  // 테이블 컬럼 정의
+  const columns = useMemo(() => [
+    {
+      key: 'ERROR_LEVEL',
+      label: '등급',
+      width: '80px',
+      sortable: true,
+      align: 'center',
+      render: (value) => (
+        <span className={`severity-badge ${getLevelClass(value)}`}>
+          {getLevelLabel(value)}
+        </span>
+      ),
+    },
+    {
+      key: 'ERROR_FLAG',
+      label: '상태',
+      width: '80px',
+      sortable: true,
+      align: 'center',
+      render: (value) => (
+        <span className={`status-badge ${value === 1 ? 'acknowledged' : 'active'}`}>
+          {value === 1 ? '인지' : '발생'}
+        </span>
+      ),
+    },
+    {
+      key: 'DEVICE_NAME',
+      label: '장비명',
+      width: '150px',
+      sortable: true,
+      className: 'cell-truncate',
+    },
+    {
+      key: 'DEVICE_IP',
+      label: 'IP 주소',
+      width: '130px',
+      sortable: true,
+      className: 'cell-ip',
+    },
+    {
+      key: 'GROUP_NAME',
+      label: '그룹명',
+      width: '120px',
+      sortable: true,
+      className: 'cell-truncate',
+    },
+    {
+      key: 'ERROR_MESSAGE',
+      label: '장애 내용',
+      sortable: true,
+      className: 'cell-truncate',
+    },
+    {
+      key: 'OCCUR_AT',
+      label: '발생 시간',
+      width: '155px',
+      sortable: true,
+      className: 'cell-date',
+      render: (value) => formatDateTime(value),
+    },
+    {
+      key: 'actions',
+      label: '작업',
+      width: '80px',
+      align: 'center',
+      render: (_, row) => (
+        <button
+          className="action-btn"
+          title="인지처리"
+          onClick={(e) => handleAckClick(row, e)}
+          disabled={row.ERROR_FLAG === 1}
+        >
+          <i className="bi bi-check-lg"></i>
+        </button>
+      ),
+    },
+  ], []);
+
+  return (
+    <div className="fault-monitoring-page">
+      {/* 페이지 헤더 */}
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">
+            <i className="bi bi-exclamation-triangle"></i>
+            실시간 장애감시
+          </h1>
+          <span className="page-subtitle">현재 발생 중인 장애를 모니터링합니다</span>
+        </div>
+        <div className="page-header-right">
+          <button className="btn btn-ghost" onClick={fetchErrors}>
+            <i className="bi bi-arrow-clockwise"></i>
+            새로고침
+          </button>
+        </div>
+      </div>
+
+      {/* 필터 영역 */}
+      <div className="filter-bar glass-card">
+        <div className="filter-group filter-group-levels">
+          <label>등급</label>
+          <div className="level-checkboxes">
+            {ERROR_LEVELS.map((level) => (
+              <label key={level.id} className="level-checkbox" style={{ '--level-color': level.color }}>
+                <input
+                  type="checkbox"
+                  checked={selectedLevels.includes(level.id)}
+                  onChange={() => toggleLevel(level.id)}
+                />
+                <span className="checkbox-label" style={{ color: level.color }}>{level.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="filter-group">
+          <label>장비명</label>
+          <input
+            type="text"
+            className="filter-input"
+            placeholder="장비명"
+            value={searchDeviceName}
+            onChange={(e) => setSearchDeviceName(e.target.value)}
+          />
+        </div>
+        <div className="filter-group">
+          <label>IP 주소</label>
+          <input
+            type="text"
+            className="filter-input"
+            placeholder="IP"
+            value={searchIp}
+            onChange={(e) => setSearchIp(e.target.value)}
+          />
+        </div>
+        <div className="filter-group">
+          <label>그룹명</label>
+          <input
+            type="text"
+            className="filter-input"
+            placeholder="그룹명"
+            value={searchGroupName}
+            onChange={(e) => setSearchGroupName(e.target.value)}
+          />
+        </div>
+        <div className="filter-group">
+          <label>장애내용</label>
+          <input
+            type="text"
+            className="filter-input"
+            placeholder="장애내용"
+            value={searchErrorMessage}
+            onChange={(e) => setSearchErrorMessage(e.target.value)}
+          />
+        </div>
+        <div className="filter-actions">
+          <button className="btn btn-icon-only" onClick={handleReset} title="초기화">
+            <i className="bi bi-arrow-counterclockwise"></i>
+          </button>
+        </div>
+      </div>
+
+      {/* 장애 테이블 */}
+      <div className="fault-content glass-card">
+        <DataTable
+          columns={columns}
+          data={sortedErrors}
+          rowKey="ERROR_ID"
+          loading={isLoading}
+          loadingText="장애 정보를 불러오는 중..."
+          emptyText="현재 발생한 장애가 없습니다"
+          emptyIcon="bi-check-circle"
+          sort={{ field: sortConfig.key, order: sortConfig.direction }}
+          onSort={handleSort}
+          onRowClick={(row) => setSelectedError(row)}
+          rowClassName={(row) => {
+            const classes = [];
+            if (row.ERROR_FLAG === 1) classes.push('acknowledged');
+            if (selectedError?.ERROR_ID === row.ERROR_ID) classes.push('selected');
+            return classes.join(' ');
+          }}
+          maxHeight="calc(100vh - 300px)"
+        />
+      </div>
+
+      {/* 인지 처리 모달 */}
+      {showAckModal && (
+        <div className="modal-overlay" onClick={() => setShowAckModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>장애 인지 처리</h3>
+              <button className="modal-close" onClick={() => setShowAckModal(false)}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="ack-info">
+                <p><strong>장비:</strong> {selectedError?.DEVICE_NAME} ({selectedError?.DEVICE_IP})</p>
+                <p><strong>장애:</strong> {selectedError?.ERROR_MESSAGE}</p>
+              </div>
+              <div className="form-group">
+                <label>인지 메시지</label>
+                <textarea
+                  value={ackMessage}
+                  onChange={(e) => setAckMessage(e.target.value)}
+                  placeholder="인지 처리 메시지를 입력하세요..."
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowAckModal(false)}>
+                취소
+              </button>
+              <button className="btn btn-primary" onClick={handleAcknowledge}>
+                인지 처리
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

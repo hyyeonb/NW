@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useGroupTree } from '../hooks';
 import { useGroupStore } from '../stores';
@@ -199,6 +199,40 @@ export default function GroupTree({ onEditGroup, onAddGroup, onDeleteGroup, onSe
   } = useGroupStore();
   const containerRef = useRef(null);
 
+  // 검색 상태
+  const [searchText, setSearchText] = useState('');
+
+  // 검색 필터링 (재귀적으로 매칭되는 노드와 그 부모 유지)
+  const filteredGroupTree = useMemo(() => {
+    if (!groupTree || !searchText.trim()) return groupTree;
+
+    const searchLower = searchText.toLowerCase().trim();
+
+    // 노드가 검색어와 매칭되는지 확인
+    const matchesSearch = (node) => {
+      return node.GROUP_NAME?.toLowerCase().includes(searchLower);
+    };
+
+    // 재귀적으로 필터링 (자신 또는 자손이 매칭되면 유지)
+    const filterNodes = (nodes) => {
+      if (!nodes) return [];
+      return nodes
+        .map(node => {
+          const filteredChildren = filterNodes(node.children);
+          const hasMatchingChildren = filteredChildren.length > 0;
+          const selfMatches = matchesSearch(node);
+
+          if (selfMatches || hasMatchingChildren) {
+            return { ...node, children: filteredChildren };
+          }
+          return null;
+        })
+        .filter(Boolean);
+    };
+
+    return filterNodes(groupTree);
+  }, [groupTree, searchText]);
+
   // 트리 데이터 설정 및 모든 노드 확장
   useEffect(() => {
     if (groupTree && groupTree.length > 0) {
@@ -342,9 +376,9 @@ export default function GroupTree({ onEditGroup, onAddGroup, onDeleteGroup, onSe
         <p>그룹 목록을 불러오는 중...</p>
       ) : error ? (
         <p style={{ color: '#f87171' }}>그룹 목록을 불러오는 중 오류가 발생했습니다.</p>
-      ) : groupTree && groupTree.length > 0 ? (
+      ) : filteredGroupTree && filteredGroupTree.length > 0 ? (
         <ul>
-          {groupTree
+          {filteredGroupTree
             .filter(g => g.GROUP_NAME !== '미등록 장비')
             .sort((a, b) => a.GROUP_NAME.localeCompare(b.GROUP_NAME))
             .map((node) => (
@@ -364,6 +398,8 @@ export default function GroupTree({ onEditGroup, onAddGroup, onDeleteGroup, onSe
               />
             ))}
         </ul>
+      ) : searchText.trim() ? (
+        <p>"{searchText}" 검색 결과가 없습니다.</p>
       ) : (
         <p>등록된 그룹이 없습니다.{!compact && <><br />우클릭하여 그룹을 추가하세요.</>}</p>
       )}
@@ -379,6 +415,26 @@ export default function GroupTree({ onEditGroup, onAddGroup, onDeleteGroup, onSe
     <aside className="page-sidebar" id="group-tree-sidebar">
       <div className="sidebar-content">
         <h1>그룹 목록</h1>
+        {/* 그룹 검색 */}
+        <div className="group-search-box">
+          <i className="bi bi-search search-icon"></i>
+          <input
+            type="text"
+            className="group-search-input"
+            placeholder="그룹 검색..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+          {searchText && (
+            <button
+              className="search-clear-btn"
+              onClick={() => setSearchText('')}
+              title="검색어 지우기"
+            >
+              <i className="bi bi-x"></i>
+            </button>
+          )}
+        </div>
         {treeContent}
       </div>
 

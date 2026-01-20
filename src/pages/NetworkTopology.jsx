@@ -2576,11 +2576,11 @@ export default function NetworkTopology() {
                     <div className="topology-detail-grid">
                       <div className="topology-detail-item">
                         <span className="topology-detail-label">장비명</span>
-                        <span className="topology-detail-value">{device.DEVICE_NAME || '-'}</span>
+                        <span className="topology-detail-value" title={device.DEVICE_NAME || '-'}>{device.DEVICE_NAME || '-'}</span>
                       </div>
                       <div className="topology-detail-item">
                         <span className="topology-detail-label">시스템명</span>
-                        <span className="topology-detail-value">{device.DEVICE_SYSTEM_NAME || '-'}</span>
+                        <span className="topology-detail-value" title={device.DEVICE_SYSTEM_NAME || '-'}>{device.DEVICE_SYSTEM_NAME || '-'}</span>
                       </div>
                       <div className="topology-detail-item">
                         <span className="topology-detail-label">IP 주소</span>
@@ -2588,15 +2588,15 @@ export default function NetworkTopology() {
                       </div>
                       <div className="topology-detail-item">
                         <span className="topology-detail-label">벤더</span>
-                        <span className="topology-detail-value">{device.VENDOR_NAME || '-'}</span>
+                        <span className="topology-detail-value" title={device.VENDOR_NAME || '-'}>{device.VENDOR_NAME || '-'}</span>
                       </div>
                       <div className="topology-detail-item">
                         <span className="topology-detail-label">모델명</span>
-                        <span className="topology-detail-value">{device.MODEL_NAME || '-'}</span>
+                        <span className="topology-detail-value" title={device.MODEL_NAME || '-'}>{device.MODEL_NAME || '-'}</span>
                       </div>
                       <div className="topology-detail-item">
                         <span className="topology-detail-label">장비 설명</span>
-                        <span className="topology-detail-value">{device.DEVICE_DESC || '-'}</span>
+                        <span className="topology-detail-value" title={device.DEVICE_DESC || '-'}>{device.DEVICE_DESC || '-'}</span>
                       </div>
                     </div>
                   </div>
@@ -2797,7 +2797,7 @@ export default function NetworkTopology() {
                       <i className={`bi ${port.IF_OPER_STATUS === 1 ? 'bi-ethernet text-success' : 'bi-ethernet text-muted'}`}></i>
                     </div>
                     <div className="topology-interface-info">
-                      <div className="topology-interface-name">
+                      <div className="topology-interface-name" title={port.IF_NAME || port.IF_DESCR || `Interface ${port.IF_INDEX}`}>
                         {port.IF_NAME || port.IF_DESCR || `Interface ${port.IF_INDEX}`}
                       </div>
                       <div className="topology-interface-details">
@@ -3120,7 +3120,7 @@ export default function NetworkTopology() {
           {currentTopologyGroupName && (
             <div className="topology-current-group">
               <i className="bi bi-diagram-3"></i>
-              <span>{currentTopologyGroupName}</span>
+              <span title={currentTopologyGroupName}>{currentTopologyGroupName}</span>
             </div>
           )}
 

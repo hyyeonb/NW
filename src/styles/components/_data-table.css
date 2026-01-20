@@ -1,0 +1,477 @@
+/* ==================
+   DataTable Component
+   NMS Modern Design System
+   ================== */
+
+/* 테이블 컨테이너 */
+.data-table-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    background: linear-gradient(180deg, rgba(22, 27, 45, 0.95) 0%, rgba(15, 20, 35, 0.98) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.18);
+    border-radius: 12px;
+    overflow: visible;
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.25),
+        0 0 40px rgba(99, 102, 241, 0.03),
+        inset 0 1px 0 rgba(99, 102, 241, 0.08);
+}
+
+/* 테이블 래퍼 - 스크롤 영역 */
+.data-table-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+.data-table-wrapper.sticky-header {
+    overflow-y: auto;
+}
+
+/* 테이블 기본 스타일 */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+}
+
+/* 테이블 헤더 */
+.data-table thead {
+    position: relative;
+}
+
+.data-table thead tr {
+    background: linear-gradient(180deg, rgba(30, 35, 55, 0.98) 0%, rgba(22, 27, 45, 0.98) 100%);
+}
+
+.data-table-wrapper.sticky-header thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.data-table th {
+    padding: 15px 18px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: #7c8ba3;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-bottom: none;
+    white-space: nowrap;
+    background: transparent;
+    position: relative;
+}
+
+/* 헤더 하단 그라디언트 라인 */
+.data-table thead tr::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        rgba(99, 102, 241, 0.05) 0%,
+        rgba(99, 102, 241, 0.35) 25%,
+        rgba(139, 92, 246, 0.35) 50%,
+        rgba(99, 102, 241, 0.35) 75%,
+        rgba(99, 102, 241, 0.05) 100%
+    );
+}
+
+.data-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.data-table th.sortable:hover {
+    background: rgba(99, 102, 241, 0.08);
+    color: #a5b4d0;
+}
+
+/* 정렬 아이콘 */
+.data-table .sort-icon {
+    margin-left: 6px;
+    font-size: 10px;
+    vertical-align: middle;
+    transition: all 0.2s ease;
+}
+
+.data-table .sort-icon.inactive {
+    opacity: 0.25;
+}
+
+.data-table .sort-icon.active {
+    opacity: 1;
+    color: #818cf8;
+}
+
+/* 테이블 본문 */
+.data-table tbody tr {
+    border-bottom: 1px solid rgba(99, 102, 241, 0.06);
+    transition: all 0.15s ease;
+}
+
+.data-table tbody tr:hover {
+    background: rgba(99, 102, 241, 0.08);
+}
+
+.data-table tbody tr.clickable {
+    cursor: pointer;
+}
+
+.data-table tbody tr.selected {
+    background: rgba(99, 102, 241, 0.12);
+}
+
+.data-table tbody tr.selected:hover {
+    background: rgba(99, 102, 241, 0.16);
+}
+
+.data-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.data-table td {
+    padding: 13px 18px;
+    font-size: 13px;
+    color: #d1d9e8;
+    vertical-align: middle;
+}
+
+/* 선택 체크박스 셀 */
+.data-table .select-cell {
+    width: 48px;
+    text-align: center;
+    padding: 10px 14px;
+}
+
+.data-table .select-cell input[type="checkbox"],
+.data-table .select-cell input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #6366f1;
+}
+
+/* 로딩 상태 */
+.data-table .loading-row td,
+.data-table .empty-row td {
+    padding: 0;
+    border-bottom: none;
+}
+
+.table-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 70px 20px;
+    gap: 18px;
+    color: #7c8ba3;
+}
+
+.table-loading .loading-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid rgba(99, 102, 241, 0.15);
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: table-spin 0.8s linear infinite;
+}
+
+@keyframes table-spin {
+    to { transform: rotate(360deg); }
+}
+
+.table-loading span {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* 빈 상태 */
+.table-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 70px 20px;
+    gap: 14px;
+    color: #5a6780;
+}
+
+.table-empty i {
+    font-size: 52px;
+    opacity: 0.3;
+}
+
+.table-empty span {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* 스크롤바 스타일 */
+.data-table-wrapper::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.data-table-wrapper::-webkit-scrollbar-track {
+    background: rgba(20, 25, 40, 0.5);
+}
+
+.data-table-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.25);
+    border-radius: 4px;
+}
+
+.data-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.4);
+}
+
+/* 페이지네이션 영역 */
+.data-table-container .pagination-controls {
+    flex-shrink: 0;
+    border-radius: 0 0 14px 14px;
+}
+
+/* ==================
+   셀 스타일 유틸리티
+   ================== */
+
+/* IP 주소 스타일 */
+.data-table td.cell-ip {
+    color: #818cf8;
+    font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* 숫자 스타일 */
+.data-table td.cell-number {
+    font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+    text-align: right;
+}
+
+/* 날짜 스타일 */
+.data-table td.cell-date {
+    color: #7c8ba3;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+/* 텍스트 말줄임 */
+.data-table td.cell-truncate {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ==================
+   뱃지 스타일
+   ================== */
+
+/* 기본 뱃지 */
+.data-table .cell-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.data-table .cell-badge.success {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.15) 100%);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.data-table .cell-badge.warning {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.15) 100%);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.data-table .cell-badge.danger {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.15) 100%);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.data-table .cell-badge.info {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.15) 100%);
+    color: #a5b4fc;
+    border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.data-table .cell-badge.muted {
+    background: rgba(71, 85, 105, 0.25);
+    color: #94a3b8;
+    border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+/* 장애 등급 뱃지 */
+.data-table .severity-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.data-table .severity-badge.critical {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.2) 100%);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    text-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+.data-table .severity-badge.major {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.25) 0%, rgba(234, 88, 12, 0.2) 100%);
+    color: #fdba74;
+    border: 1px solid rgba(249, 115, 22, 0.35);
+    text-shadow: 0 0 8px rgba(249, 115, 22, 0.4);
+}
+
+.data-table .severity-badge.minor {
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.25) 0%, rgba(202, 138, 4, 0.2) 100%);
+    color: #fde047;
+    border: 1px solid rgba(234, 179, 8, 0.35);
+    text-shadow: 0 0 8px rgba(234, 179, 8, 0.4);
+}
+
+.data-table .severity-badge.warning {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.2) 100%);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    text-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+}
+
+/* 포트 수 뱃지 */
+.data-table .port-badge,
+.port-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    padding: 3px 10px;
+    background: rgba(99, 102, 241, 0.12);
+    color: #a5b4fc;
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* 장애 LED 인디케이터 */
+.data-table .fault-led,
+.fault-led {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.data-table .fault-led-C,
+.fault-led-C {
+    background: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
+    animation: pulse-critical 2s ease-in-out infinite;
+}
+
+.data-table .fault-led-M,
+.fault-led-M {
+    background: #f97316;
+    box-shadow: 0 0 8px rgba(249, 115, 22, 0.7);
+}
+
+.data-table .fault-led-N,
+.fault-led-N {
+    background: #eab308;
+    box-shadow: 0 0 6px rgba(234, 179, 8, 0.6);
+}
+
+.data-table .fault-led-W,
+.fault-led-W {
+    background: #3b82f6;
+    box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
+}
+
+@keyframes pulse-critical {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(239, 68, 68, 0.7); }
+    50% { opacity: 0.7; box-shadow: 0 0 12px rgba(239, 68, 68, 0.9); }
+}
+
+/* 액션 버튼 */
+.data-table .action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    margin: 0 2px;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: 8px;
+    color: #818cf8;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.data-table .action-btn:hover:not(:disabled) {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.4);
+    color: #a5b4fc;
+    transform: translateY(-1px);
+}
+
+.data-table .action-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.data-table .action-btn.danger:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #f87171;
+}
+
+.data-table .action-btn i {
+    font-size: 13px;
+}
+
+/* ==================
+   반응형
+   ================== */
+@media (max-width: 768px) {
+    .data-table th,
+    .data-table td {
+        padding: 11px 14px;
+        font-size: 12px;
+    }
+
+    .data-table th {
+        font-size: 10px;
+        padding: 12px 14px;
+    }
+
+    .data-table .select-cell {
+        width: 40px;
+        padding: 8px 10px;
+    }
+}

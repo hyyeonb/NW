@@ -594,7 +594,7 @@ function TopologyWidget({ onExpand }) {
       {!isLoading && defaultGroupId && (
         <div className="topology-current-group">
           <i className="bi bi-folder"></i>
-          <span>{currentGroupName}</span>
+          <span title={currentGroupName}>{currentGroupName}</span>
         </div>
       )}
       {dimensionsReady && !isLoading && defaultGroupId && (

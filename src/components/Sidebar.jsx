@@ -35,11 +35,11 @@ export default function Sidebar({ collapsed, onToggle }) {
       ],
     },
     {
-      icon: 'bi-display',
-      label: '모니터링',
+      icon: 'bi-exclamation-triangle',
+      label: '장애감시',
       children: [
-        { label: '성능 모니터링', path: '/dashboard', icon: 'bi-grid-3x3-gap' },
-        { label: '장애 모니터링', path: '/monitoring/fault', icon: 'bi-exclamation-triangle' },
+        { label: '실시간 장애감시', path: '/fault/realtime', icon: 'bi-broadcast' },
+        { label: '장애이력', path: '/fault/history', icon: 'bi-clock-history' },
       ],
     },
     {
@@ -48,13 +48,10 @@ export default function Sidebar({ collapsed, onToggle }) {
       children: [
         { label: '그룹 관리', path: '/mgmt/groups', icon: 'bi-folder' },
         { label: '자산 관리', path: '/mgmt/assets', icon: 'bi-hdd-network' },
-        { label: '신규자산관리', path: '/mgmt/new-assets', icon: 'bi-plus-circle' },
+        { label: '신규 자산 관리', path: '/mgmt/new-assets', icon: 'bi-plus-circle' },
         { label: '모델 관리', path: '/mgmt/models', icon: 'bi-cpu' },
-        { label: '시스템 관리', path: '/mgmt/system', icon: 'bi-sliders' },
-        { label: '사용자 관리', path: '/mgmt/users', icon: 'bi-people' },
       ],
     },
-    { icon: 'bi-chat-square-text', label: '게시판', path: '/board' },
     { icon: 'bi-gear-fill', label: '설정', path: '/settings' },
   ];
 
@@ -174,8 +171,8 @@ export default function Sidebar({ collapsed, onToggle }) {
           )}
           {!collapsed && (
             <div className="profile-info">
-              <span className="profile-name">{user?.NAME || '사용자'}</span>
-              <span className="profile-email">{user?.EMAIL || ''}</span>
+              <span className="profile-name" title={user?.NAME || '사용자'}>{user?.NAME || '사용자'}</span>
+              <span className="profile-email" title={user?.EMAIL || ''}>{user?.EMAIL || ''}</span>
             </div>
           )}
           {!collapsed && (
@@ -195,8 +192,8 @@ export default function Sidebar({ collapsed, onToggle }) {
                 )}
               </div>
               <div className="profile-dropdown-info">
-                <span className="name">{user?.NAME || '사용자'}</span>
-                <span className="email">{user?.EMAIL || ''}</span>
+                <span className="name" title={user?.NAME || '사용자'}>{user?.NAME || '사용자'}</span>
+                <span className="email" title={user?.EMAIL || ''}>{user?.EMAIL || ''}</span>
               </div>
             </div>
             <div className="profile-dropdown-divider"></div>
