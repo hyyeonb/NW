@@ -54,13 +54,9 @@ export const useUserDashboard = (userId) => {
 
 // 사용자 대시보드 저장
 export const useSaveUserDashboard = (userId) => {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (widgets) => dashboardApi.saveUserDashboard(userId, widgets),
-    onSuccess: () => {
-      // 저장 후 데이터 refetch
-      queryClient.invalidateQueries({ queryKey: ['userDashboard', userId] });
-    },
+    // onSuccess는 호출하는 곳에서 처리 (Dashboard.jsx)
   });
 };
 
@@ -88,12 +84,9 @@ export const useDeleteUserWidget = (userId) => {
 
 // 사용자 대시보드 초기화
 export const useResetUserDashboard = (userId) => {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => dashboardApi.resetUserDashboard(userId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['userDashboard', userId] });
-    },
+    // onSuccess는 호출하는 곳에서 처리 (Dashboard.jsx)
   });
 };
 

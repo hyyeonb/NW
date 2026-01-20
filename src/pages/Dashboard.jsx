@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, memo, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import GridLayout from 'react-grid-layout';
 import ForceGraph2D from 'react-force-graph-2d';
 import ReactECharts from 'echarts-for-react';
@@ -8,6 +9,59 @@ import { useAuthStore } from '../stores/authStore';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import '../styles/dashboard.css';
+
+// 값 포맷팅 함수 (K, M, G 단위 적용)
+const formatLargeValue = (value, unit = '') => {
+  if (value == null || isNaN(value)) return '-';
+  const absValue = Math.abs(value);
+
+  // bps, byte 관련 단위인 경우
+  if (unit.toLowerCase().includes('bps') || unit.toLowerCase().includes('byte')) {
+    if (absValue >= 1000000000) {
+      return (value / 1000000000).toFixed(1) + 'G';
+    } else if (absValue >= 1000000) {
+      return (value / 1000000).toFixed(1) + 'M';
+    } else if (absValue >= 1000) {
+      return (value / 1000).toFixed(1) + 'K';
+    }
+  }
+
+  // 일반 숫자
+  if (absValue >= 1000000000) {
+    return (value / 1000000000).toFixed(1) + 'G';
+  } else if (absValue >= 1000000) {
+    return (value / 1000000).toFixed(1) + 'M';
+  } else if (absValue >= 1000) {
+    return (value / 1000).toFixed(1) + 'K';
+  }
+
+  return value.toFixed(1);
+};
+
+// 메트릭 이름 축약 함수
+const getShortMetricName = (metric) => {
+  const abbrevMap = {
+    'ICMP_MAX': 'MAX',
+    'ICMP_MIN': 'MIN',
+    'ICMP_AVG': 'AVG',
+    'ICMP_LOSS': 'LOSS',
+    'TRAFFIC_IN_BPS': 'IN_BPS',
+    'TRAFFIC_OUT_BPS': 'OUT_BPS',
+    'TRAFFIC_IN_BYTE': 'IN_BYTE',
+    'TRAFFIC_OUT_BYTE': 'OUT_BYTE',
+    'TRAFFIC_INPUT_BYTE': 'IN_BYTE',
+    'TRAFFIC_OUTPUT_BYTE': 'OUT_BYTE',
+    'TRAFFIC_IN_PKT': 'IN_PKT',
+    'TRAFFIC_OUT_PKT': 'OUT_PKT',
+    'TRAFFIC_IN_ERR': 'IN_ERR',
+    'TRAFFIC_OUT_ERR': 'OUT_ERR',
+    'TRAFFIC_IN_DROP': 'IN_DROP',
+    'TRAFFIC_OUT_DROP': 'OUT_DROP',
+    'CPU_USAGE': 'CPU',
+    'MEMORY_USAGE': 'MEM',
+  };
+  return abbrevMap[metric] || metric;
+};
 
 // 기본 위젯 타입 (API 실패 시 폴백)
 const DEFAULT_WIDGET_TYPES = {
@@ -843,29 +897,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
               metricColorMap.get(data.metric).push(data);
             });
 
-            // 7. 메트릭 이름 약어 변환
-            const metricAbbrev = {
-              'ICMP_MAX': 'MAX',
-              'ICMP_MIN': 'MIN',
-              'ICMP_AVG': 'AVG',
-              'ICMP_LOSS': 'LOSS',
-              'TRAFFIC_IN_BPS': 'IN_BPS',
-              'TRAFFIC_OUT_BPS': 'OUT_BPS',
-              'TRAFFIC_IN_BYTE': 'IN_BYTE',
-              'TRAFFIC_OUT_BYTE': 'OUT_BYTE',
-              'TRAFFIC_INPUT_BYTE': 'IN_BYTE',
-              'TRAFFIC_OUTPUT_BYTE': 'OUT_BYTE',
-              'TRAFFIC_IN_PKT': 'IN_PKT',
-              'TRAFFIC_OUT_PKT': 'OUT_PKT',
-              'TRAFFIC_IN_ERR': 'IN_ERR',
-              'TRAFFIC_OUT_ERR': 'OUT_ERR',
-              'TRAFFIC_IN_DROP': 'IN_DROP',
-              'TRAFFIC_OUT_DROP': 'OUT_DROP',
-              'CPU_USAGE': 'CPU',
-              'MEMORY_USAGE': 'MEM',
-            };
-
-            // 8. 색상 톤 변화 함수 (같은 메트릭 내 디바이스 구분용)
+            // 7. 색상 톤 변화 함수 (같은 메트릭 내 디바이스 구분용)
             const adjustColorBrightness = (hexColor, index, total) => {
               try {
                 // hex 색상인지 확인
@@ -926,7 +958,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
             let result = [];
             metricColorMap.forEach((devices, metric) => {
               const baseColor = metricColors[metric] || '#14b8a6';
-              const shortMetric = metricAbbrev[metric] || metric;
+              const shortMetric = getShortMetricName(metric);
               const deviceCount = devices.length;
               const metricUnit = metricUnits[metric] || '%';
 
@@ -1155,7 +1187,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
           const baseColor = metricBaseColors[metric] || '#14b8a6';
 
           return {
-            name: metric,
+            name: getShortMetricName(metric),
             type: 'pie',
             radius: ['18%', '35%'],
             center: position.center,
@@ -1196,7 +1228,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
           const position = positions[index] || { center: ['50%', '50%'], titleTop: '25%' };
 
           return {
-            text: metric,
+            text: getShortMetricName(metric),
             left: position.center[0],
             top: position.titleTop,
             textAlign: 'center',
@@ -1332,7 +1364,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
           });
 
           return {
-            name: metric,
+            name: getShortMetricName(metric),
             type: 'bar',
             data: metricData,
             itemStyle: {
@@ -1349,20 +1381,42 @@ function CustomWidgetContent({ widget, isEditMode }) {
             axisPointer: { type: 'shadow' },
             backgroundColor: '#1e293b',
             borderColor: '#334155',
-            textStyle: { color: '#f1f5f9' }
+            textStyle: { color: '#f1f5f9' },
+            formatter: (params) => {
+              if (!params || params.length === 0) return '';
+              let result = `<div style="font-weight: bold; margin-bottom: 4px;">${params[0].name}</div>`;
+              params.forEach(param => {
+                if (param.value == null) return;
+                // 메트릭별 단위 결정
+                let unit = '';
+                if (param.seriesName.includes('BPS')) unit = 'bps';
+                else if (param.seriesName.includes('BYTE')) unit = 'byte';
+                else if (param.seriesName.includes('PKT')) unit = 'pkt';
+                else if (param.seriesName.includes('ERR') || param.seriesName.includes('DROP')) unit = '';
+                else if (param.seriesName.includes('LOSS')) unit = '%';
+                else unit = 'ms';
+                const displayValue = formatLargeValue(param.value, unit);
+                const marker = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${param.color};margin-right:6px;"></span>`;
+                result += `<div style="margin-top: 2px;">${marker}${param.seriesName}: <strong>${displayValue}${unit}</strong></div>`;
+              });
+              return result;
+            }
           },
           legend: {
-            data: uniqueMetrics,
-            textStyle: { color: '#94a3b8', fontSize: 11 },
-            top: '5%',
-            itemWidth: 14,
-            itemHeight: 14
+            data: uniqueMetrics.map(getShortMetricName),
+            textStyle: { color: '#94a3b8', fontSize: 10 },
+            bottom: 0,
+            itemWidth: 12,
+            itemHeight: 12,
+            type: 'scroll',
+            pageIconColor: '#3b82f6',
+            pageIconInactiveColor: '#475569'
           },
           grid: {
-            left: '3%',
-            right: '4%',
+            left: '2%',
+            right: '2%',
             bottom: '15%',
-            top: '18%',
+            top: '5%',
             containLabel: true
           },
           xAxis: {
@@ -1370,9 +1424,11 @@ function CustomWidgetContent({ widget, isEditMode }) {
             data: uniqueDevices,
             axisLabel: {
               color: '#94a3b8',
-              fontSize: 10,
-              interval: 0,
-              rotate: 45
+              fontSize: 9,
+              interval: 'auto',
+              rotate: 30,
+              overflow: 'truncate',
+              width: 60
             },
             axisLine: { lineStyle: { color: '#334155' } }
           },
@@ -1380,7 +1436,10 @@ function CustomWidgetContent({ widget, isEditMode }) {
             type: 'value',
             name: 'ms / %',
             nameTextStyle: { color: '#94a3b8' },
-            axisLabel: { color: '#94a3b8' },
+            axisLabel: {
+              color: '#94a3b8',
+              formatter: (value) => formatLargeValue(value, '')
+            },
             axisLine: { lineStyle: { color: '#334155' } },
             splitLine: { lineStyle: { color: '#1e293b' } }
           },
@@ -1389,6 +1448,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
       }
 
       // 기본 Bar Chart: 단일 메트릭
+      const barUnit = elementMeta?.unit || '%';
       return {
         backgroundColor: 'transparent',
         tooltip: {
@@ -1396,13 +1456,19 @@ function CustomWidgetContent({ widget, isEditMode }) {
           axisPointer: { type: 'shadow' },
           backgroundColor: '#1e293b',
           borderColor: '#334155',
-          textStyle: { color: '#f1f5f9' }
+          textStyle: { color: '#f1f5f9' },
+          formatter: (params) => {
+            const param = params[0];
+            if (!param) return '';
+            const displayValue = formatLargeValue(param.value, barUnit);
+            return `${param.name}<br/>${param.seriesName}: <strong>${displayValue}${barUnit}</strong>`;
+          }
         },
         grid: {
-          left: '3%',
-          right: '4%',
-          bottom: '15%',
-          top: '10%',
+          left: '2%',
+          right: '2%',
+          bottom: '12%',
+          top: '8%',
           containLabel: true
         },
         xAxis: {
@@ -1410,17 +1476,23 @@ function CustomWidgetContent({ widget, isEditMode }) {
           data: chartData.map(item => item.deviceName),
           axisLabel: {
             color: '#94a3b8',
-            fontSize: 10,
-            interval: 0,
-            rotate: 45
+            fontSize: 9,
+            interval: 'auto',
+            rotate: 30,
+            overflow: 'truncate',
+            width: 60
           },
           axisLine: { lineStyle: { color: '#334155' } }
         },
         yAxis: {
           type: 'value',
           name: elementMeta?.unit || '%',
-          nameTextStyle: { color: '#94a3b8' },
-          axisLabel: { color: '#94a3b8' },
+          nameTextStyle: { color: '#94a3b8', fontSize: 10 },
+          axisLabel: {
+            color: '#94a3b8',
+            fontSize: 10,
+            formatter: (value) => formatLargeValue(value, elementMeta?.unit || '%')
+          },
           axisLine: { lineStyle: { color: '#334155' } },
           splitLine: { lineStyle: { color: '#1e293b' } }
         },
@@ -1499,8 +1571,8 @@ function CustomWidgetContent({ widget, isEditMode }) {
               // 각 시리즈의 unit 찾기
               const dataItem = chartData.find(d => (d.displayName || d.deviceName) === param.seriesName);
               const unit = dataItem?.unit || '%';
-              // 절대값으로 표시 (TRAFFIC 미러 차트 대응)
-              const displayValue = Math.abs(param.value)?.toFixed(2);
+              // 절대값으로 표시 + K/M/G 단위 적용
+              const displayValue = formatLargeValue(Math.abs(param.value), unit);
               items += `<div style="margin-top: 4px; white-space: nowrap; font-size: 12px;">${marker}${param.seriesName}: <strong>${displayValue}${unit}</strong></div>`;
             });
 
@@ -1539,16 +1611,17 @@ function CustomWidgetContent({ widget, isEditMode }) {
           }
         },
         grid: {
-          left: '3%',
-          right: '4%',
-          bottom: '18%',
-          top: '10%',
+          left: '2%',
+          right: '2%',
+          bottom: '15%',
+          top: '8%',
           containLabel: true
         },
         toolbox: {
           show: true,
-          right: 10,
+          right: 5,
           top: 0,
+          itemSize: 12,
           feature: {
             dataZoom: {
               yAxisIndex: 'none',
@@ -1578,7 +1651,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
           type: 'category',
           boundaryGap: false,
           data: chartData[0]?.timestamps?.map(ts => ts.split(' ')[1]?.substring(0, 5) || '') || [],
-          axisLabel: { color: '#94a3b8', fontSize: 10 },
+          axisLabel: { color: '#94a3b8', fontSize: 9 },
           axisLine: { lineStyle: { color: '#334155' } }
         },
         yAxis: {
@@ -1591,11 +1664,9 @@ function CustomWidgetContent({ widget, isEditMode }) {
           axisLabel: {
             color: '#94a3b8',
             formatter: (value) => {
-              // TRAFFIC 미러 차트: 절대값으로 표시
-              if (selectedGroup === 'TRAFFIC') {
-                return Math.abs(value).toFixed(1);
-              }
-              return value;
+              const absValue = Math.abs(value);
+              const unit = chartData[0]?.unit || '';
+              return formatLargeValue(absValue, unit);
             }
           },
           axisLine: { lineStyle: { color: '#334155' } },
@@ -1679,7 +1750,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
                       show: true,
                       position: 'top',
                       distance: 8,
-                      formatter: `{value|${globalMax.value.toFixed(1)}${globalMax.unit}}`,
+                      formatter: `{value|${formatLargeValue(globalMax.value, globalMax.unit)}${globalMax.unit}}`,
                       rich: {
                         value: {
                           fontSize: 12,
@@ -2291,34 +2362,35 @@ function WidgetContent({ widget, widgetTypes, isEditMode }) {
       );
 
     case 'ALERT_SUMMARY':
+      const alertCntData = widget.cntData || {};
       return (
         <div className="widget-content-inner">
           <div className="alert-summary-grid">
             <div className="summary-card critical">
               <div className="summary-icon"><i className="bi bi-exclamation-circle-fill"></i></div>
               <div className="summary-content">
-                <div className="summary-count">12</div>
+                <div className="summary-count">{alertCntData.criticalCnt ?? 0}</div>
                 <div className="summary-label">Critical</div>
               </div>
             </div>
             <div className="summary-card major">
               <div className="summary-icon"><i className="bi bi-exclamation-triangle-fill"></i></div>
               <div className="summary-content">
-                <div className="summary-count">28</div>
+                <div className="summary-count">{alertCntData.majorCnt ?? 0}</div>
                 <div className="summary-label">Major</div>
               </div>
             </div>
             <div className="summary-card minor">
               <div className="summary-icon"><i className="bi bi-info-circle-fill"></i></div>
               <div className="summary-content">
-                <div className="summary-count">45</div>
+                <div className="summary-count">{alertCntData.minorCnt ?? 0}</div>
                 <div className="summary-label">Minor</div>
               </div>
             </div>
             <div className="summary-card warning">
               <div className="summary-icon"><i className="bi bi-exclamation-diamond-fill"></i></div>
               <div className="summary-content">
-                <div className="summary-count">67</div>
+                <div className="summary-count">{alertCntData.warningCnt ?? 0}</div>
                 <div className="summary-label">Warning</div>
               </div>
             </div>
@@ -2376,6 +2448,7 @@ function WidgetContent({ widget, widgetTypes, isEditMode }) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const containerRef = useRef(null);
   const [widgets, setWidgets] = useState([]);
   const [layout, setLayout] = useState([]);
@@ -2390,6 +2463,8 @@ export default function Dashboard() {
   const [containerWidth, setContainerWidth] = useState(1200);
   const [isInitialized, setIsInitialized] = useState(false);
   const [initialWidgetCount, setInitialWidgetCount] = useState(0); // 편집 시작 시 위젯 개수
+  const [showResetConfirm, setShowResetConfirm] = useState(false); // 초기화 확인 모달
+  const [isResettingDashboard, setIsResettingDashboard] = useState(false); // 초기화 진행 중
 
   // 사용자 정보 가져오기
   const { user } = useAuthStore();
@@ -2538,6 +2613,7 @@ export default function Dashboard() {
         sortOrder: item.sortOrder ?? index, // DB: SORT_ORDER
         config: configWithMetadata, // 메타데이터가 추가된 CONFIG
         chartData: item.chartData || [], // 백엔드에서 받은 차트 데이터
+        cntData: item.cntData || null, // 백엔드에서 받은 카운트 데이터 (장애현황 등)
       });
 
       newLayout.push({
@@ -2770,11 +2846,22 @@ export default function Dashboard() {
     setShowCustomWidgetModal(false);
   }, [layout, widgets, WIDGET_TYPES]);
 
-  // 위젯 삭제
+  // 위젯 삭제 (최소 1개 위젯 유지)
   const handleDeleteWidget = useCallback((widgetId) => {
-    // 로컬 state에서만 제거 (API 호출 없음)
-    setWidgets(prev => prev.filter(w => w.id !== widgetId));
-    setLayout(prev => prev.filter(l => l.i !== widgetId));
+    setWidgets(prev => {
+      // 마지막 위젯은 삭제 불가
+      if (prev.length <= 1) {
+        alert('최소 1개의 위젯은 유지해야 합니다.');
+        return prev;
+      }
+      return prev.filter(w => w.id !== widgetId);
+    });
+    setLayout(prev => {
+      if (prev.length <= 1) {
+        return prev;
+      }
+      return prev.filter(l => l.i !== widgetId);
+    });
   }, []);
 
   // 위젯 설정 열기
@@ -2932,21 +3019,32 @@ export default function Dashboard() {
 
       // 백그라운드에서 저장
       saveUserDashboard(widgetsToSave, {
-        onSuccess: async () => {
+        onSuccess: (response) => {
           console.log('대시보드가 성공적으로 저장되었습니다.');
-          // 새 위젯 ID만 업데이트 (전체 재초기화 없이)
-          const { data } = await refetchUserDashboard();
-          if (data && data.length > 0) {
+
+          // 저장 API 응답에서 데이터 추출
+          const freshData = response?.data?.data || response?.data || [];
+          console.log('=== 저장 후 응답 데이터 ===', freshData);
+
+          // 응답 데이터가 있으면 캐시 업데이트
+          if (Array.isArray(freshData)) {
+            queryClient.setQueryData(['userDashboard', userId], freshData);
+          }
+
+          // 위젯 ID 및 데이터 업데이트
+          if (freshData && freshData.length > 0) {
             setWidgets(prev => prev.map(widget => {
-              // 새로 추가된 위젯(userDashboardWidgetId가 없는)에 대해 ID 매핑
-              if (!widget.userDashboardWidgetId) {
-                const matched = data.find(d =>
-                  d.widgetId === widget.widgetId &&
-                  d.title === widget.title
-                );
-                if (matched) {
-                  return { ...widget, userDashboardWidgetId: matched.userDashboardWidgetId };
-                }
+              const matched = freshData.find(d =>
+                (widget.userDashboardWidgetId && d.userDashboardWidgetId === widget.userDashboardWidgetId) ||
+                (!widget.userDashboardWidgetId && d.widgetId === widget.widgetId && d.title === widget.title)
+              );
+              if (matched) {
+                return {
+                  ...widget,
+                  userDashboardWidgetId: matched.userDashboardWidgetId,
+                  chartData: matched.chartData || widget.chartData || [],
+                  cntData: matched.cntData || widget.cntData || null,
+                };
               }
               return widget;
             }));
@@ -2963,28 +3061,83 @@ export default function Dashboard() {
       setInitialWidgetCount(widgets.length);
       setIsEditMode(true);
     }
-  }, [isEditMode, widgets, layout, saveUserDashboard, refetchUserDashboard, removeConfigMetadata]);
+  }, [isEditMode, widgets, layout, saveUserDashboard, refetchUserDashboard, removeConfigMetadata, queryClient, userId]);
 
-  // 기본 대시보드로 초기화
+  // 기본 대시보드로 초기화 - 확인 모달 표시
   const handleResetDashboard = useCallback(() => {
-    if (!confirm('사용자 설정을 초기화하고 기본 대시보드로 되돌리시겠습니까?')) {
-      return;
-    }
+    setShowResetConfirm(true);
+  }, []);
+
+  // 실제 초기화 실행
+  const executeResetDashboard = useCallback(() => {
+    setIsResettingDashboard(true);
 
     resetUserDashboard(undefined, {
-      onSuccess: async () => {
+      onSuccess: (response) => {
         console.log('대시보드가 기본값으로 초기화되었습니다.');
-        alert('기본 대시보드로 초기화되었습니다.');
-        // 새로운 데이터를 즉시 가져온 후 재초기화
-        await refetchUserDashboard();
-        setIsInitialized(false);
+
+        // API 응답에서 바로 위젯 데이터 사용
+        const freshData = response?.data?.data || response?.data || response || [];
+        console.log('=== 초기화 API 응답 데이터 ===', freshData);
+
+        if (freshData && freshData.length > 0) {
+          // 새 데이터로 위젯과 레이아웃 직접 업데이트
+          const maxCols = 12;
+          const newWidgets = [];
+          const newLayout = [];
+
+          freshData.forEach((item, index) => {
+            const id = `w${item.userDashboardWidgetId || index}`;
+            const width = Math.min(item.width ?? 1, maxCols);
+            const posX = Math.min(item.posX ?? item.x ?? 0, maxCols - width);
+
+            let parsedConfig = item.config ? (typeof item.config === 'string' ? JSON.parse(item.config) : item.config) : {};
+            const widgetType = WIDGET_TYPES[item.widgetCode];
+            if ((!parsedConfig || Object.keys(parsedConfig).length === 0) && widgetType?.defaultConfig) {
+              parsedConfig = { ...widgetType.defaultConfig };
+            }
+
+            newWidgets.push({
+              id,
+              widgetId: item.widgetId,
+              userDashboardWidgetId: item.userDashboardWidgetId,
+              type: item.widgetCode,
+              title: item.title || item.name || item.widgetCode,
+              sortOrder: item.sortOrder ?? index,
+              config: parsedConfig,
+              chartData: item.chartData || [],
+              cntData: item.cntData || null,
+            });
+
+            newLayout.push({
+              i: id,
+              x: posX,
+              y: item.posY ?? item.y ?? 0,
+              w: width,
+              h: item.height ?? 1,
+              minW: 1,
+              minH: 1,
+              maxW: maxCols,
+            });
+          });
+
+          setWidgets(newWidgets);
+          setLayout(newLayout);
+
+          // 캐시도 업데이트 (다음 조회 시 일관성 유지)
+          queryClient.setQueryData(['userDashboard', userId], freshData);
+        }
+
+        setIsResettingDashboard(false);
+        setShowResetConfirm(false);
       },
       onError: (error) => {
         console.error('대시보드 초기화 실패:', error);
-        alert('대시보드 초기화에 실패했습니다.');
+        setIsResettingDashboard(false);
+        setShowResetConfirm(false);
       }
     });
-  }, [resetUserDashboard, refetchUserDashboard]);
+  }, [resetUserDashboard, queryClient, userId, WIDGET_TYPES]);
 
   // 허용할 위젯 코드 목록 (화이트리스트)
   const ALLOWED_WIDGET_CODES = [
@@ -3051,11 +3204,6 @@ export default function Dashboard() {
         <div className="dashboard-title">
           <h1>대시보드</h1>
           <span className="widget-count">{widgets.length}개 위젯</span>
-          {userDashboard && userDashboard.length > 0 ? (
-            <span className="dashboard-status">사용자 설정</span>
-          ) : (
-            <span className="dashboard-status default">기본 대시보드</span>
-          )}
         </div>
         <div className="dashboard-actions">
           {isEditMode && (
@@ -3064,33 +3212,22 @@ export default function Dashboard() {
               위젯 추가
             </button>
           )}
-          {userDashboard && userDashboard.length > 0 && !isEditMode && (
+          {!isEditMode && (
             <button className="btn-reset" onClick={handleResetDashboard} disabled={isResetting}>
               <i className="bi bi-arrow-counterclockwise"></i>
               {isResetting ? '초기화 중...' : '기본값으로 초기화'}
             </button>
           )}
 
-          {/* 사용자 위젯이 없으면 "내 대시보드 만들기", 있으면 "편집" */}
-          {userDashboard && userDashboard.length > 0 ? (
-            <button
-              className={`btn-edit-mode ${isEditMode ? 'active' : ''}`}
-              onClick={handleToggleEditMode}
-              disabled={isSaving}
-            >
-              <i className={`bi ${isEditMode ? 'bi-check-lg' : 'bi-pencil'}`}></i>
-              {isSaving ? '저장 중...' : (isEditMode ? '완료' : '편집')}
-            </button>
-          ) : (
-            <button
-              className="btn-create-dashboard"
-              onClick={handleCopyToUserDashboard}
-              disabled={isSaving}
-            >
-              <i className="bi bi-plus-square"></i>
-              {isSaving ? '생성 중...' : '내 대시보드 만들기'}
-            </button>
-          )}
+          {/* 편집 버튼 - 사용자 대시보드 유무 관계없이 표시 */}
+          <button
+            className={`btn-edit-mode ${isEditMode ? 'active' : ''}`}
+            onClick={handleToggleEditMode}
+            disabled={isSaving}
+          >
+            <i className={`bi ${isEditMode ? 'bi-check-lg' : 'bi-pencil'}`}></i>
+            {isSaving ? '저장 중...' : (isEditMode ? '완료' : '편집')}
+          </button>
         </div>
       </div>
 
@@ -3304,6 +3441,52 @@ export default function Dashboard() {
             <button className="btn-confirm" onClick={() => setShowFullScreenAlert(false)}>
               확인
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 기본값 초기화 확인 모달 */}
+      {showResetConfirm && (
+        <div className="modal-overlay" onClick={() => !isResettingDashboard && setShowResetConfirm(false)}>
+          <div className="modal-content reset-confirm-modal" onClick={e => e.stopPropagation()}>
+            <div className="reset-confirm-icon">
+              <i className="bi bi-arrow-counterclockwise"></i>
+            </div>
+            <h3>기본 대시보드로 초기화</h3>
+            <p>
+              현재 대시보드 설정이 모두 삭제되고<br/>
+              기본 대시보드로 복원됩니다.
+            </p>
+            <div className="reset-confirm-warning">
+              <i className="bi bi-exclamation-triangle-fill"></i>
+              <span>이 작업은 되돌릴 수 없습니다.</span>
+            </div>
+            <div className="reset-confirm-buttons">
+              <button
+                className="btn-cancel"
+                onClick={() => setShowResetConfirm(false)}
+                disabled={isResettingDashboard}
+              >
+                취소
+              </button>
+              <button
+                className="btn-reset"
+                onClick={executeResetDashboard}
+                disabled={isResettingDashboard}
+              >
+                {isResettingDashboard ? (
+                  <>
+                    <span className="spinner"></span>
+                    초기화 중...
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-check-lg"></i>
+                    초기화
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
