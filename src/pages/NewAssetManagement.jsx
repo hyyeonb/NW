@@ -45,6 +45,16 @@ export default function NewAssetManagement() {
   const [registrationProgress, setRegistrationProgress] = useState(null);
   const fileInputRef = useRef(null);
 
+  // IP 주소 검증 에러
+  const [ipError, setIpError] = useState('');
+
+  // IP 주소 정규식 검증
+  const isValidIp = (ip) => {
+    if (!ip) return false;
+    const ipv4Regex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    return ipv4Regex.test(ip);
+  };
+
   // 성공 목록 정렬 상태 (기본: 장비명 오름차순)
   const [successSortField, setSuccessSortField] = useState('deviceName');
   const [successSortOrder, setSuccessSortOrder] = useState('asc');
@@ -145,12 +155,22 @@ export default function NewAssetManagement() {
       ...prev,
       [name]: name === 'SNMP_VERSION' || name === 'SNMP_PORT' ? parseInt(value) : value,
     }));
+    // IP 주소 입력 시 에러 클리어
+    if (name === 'DEVICE_IP') {
+      setIpError('');
+    }
   };
 
   // 장비 추가 (서버 측 중복 검증 포함)
   const handleAddDevice = async () => {
     if (!formData.DEVICE_NAME || !formData.DEVICE_IP) {
       alert('장비명과 IP 주소는 필수입니다.');
+      return;
+    }
+
+    // IP 주소 형식 검증
+    if (!isValidIp(formData.DEVICE_IP)) {
+      setIpError('올바른 IP 주소를 입력해주세요 (예: 192.168.1.1)');
       return;
     }
 
@@ -378,12 +398,19 @@ export default function NewAssetManagement() {
 
     const newDevices = [];
     const localDuplicates = [];
+    const invalidIps = [];
 
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(',').map((col) => col.trim());
       if (cols.length < 4) continue;
 
       const deviceIp = cols[1];
+
+      // IP 주소 형식 검증
+      if (!isValidIp(deviceIp)) {
+        invalidIps.push(deviceIp);
+        continue;
+      }
 
       // 현재 목록 내 중복 검사
       if (devices.some((d) => d.DEVICE_IP === deviceIp) || newDevices.some((d) => d.DEVICE_IP === deviceIp)) {
@@ -427,8 +454,15 @@ export default function NewAssetManagement() {
     }
 
     if (newDevices.length === 0) {
+      const messages = [];
       if (localDuplicates.length > 0) {
-        alert(`모든 장비가 현재 목록에 중복되어 추가할 수 없습니다.`);
+        messages.push(`중복된 IP: ${localDuplicates.length}개`);
+      }
+      if (invalidIps.length > 0) {
+        messages.push(`유효하지 않은 IP: ${invalidIps.length}개`);
+      }
+      if (messages.length > 0) {
+        alert(`추가할 수 있는 장비가 없습니다.\n${messages.join('\n')}`);
       } else {
         alert('추가할 수 있는 장비가 없습니다.');
       }
@@ -469,9 +503,17 @@ export default function NewAssetManagement() {
 
       const serverDuplicateCount = newDevices.length - validDevices.length;
       const totalDuplicates = localDuplicates.length + serverDuplicateCount;
+      const excludedMessages = [];
 
       if (totalDuplicates > 0) {
-        alert(`${validDevices.length}개의 장비가 추가되었습니다.\n중복된 IP ${totalDuplicates}개는 제외되었습니다.`);
+        excludedMessages.push(`중복된 IP: ${totalDuplicates}개`);
+      }
+      if (invalidIps.length > 0) {
+        excludedMessages.push(`유효하지 않은 IP: ${invalidIps.length}개`);
+      }
+
+      if (excludedMessages.length > 0) {
+        alert(`${validDevices.length}개의 장비가 추가되었습니다.\n\n제외된 항목:\n${excludedMessages.join('\n')}`);
       } else {
         alert(`${validDevices.length}개의 장비가 추가되었습니다.`);
       }
@@ -730,11 +772,21 @@ export default function NewAssetManagement() {
   return (
     <div className="page-container new-asset-page no-sidebar">
       <main className="page-main-content full-width">
-        <div className="content-header">
-          <h2>신규자산관리</h2>
-          <button type="button" className="template-download-link" onClick={downloadCsvTemplate}>
-            CSV 양식 다운로드
-          </button>
+        {/* 페이지 헤더 */}
+        <div className="page-header">
+          <div className="page-header-left">
+            <h1 className="page-title">
+              <i className="bi bi-plus-circle"></i>
+              신규 자산 등록
+            </h1>
+            <span className="page-subtitle">새로운 장비를 등록합니다</span>
+          </div>
+          <div className="page-header-right">
+            <button type="button" className="btn btn-ghost" onClick={downloadCsvTemplate}>
+              <i className="bi bi-download"></i>
+              CSV 양식
+            </button>
+          </div>
         </div>
 
         {/* 장비 입력 및 목록 통합 영역 */}
@@ -788,7 +840,9 @@ export default function NewAssetManagement() {
                 value={formData.DEVICE_IP}
                 onChange={handleInputChange}
                 placeholder="192.168.1.1"
+                className={ipError ? 'input-error' : ''}
               />
+              {ipError && <span className="input-error-message">{ipError}</span>}
             </div>
             <div className="input-cell">
               <label>SNMP 버전</label>

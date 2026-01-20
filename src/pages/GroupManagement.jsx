@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import GroupTree from '../components/GroupTree';
+import { GroupTree, DataTable } from '../components';
 import IconSelectorModal from '../components/IconSelectorModal';
 import { useGroupStore } from '../stores';
 import {
@@ -42,6 +42,10 @@ export default function GroupManagement() {
   const [groupSortField, setGroupSortField] = useState('GROUP_ID');
   const [groupSortOrder, setGroupSortOrder] = useState('asc');
 
+  // 하위 그룹 검색 상태
+  const [searchChildGroupName, setSearchChildGroupName] = useState('');
+  const [searchChildAddress, setSearchChildAddress] = useState('');
+
   // Mutations
   const createGroupMutation = useCreateGroup();
   const updateGroupMutation = useUpdateGroup();
@@ -70,6 +74,8 @@ export default function GroupManagement() {
       const children = getAllChildren(selectedGroup);
       setAllChildGroups(children);
       setChildGroupsCurrentPage(1);
+      setSearchChildGroupName('');
+      setSearchChildAddress('');
     } else {
       setAllChildGroups([]);
     }
@@ -111,10 +117,22 @@ export default function GroupManagement() {
     }
   };
 
+  // 하위 그룹 검색 필터링
+  const filteredChildGroups = useMemo(() => {
+    if (!allChildGroups.length) return [];
+    return allChildGroups.filter(group => {
+      const nameMatch = !searchChildGroupName ||
+        (group.GROUP_NAME || '').toLowerCase().includes(searchChildGroupName.toLowerCase());
+      const addressMatch = !searchChildAddress ||
+        (group.ADDRESS || '').toLowerCase().includes(searchChildAddress.toLowerCase());
+      return nameMatch && addressMatch;
+    });
+  }, [allChildGroups, searchChildGroupName, searchChildAddress]);
+
   // 하위 그룹 정렬 로직
   const sortedChildGroups = useMemo(() => {
-    if (!allChildGroups.length) return [];
-    return [...allChildGroups].sort((a, b) => {
+    if (!filteredChildGroups.length) return [];
+    return [...filteredChildGroups].sort((a, b) => {
       let aVal = a[groupSortField];
       let bVal = b[groupSortField];
 
@@ -142,7 +160,7 @@ export default function GroupManagement() {
       }
       return strB.localeCompare(strA, 'ko');
     });
-  }, [allChildGroups, groupSortField, groupSortOrder]);
+  }, [filteredChildGroups, groupSortField, groupSortOrder]);
 
   // 페이지네이션 계산
   const totalPages = useMemo(
@@ -387,6 +405,36 @@ export default function GroupManagement() {
     }
   };
 
+  // 하위 그룹 테이블 컬럼 정의
+  const childGroupColumns = useMemo(() => [
+    {
+      key: 'GROUP_NAME',
+      label: '그룹 이름',
+      sortable: true,
+      className: 'cell-truncate',
+    },
+    {
+      key: 'ADDRESS',
+      label: '주소',
+      sortable: true,
+      className: 'cell-truncate',
+    },
+    {
+      key: 'PHONE',
+      label: '전화번호',
+      width: '130px',
+      sortable: true,
+    },
+    {
+      key: 'CREATE_AT',
+      label: '등록일자',
+      width: '110px',
+      sortable: true,
+      className: 'cell-date',
+      render: (value) => formatDate(value),
+    },
+  ], []);
+
   return (
     <div className="page-container">
       <GroupTree
@@ -398,15 +446,18 @@ export default function GroupManagement() {
       />
 
       <main className="page-main-content">
-        <h2 id="form-title">
-          {viewMode === 'edit'
-            ? '그룹 수정'
-            : viewMode === 'add'
-            ? parentIdForAdd
-              ? '하위 그룹 추가'
-              : '그룹 추가'
-            : '그룹 정보'}
-        </h2>
+        {/* 페이지 헤더 */}
+        <div className="page-header">
+          <div className="page-header-left">
+            <h1 className="page-title">
+              <i className="bi bi-diagram-3"></i>
+              그룹 관리
+            </h1>
+            <span className="page-subtitle">조직 및 장비 그룹을 관리합니다</span>
+          </div>
+        </div>
+
+
 
         {/* 웰컴 메시지 - 선택된 그룹이 없을 때 */}
         {!selectedGroup && viewMode === 'info' && (
@@ -444,86 +495,29 @@ export default function GroupManagement() {
 
             {/* 하위 그룹 테이블 */}
             <div id="child-groups-section" style={{ marginTop: '30px' }}>
-              <h3 style={{ color: '#ffffff', fontSize: '18px', marginBottom: '15px' }}>
-                하위 그룹 목록
-              </h3>
-              <div className="table-wrapper">
-                <table id="child-groups-table" className="child-groups-table">
-                  <thead>
-                    <tr>
-                      <th className="sortable" onClick={() => handleGroupSort('GROUP_NAME')}>
-                        그룹 이름 {renderSortIcon('GROUP_NAME')}
-                      </th>
-                      <th className="sortable" onClick={() => handleGroupSort('ADDRESS')}>
-                        주소 {renderSortIcon('ADDRESS')}
-                      </th>
-                      <th className="sortable" onClick={() => handleGroupSort('PHONE')}>
-                        전화번호 {renderSortIcon('PHONE')}
-                      </th>
-                      <th className="sortable" onClick={() => handleGroupSort('CREATE_AT')}>
-                        등록일자 {renderSortIcon('CREATE_AT')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody id="child-groups-tbody">
-                    {pagedChildGroups.length === 0 ? (
-                      <tr>
-                        <td colSpan="4" className="no-children-message">
-                          하위 그룹이 없습니다.
-                        </td>
-                      </tr>
-                    ) : (
-                      pagedChildGroups.map((child) => (
-                        <tr
-                          key={child.GROUP_ID}
-                          style={{ cursor: 'pointer' }}
-                          data-group-id={child.GROUP_ID}
-                          onClick={() => handleChildGroupClick(child.GROUP_ID)}
-                        >
-                          <td>{child.GROUP_NAME}</td>
-                          <td>{child.ADDRESS || '-'}</td>
-                          <td>{child.PHONE || '-'}</td>
-                          <td>{formatDate(child.CREATE_AT)}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
 
-              {/* 페이지네이션 컨트롤 */}
-              <div className="pagination-controls">
-                <div className="items-per-page">
-                  <label htmlFor="child-groups-items-per-page">개수:</label>
-                  <select
-                    id="child-groups-items-per-page"
-                    value={childGroupsItemsPerPage}
-                    onChange={handleItemsPerPageChange}
-                  >
-                    <option value="10">10</option>
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                  </select>
-                </div>
-                <div id="child-groups-pagination" className="pagination">
-                  {totalPages > 1 && (
-                    <>
-                      <button onClick={handlePrevPage} disabled={childGroupsCurrentPage === 1}>
-                        이전
-                      </button>
-                      <span>
-                        {childGroupsCurrentPage} / {totalPages}
-                      </span>
-                      <button
-                        onClick={handleNextPage}
-                        disabled={childGroupsCurrentPage === totalPages}
-                      >
-                        다음
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
+              <DataTable
+                columns={childGroupColumns}
+                data={pagedChildGroups}
+                rowKey="GROUP_ID"
+                emptyText="하위 그룹이 없습니다"
+                emptyIcon="bi-folder2"
+                sort={{ field: groupSortField, order: groupSortOrder }}
+                onSort={handleGroupSort}
+                onRowClick={(row) => handleChildGroupClick(row.GROUP_ID)}
+                pagination={{
+                  currentPage: childGroupsCurrentPage,
+                  pageSize: childGroupsItemsPerPage,
+                  totalItems: sortedChildGroups.length,
+                  onPageChange: setChildGroupsCurrentPage,
+                  onPageSizeChange: (newSize) => {
+                    setChildGroupsItemsPerPage(newSize);
+                    setChildGroupsCurrentPage(1);
+                  },
+                  pageSizeOptions: [10, 20, 50],
+                }}
+                maxHeight="calc(100vh - 400px)"
+              />
             </div>
           </div>
         )}

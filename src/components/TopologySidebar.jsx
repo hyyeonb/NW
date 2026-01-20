@@ -55,7 +55,7 @@ function GroupNode({ group, depth = 0, isEditMode, onGroupSelect }) {
         >
           {isEditMode && <i className="bi bi-grip-vertical drag-handle"></i>}
           <i className={`bi ${isExpanded ? 'bi-folder2-open' : 'bi-folder2'} group-icon`}></i>
-          <span className="group-name">{group.GROUP_NAME}</span>
+          <span className="group-name" title={group.GROUP_NAME}>{group.GROUP_NAME}</span>
           {hasChildren && (
             <span className="group-count">{group.children.length}</span>
           )}
@@ -249,7 +249,7 @@ function DeviceListSidebar({ selectedDevice, onSelectDevice, isEditMode, onAddMu
       </div>
       <div className="topology-sidebar-subheader">
         <i className="bi bi-folder2"></i>
-        <span>{selectedGroup.GROUP_NAME}</span>
+        <span title={selectedGroup.GROUP_NAME}>{selectedGroup.GROUP_NAME}</span>
       </div>
 
       {/* 편집 모드에서 다중 선택 툴바 */}
@@ -317,7 +317,7 @@ function DeviceListSidebar({ selectedDevice, onSelectDevice, isEditMode, onAddMu
                   )}
                   <i className={`bi ${notRegistered ? 'bi-exclamation-circle' : 'bi-hdd-network'} device-icon ${notRegistered ? 'not-registered-icon' : ''}`}></i>
                   <div className="device-info">
-                    <span className={`device-name ${notRegistered ? 'not-registered-name' : ''}`}>
+                    <span className={`device-name ${notRegistered ? 'not-registered-name' : ''}`} title={device.DEVICE_NAME || device.DEVICE_ID}>
                       {device.DEVICE_NAME || device.DEVICE_ID}
                       {notRegistered && <span className="not-registered-badge">미등록</span>}
                     </span>

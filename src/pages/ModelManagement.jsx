@@ -273,8 +273,21 @@ export default function ModelManagement() {
 
   return (
     <div className="model-management-container">
-      {/* 좌측: 벤더-모델 트리 */}
-      <div className="model-tree-panel">
+      {/* 페이지 헤더 */}
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">
+            <i className="bi bi-cpu"></i>
+            모델 관리
+          </h1>
+          <span className="page-subtitle">장비 모델 및 OID를 관리합니다</span>
+        </div>
+      </div>
+
+      {/* 패널 래퍼 */}
+      <div className="model-panels-wrapper">
+        {/* 좌측: 벤더-모델 트리 */}
+        <div className="model-tree-panel">
         <div className="panel-header">
           <h3><i className="bi bi-diagram-3"></i> 벤더 / 모델</h3>
           <button
@@ -322,7 +335,7 @@ export default function ModelManagement() {
                             onClick={(e) => handleModelClick(model, e)}
                           >
                             <i className="bi bi-cpu model-icon"></i>
-                            <span className="model-name">{model.MODEL_NAME || '(이름 없음)'}</span>
+                            <span className="model-name" title={model.MODEL_NAME || '(이름 없음)'}>{model.MODEL_NAME || '(이름 없음)'}</span>
                           </li>
                         ))}
                       </ul>
@@ -347,15 +360,15 @@ export default function ModelManagement() {
               <div className="detail-section">
                 <div className="detail-row">
                   <span className="detail-label">모델명</span>
-                  <span className="detail-value">{selectedModel.MODEL_NAME || '-'}</span>
+                  <span className="detail-value" title={selectedModel.MODEL_NAME || '-'}>{selectedModel.MODEL_NAME || '-'}</span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">모델 OID</span>
-                  <span className="detail-value oid">{selectedModel.MODEL_OID || '-'}</span>
+                  <span className="detail-value oid" title={selectedModel.MODEL_OID || '-'}>{selectedModel.MODEL_OID || '-'}</span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">벤더</span>
-                  <span className="detail-value">{selectedModel.VENDOR_NAME || '-'}</span>
+                  <span className="detail-value" title={selectedModel.VENDOR_NAME || '-'}>{selectedModel.VENDOR_NAME || '-'}</span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">등록일</span>
@@ -404,6 +417,7 @@ export default function ModelManagement() {
             <p>선택 된 모델이 없습니다</p>
           </div>
         )}
+        </div>
       </div>
 
       {/* 모델 추가/수정 모달 */}

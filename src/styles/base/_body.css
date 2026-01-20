@@ -10,6 +10,11 @@ body {
     background: var(--color-bg-dark);
     color: var(--color-text-secondary);
     overflow-x: hidden;
+    /* 폰트 렌더링 최적화 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern" 1;
 }
 
 /* Animated Background - Gradient Orbs */

@@ -1081,3 +1081,33 @@
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* ==================
+   IP 주소 검증 에러 스타일
+   ================== */
+.input-cell input.input-error {
+    border-color: rgba(239, 68, 68, 0.6) !important;
+    background: rgba(239, 68, 68, 0.1) !important;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+
+.input-cell input.input-error:focus {
+    border-color: rgba(239, 68, 68, 0.8) !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+.input-error-message {
+    display: block;
+    font-size: 11px;
+    color: #f87171;
+    margin-top: 4px;
+    position: absolute;
+    bottom: -18px;
+    left: 0;
+    white-space: nowrap;
+}
+
+/* input-cell에 relative 포지션 추가 (에러 메시지 위치 기준) */
+.device-input-row .input-cell {
+    position: relative;
+}
+

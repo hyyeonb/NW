@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import GroupTree from '../components/GroupTree';
+import { GroupTree, DataTable } from '../components';
 import { useGroupStore } from '../stores';
 import ReactECharts from 'echarts-for-react';
 import {
@@ -13,6 +13,7 @@ import {
   useDeviceTraffic,
   useTogglePortChartFlag,
   useResetChartFlags,
+  useDeviceErrorLevels,
 } from '../hooks';
 import { devicesApi } from '../api/devices';
 
@@ -57,24 +58,45 @@ export default function AssetManagement() {
   const [portSortField, setPortSortField] = useState('IF_INDEX');
   const [portSortOrder, setPortSortOrder] = useState('asc');
 
+  // 검색 상태
+  const [searchDeviceName, setSearchDeviceName] = useState('');
+  const [searchDeviceIp, setSearchDeviceIp] = useState('');
+
   // 차트 플래그 토글/초기화 mutation
   const toggleChartFlag = useTogglePortChartFlag();
   const resetChartFlags = useResetChartFlags();
 
-  // 그룹 변경 시 페이지 초기화
+  // 그룹 변경 시 페이지 및 검색 초기화
   useEffect(() => {
     setPage(1);
     setSelectedDevices([]);
+    setSearchDeviceName('');
+    setSearchDeviceIp('');
   }, [selectedGroup?.GROUP_ID]);
 
+  // 검색 파라미터 (useMemo로 불필요한 객체 생성 방지)
+  const searchParams = useMemo(() => ({
+    deviceName: searchDeviceName.trim(),
+    deviceIp: searchDeviceIp.trim()
+  }), [searchDeviceName, searchDeviceIp]);
 
-  // 서버 측 페이지네이션 + 정렬 사용 (LIMIT OFFSET + ORDER BY)
+  // 검색 초기화 함수
+  const handleSearchReset = () => {
+    setSearchDeviceName('');
+    setSearchDeviceIp('');
+    setPage(1);
+  };
+
+  // 서버 측 페이지네이션 + 정렬 + 검색 사용 (LIMIT OFFSET + ORDER BY + WHERE)
   const { data: devicesData, isLoading } = useDevicesByGroupPaged(
-    selectedGroup?.GROUP_ID, page, pageSize, deviceSortField, deviceSortOrder
+    selectedGroup?.GROUP_ID, page, pageSize, deviceSortField, deviceSortOrder, searchParams
   );
   const { data: portsDataRaw, isLoading: portsLoading } = useDevicePorts(detailDevice?.DEVICE_ID);
   const { data: deviceScope, isLoading: scopeLoading } = useDeviceScope(detailDevice?.DEVICE_ID);
   const { data: trafficData, isLoading: trafficLoading } = useDeviceTraffic(detailDevice?.DEVICE_ID, 60);
+
+  // 장비별 활성 장애 등급 조회
+  const { deviceErrorMap } = useDeviceErrorLevels();
 
   // 가상 인터페이스 필터링 (docker, veth, br-, lo 등 제외)
   const portsData = useMemo(() => {
@@ -422,6 +444,7 @@ export default function AssetManagement() {
   // 서버 측 페이지네이션 + 정렬 결과 사용
   const pagedDevices = devicesData?.content || [];
   const totalPages = devicesData?.totalPages || 0;
+  const totalElements = devicesData?.totalElements || 0;
 
   // 장비 테이블 정렬 핸들러 (서버에서 정렬하므로 페이지 리셋)
   const handleDeviceSort = (field) => {
@@ -621,18 +644,105 @@ export default function AssetManagement() {
     return value && value.length > maxLength;
   };
 
+  // 장비 테이블 컬럼 정의
+  const deviceColumns = useMemo(() => [
+    {
+      key: 'DEVICE_NAME',
+      label: '이름',
+      width: '180px',
+      sortable: true,
+      className: 'cell-truncate',
+      render: (value, row) => (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {deviceErrorMap?.get(row.DEVICE_ID) && (
+            <span
+              className={`fault-led fault-led-${deviceErrorMap.get(row.DEVICE_ID)}`}
+              title={`장애 발생 (${
+                deviceErrorMap.get(row.DEVICE_ID) === 'C' ? 'Critical' :
+                deviceErrorMap.get(row.DEVICE_ID) === 'M' ? 'Major' :
+                deviceErrorMap.get(row.DEVICE_ID) === 'N' ? 'Minor' : 'Warning'
+              })`}
+            />
+          )}
+          {value}
+        </span>
+      ),
+    },
+    {
+      key: 'GROUP_NAME',
+      label: '그룹',
+      width: '120px',
+      sortable: true,
+      className: 'cell-truncate',
+      render: (value) => (
+        <span style={{ color: '#94a3b8', fontSize: '12px' }}>{value || '-'}</span>
+      ),
+    },
+    {
+      key: 'DEVICE_SYSTEM_NAME',
+      label: '시스템명',
+      width: '150px',
+      sortable: true,
+      className: 'cell-truncate',
+    },
+    {
+      key: 'DEVICE_IP',
+      label: 'IP',
+      width: '130px',
+      sortable: true,
+      className: 'cell-ip',
+    },
+    {
+      key: 'MODEL_NAME',
+      label: '모델',
+      width: '120px',
+      sortable: true,
+      className: 'cell-truncate',
+    },
+    {
+      key: 'VENDOR_NAME',
+      label: '벤더',
+      width: '100px',
+      sortable: true,
+      className: 'cell-truncate',
+    },
+    {
+      key: 'PORT_COUNT',
+      label: '포트수',
+      width: '80px',
+      sortable: true,
+      align: 'center',
+      render: (value) => value != null ? <span className="port-badge">{value}</span> : '-',
+    },
+    {
+      key: 'CREATE_AT',
+      label: '등록일',
+      width: '100px',
+      sortable: true,
+      className: 'cell-date',
+      render: (value) => formatDate(value),
+    },
+  ], [deviceErrorMap]);
+
   return (
     <div className="page-container">
       <GroupTree />
       <main className="page-main-content">
-        <div className="content-header">
-          <h2 id="page-title">자산 목록</h2>
-          {selectedGroup && (
-            <span className="selected-group-badge" style={{ marginLeft: '16px' }}>
-              <i className="bi bi-folder2"></i>
-              {selectedGroup.GROUP_NAME}
-            </span>
-          )}
+        {/* 페이지 헤더 */}
+        <div className="page-header">
+          <div className="page-header-left">
+            <h1 className="page-title">
+              <i className="bi bi-hdd-rack"></i>
+              자산 관리
+            </h1>
+            <span className="page-subtitle">등록된 장비를 조회하고 관리합니다</span>
+            {selectedGroup && (
+              <span className="selected-group-badge">
+                <i className="bi bi-folder2"></i>
+                {selectedGroup.GROUP_NAME}
+              </span>
+            )}
+          </div>
         </div>
 
         {!selectedGroup ? (
@@ -661,121 +771,62 @@ export default function AssetManagement() {
               </div>
             )}
 
-            <div className="table-wrapper">
-              <table id="device-table" className="device-table">
-                <thead>
-                  <tr>
-                    <th>
-                      <input
-                        type="checkbox"
-                        id="select-all-devices"
-                        checked={selectedDevices.length === pagedDevices.length && pagedDevices.length > 0}
-                        onChange={handleSelectAll}
-                      />
-                    </th>
-                    <th className="sortable" onClick={() => handleDeviceSort('DEVICE_NAME')}>
-                      이름 {renderSortIcon('DEVICE_NAME', deviceSortField, deviceSortOrder)}
-                    </th>
-                    <th className="sortable" onClick={() => handleDeviceSort('GROUP_NAME')}>
-                      그룹 {renderSortIcon('GROUP_NAME', deviceSortField, deviceSortOrder)}
-                    </th>
-                    <th className="sortable" onClick={() => handleDeviceSort('DEVICE_SYSTEM_NAME')}>
-                      시스템명 {renderSortIcon('DEVICE_SYSTEM_NAME', deviceSortField, deviceSortOrder)}
-                    </th>
-                    <th className="sortable" onClick={() => handleDeviceSort('DEVICE_IP')}>
-                      IP {renderSortIcon('DEVICE_IP', deviceSortField, deviceSortOrder)}
-                    </th>
-                    <th className="sortable" onClick={() => handleDeviceSort('MODEL_NAME')}>
-                      모델 {renderSortIcon('MODEL_NAME', deviceSortField, deviceSortOrder)}
-                    </th>
-                    <th className="sortable" onClick={() => handleDeviceSort('VENDOR_NAME')}>
-                      벤더 {renderSortIcon('VENDOR_NAME', deviceSortField, deviceSortOrder)}
-                    </th>
-                    <th className="sortable" onClick={() => handleDeviceSort('PORT_COUNT')}>
-                      포트수 {renderSortIcon('PORT_COUNT', deviceSortField, deviceSortOrder)}
-                    </th>
-                    <th className="sortable" onClick={() => handleDeviceSort('CREATE_AT')}>
-                      등록일 {renderSortIcon('CREATE_AT', deviceSortField, deviceSortOrder)}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody id="device-table-tbody">
-                  {pagedDevices.length > 0 ? (
-                    pagedDevices.map((device) => (
-                      <tr
-                        key={device.DEVICE_ID}
-                        onClick={() => handleRowClick(device)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <td onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={selectedDevices.includes(device.DEVICE_ID)}
-                            onChange={() => handleSelectDevice(device.DEVICE_ID)}
-                          />
-                        </td>
-                        <td>{device.DEVICE_NAME}</td>
-                        <td style={{ color: '#94a3b8', fontSize: '12px' }}>{device.GROUP_NAME || '-'}</td>
-                        <td>{device.DEVICE_SYSTEM_NAME || '-'}</td>
-                        <td style={{ color: '#60a5fa' }}>{device.DEVICE_IP}</td>
-                        <td>{device.MODEL_NAME || '-'}</td>
-                        <td>{device.VENDOR_NAME || '-'}</td>
-                        <td>
-                          {device.PORT_COUNT != null ? (
-                            <span className="port-badge">{device.PORT_COUNT}</span>
-                          ) : '-'}
-                        </td>
-                        <td>{formatDate(device.CREATE_AT)}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="9" style={{ textAlign: 'center', color: '#94a3b8' }}>
-                        등록된 장비가 없습니다.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+            {/* 검색 필터 바 */}
+            <div className="filter-bar glass-card">
+              <div className="filter-group">
+                <label>장비명</label>
+                <input
+                  type="text"
+                  className="filter-input"
+                  placeholder="장비명"
+                  value={searchDeviceName}
+                  onChange={(e) => setSearchDeviceName(e.target.value)}
+                />
+              </div>
+              <div className="filter-group">
+                <label>IP 주소</label>
+                <input
+                  type="text"
+                  className="filter-input"
+                  placeholder="IP"
+                  value={searchDeviceIp}
+                  onChange={(e) => setSearchDeviceIp(e.target.value)}
+                />
+              </div>
+              <div className="filter-actions">
+                <button className="btn btn-icon-only" onClick={handleSearchReset} title="초기화">
+                  <i className="bi bi-arrow-counterclockwise"></i>
+                </button>
+              </div>
             </div>
 
-            <div className="pagination-controls">
-              <div className="items-per-page">
-                <label htmlFor="items-per-page-selector">개수:</label>
-                <select
-                  id="items-per-page-selector"
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setPage(1);
-                  }}
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-              </div>
-              <div id="pagination" className="pagination">
-                {totalPages > 1 && (
-                  <>
-                    <button
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                    >
-                      이전
-                    </button>
-                    <span>{page} / {totalPages}</span>
-                    <button
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={page === totalPages}
-                    >
-                      다음
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
+            <DataTable
+              columns={deviceColumns}
+              data={pagedDevices}
+              rowKey="DEVICE_ID"
+              loading={isLoading}
+              loadingText="장비 정보를 불러오는 중..."
+              emptyText="등록된 장비가 없습니다"
+              emptyIcon="bi-hdd-rack"
+              sort={{ field: deviceSortField, order: deviceSortOrder }}
+              onSort={handleDeviceSort}
+              selectable={true}
+              selectMode="multi"
+              selectedRows={selectedDevices}
+              onSelectChange={setSelectedDevices}
+              onRowClick={handleRowClick}
+              pagination={{
+                currentPage: page,
+                pageSize: pageSize,
+                totalItems: totalElements,
+                onPageChange: setPage,
+                onPageSizeChange: (newSize) => {
+                  setPageSize(newSize);
+                  setPage(1);
+                },
+              }}
+              maxHeight="calc(100vh - 340px)"
+            />
           </div>
         )}
       </main>
@@ -820,7 +871,20 @@ export default function AssetManagement() {
                           <span className="label">IP</span>
                           <input type="text" className="edit-input ip" value={editFormData.DEVICE_IP || ''} onChange={(e) => setEditFormData({...editFormData, DEVICE_IP: e.target.value})} />
                         </div>
-                        <div className="info-row"><span className="label">시스템명</span><span className="value">{detailDevice.DEVICE_SYSTEM_NAME || '-'}</span></div>
+                        <div className="info-row">
+                          <span className="label">
+                            시스템명
+                            {(detailDevice.DEVICE_DESC || detailDevice.sysDescr) && (
+                              <span
+                                className="sys-descr-tooltip"
+                                title={detailDevice.DEVICE_DESC || detailDevice.sysDescr}
+                              >
+                                <i className="bi bi-question-circle"></i>
+                              </span>
+                            )}
+                          </span>
+                          <span className="value">{detailDevice.DEVICE_SYSTEM_NAME || '-'}</span>
+                        </div>
                         <div className="info-row">
                           <span className="label">벤더</span>
                           <span className="value" style={{flex: '0 0 auto', marginRight: '16px'}}>{detailDevice.VENDOR_NAME || '-'}</span>
