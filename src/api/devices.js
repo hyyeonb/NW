@@ -159,4 +159,30 @@ export const devicesApi = {
   // 모델 삭제
   deleteModel: (modelId) =>
     apiClient.delete(`/mgmt/models/${modelId}`),
+
+  // ==================== DevCode (장비군) 관련 ====================
+
+  // 장비군 트리 조회
+  getDevCodeTree: () =>
+    apiClient.get('/mgmt/dev-codes/tree'),
+
+  // 장비군 목록 조회 (플랫 리스트)
+  getDevCodes: () =>
+    apiClient.get('/mgmt/dev-codes'),
+
+  // 특정 장비군 조회
+  getDevCode: (devCodeId) =>
+    apiClient.get(`/mgmt/dev-codes/${devCodeId}`),
+
+  // 장비군 생성
+  createDevCode: (data) =>
+    apiClient.post('/mgmt/dev-codes', data),
+
+  // 장비군 수정
+  updateDevCode: (devCodeId, data) =>
+    apiClient.put(`/mgmt/dev-codes/${devCodeId}`, data),
+
+  // 장비군 삭제
+  deleteDevCode: (devCodeId) =>
+    apiClient.delete(`/mgmt/dev-codes/${devCodeId}`),
 };

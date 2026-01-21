@@ -1,0 +1,241 @@
+/* ==================
+   Theme Design Tokens
+   Dark / Light Mode Support
+   ================== */
+
+/* 다크 모드 (기본값) */
+:root,
+[data-theme="dark"] {
+    /* 배경색 */
+    --theme-bg-primary: #0a0a0f;
+    --theme-bg-secondary: #0f0f1a;
+    --theme-bg-tertiary: #161625;
+    --theme-bg-card: rgba(15, 15, 25, 0.6);
+    --theme-bg-elevated: rgba(20, 20, 35, 0.95);
+    --theme-bg-input: rgba(15, 15, 25, 0.8);
+    --theme-bg-hover: rgba(255, 255, 255, 0.05);
+
+    /* 테이블/필터 배경 (인디고 계열) */
+    --theme-bg-panel: linear-gradient(180deg, rgba(22, 27, 45, 0.95) 0%, rgba(15, 20, 35, 0.98) 100%);
+    --theme-bg-panel-header: linear-gradient(180deg, rgba(30, 35, 55, 0.98) 0%, rgba(22, 27, 45, 0.98) 100%);
+    --theme-bg-panel-hover: linear-gradient(180deg, rgba(35, 40, 60, 0.98) 0%, rgba(25, 30, 50, 0.98) 100%);
+
+    /* 테이블 행 */
+    --theme-bg-table-row: rgba(15, 23, 42, 0.4);
+    --theme-bg-table-row-hover: rgba(15, 23, 42, 0.6);
+    --theme-bg-table-row-selected: rgba(99, 102, 241, 0.15);
+
+    /* 텍스트 */
+    --theme-text-primary: #ffffff;
+    --theme-text-secondary: #d1d9e8;
+    --theme-text-tertiary: #94a3b8;
+    --theme-text-muted: #7c8ba3;
+    --theme-text-disabled: #5a6780;
+
+    /* 테두리 */
+    --theme-border-default: rgba(255, 255, 255, 0.1);
+    --theme-border-hover: rgba(255, 255, 255, 0.2);
+    --theme-border-panel: rgba(99, 102, 241, 0.18);
+    --theme-border-input: rgba(99, 102, 241, 0.15);
+    --theme-border-subtle: rgba(255, 255, 255, 0.06);
+
+    /* 액센트 (인디고) */
+    --theme-accent-primary: #6366f1;
+    --theme-accent-light: #818cf8;
+    --theme-accent-lighter: #a5b4fc;
+    --theme-accent-dark: #4f46e5;
+    --theme-accent-bg: rgba(99, 102, 241, 0.12);
+    --theme-accent-bg-hover: rgba(99, 102, 241, 0.2);
+    --theme-accent-border: rgba(99, 102, 241, 0.3);
+    --theme-accent-glow: rgba(99, 102, 241, 0.5);
+
+    /* 글래스 효과 */
+    --theme-glass-bg: rgba(255, 255, 255, 0.03);
+    --theme-glass-bg-hover: rgba(255, 255, 255, 0.05);
+    --theme-glass-border: rgba(255, 255, 255, 0.08);
+    --theme-glass-highlight: rgba(255, 255, 255, 0.15);
+
+    /* 그림자 */
+    --theme-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --theme-shadow-md: 0 4px 20px rgba(0, 0, 0, 0.25);
+    --theme-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --theme-shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    --theme-shadow-accent: 0 4px 15px rgba(99, 102, 241, 0.25);
+    --theme-shadow-accent-lg: 0 8px 25px rgba(99, 102, 241, 0.35);
+
+    /* 모달 */
+    --theme-modal-backdrop: rgba(0, 0, 0, 0.8);
+
+    /* 배경 그라데이션 (body::before) */
+    --theme-gradient-orb1: rgba(59, 130, 246, 0.15);
+    --theme-gradient-orb2: rgba(139, 92, 246, 0.12);
+    --theme-gradient-orb3: rgba(6, 182, 212, 0.1);
+
+    /* 스크롤바 */
+    --theme-scrollbar-track: rgba(20, 25, 40, 0.5);
+    --theme-scrollbar-thumb: rgba(99, 102, 241, 0.25);
+    --theme-scrollbar-thumb-hover: rgba(99, 102, 241, 0.4);
+
+    /* 상태 색상 */
+    --theme-success-bg: rgba(16, 185, 129, 0.15);
+    --theme-success-border: rgba(16, 185, 129, 0.4);
+    --theme-success-text: #10b981;
+
+    --theme-warning-bg: rgba(245, 158, 11, 0.15);
+    --theme-warning-bg-hover: rgba(245, 158, 11, 0.25);
+    --theme-warning-bg-solid: #92400e;
+    --theme-warning-border: rgba(245, 158, 11, 0.4);
+    --theme-warning-text: #f59e0b;
+
+    --theme-danger-bg: rgba(239, 68, 68, 0.15);
+    --theme-danger-border: rgba(239, 68, 68, 0.4);
+    --theme-danger-text: #ef4444;
+
+    --theme-info-bg: rgba(59, 130, 246, 0.15);
+    --theme-info-border: rgba(59, 130, 246, 0.4);
+    --theme-info-text: #3b82f6;
+
+    /* 카드/패널 */
+    --theme-card-bg: rgba(15, 15, 25, 0.6);
+    --theme-card-border: rgba(255, 255, 255, 0.08);
+    --theme-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+
+    /* 입력 필드 포커스 */
+    --theme-input-focus-border: #6366f1;
+    --theme-input-focus-ring: rgba(99, 102, 241, 0.25);
+
+    /* 네비게이션/사이드바 */
+    --theme-nav-bg: rgba(15, 15, 25, 0.95);
+    --theme-nav-border: rgba(255, 255, 255, 0.08);
+    --theme-nav-item-hover: rgba(255, 255, 255, 0.05);
+    --theme-nav-item-active: rgba(99, 102, 241, 0.15);
+}
+
+/* 라이트 모드 - 깔끔하고 세련된 UI */
+[data-theme="light"] {
+    /* 배경색 - 밝고 깨끗한 톤 */
+    --theme-bg-primary: #ffffff;
+    --theme-bg-secondary: #f8fafc;
+    --theme-bg-tertiary: #f1f5f9;
+    --theme-bg-card: #ffffff;
+    --theme-bg-elevated: #ffffff;
+    --theme-bg-input: #ffffff;
+    --theme-bg-hover: rgba(99, 102, 241, 0.04);
+
+    /* 테이블/필터 배경 - 소프트 그레이 */
+    --theme-bg-panel: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+    --theme-bg-panel-header: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    --theme-bg-panel-hover: linear-gradient(180deg, #f1f5f9 0%, #e8ecf2 100%);
+
+    /* 테이블 행 */
+    --theme-bg-table-row: #ffffff;
+    --theme-bg-table-row-hover: #f8fafc;
+    --theme-bg-table-row-selected: rgba(99, 102, 241, 0.08);
+
+    /* 텍스트 - 선명한 대비 */
+    --theme-text-primary: #1e293b;
+    --theme-text-secondary: #475569;
+    --theme-text-tertiary: #64748b;
+    --theme-text-muted: #94a3b8;
+    --theme-text-disabled: #cbd5e1;
+
+    /* 테두리 - 깔끔한 구분선 */
+    --theme-border-default: #e2e8f0;
+    --theme-border-hover: #cbd5e1;
+    --theme-border-panel: #e2e8f0;
+    --theme-border-input: #d1d5db;
+    --theme-border-subtle: #f1f5f9;
+
+    /* 액센트 (인디고) - 라이트 모드에서 더 선명하게 */
+    --theme-accent-primary: #4f46e5;
+    --theme-accent-light: #6366f1;
+    --theme-accent-lighter: #a5b4fc;
+    --theme-accent-dark: #3730a3;
+    --theme-accent-bg: rgba(79, 70, 229, 0.08);
+    --theme-accent-bg-hover: rgba(79, 70, 229, 0.12);
+    --theme-accent-border: rgba(79, 70, 229, 0.25);
+    --theme-accent-glow: rgba(79, 70, 229, 0.2);
+
+    /* 글래스 효과 - 라이트 모드용 */
+    --theme-glass-bg: #ffffff;
+    --theme-glass-bg-hover: #f8fafc;
+    --theme-glass-border: #e2e8f0;
+    --theme-glass-highlight: #ffffff;
+
+    /* 그림자 - 부드럽고 깊이감 있는 그림자 */
+    --theme-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+    --theme-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.03);
+    --theme-shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.06), 0 4px 10px rgba(0, 0, 0, 0.04);
+    --theme-shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.03);
+    --theme-shadow-accent: 0 4px 12px rgba(79, 70, 229, 0.15);
+    --theme-shadow-accent-lg: 0 8px 20px rgba(79, 70, 229, 0.2);
+
+    /* 모달 */
+    --theme-modal-backdrop: rgba(15, 23, 42, 0.4);
+
+    /* 배경 그라데이션 - 라이트 모드에서는 미세하게 */
+    --theme-gradient-orb1: rgba(99, 102, 241, 0.03);
+    --theme-gradient-orb2: rgba(139, 92, 246, 0.02);
+    --theme-gradient-orb3: rgba(6, 182, 212, 0.02);
+
+    /* 스크롤바 */
+    --theme-scrollbar-track: #f1f5f9;
+    --theme-scrollbar-thumb: #cbd5e1;
+    --theme-scrollbar-thumb-hover: #94a3b8;
+
+    /* 추가: 상태 색상 (라이트 모드 최적화) */
+    --theme-success-bg: rgba(16, 185, 129, 0.1);
+    --theme-success-border: rgba(16, 185, 129, 0.3);
+    --theme-success-text: #059669;
+
+    --theme-warning-bg: rgba(245, 158, 11, 0.1);
+    --theme-warning-bg-hover: rgba(245, 158, 11, 0.18);
+    --theme-warning-bg-solid: #b45309;
+    --theme-warning-border: rgba(245, 158, 11, 0.3);
+    --theme-warning-text: #d97706;
+
+    --theme-danger-bg: rgba(239, 68, 68, 0.1);
+    --theme-danger-border: rgba(239, 68, 68, 0.3);
+    --theme-danger-text: #dc2626;
+
+    --theme-info-bg: rgba(59, 130, 246, 0.1);
+    --theme-info-border: rgba(59, 130, 246, 0.3);
+    --theme-info-text: #2563eb;
+
+    /* 카드/패널 추가 스타일 */
+    --theme-card-bg: #ffffff;
+    --theme-card-border: #e2e8f0;
+    --theme-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+
+    /* 입력 필드 포커스 */
+    --theme-input-focus-border: #4f46e5;
+    --theme-input-focus-ring: rgba(79, 70, 229, 0.15);
+
+    /* 네비게이션/사이드바 */
+    --theme-nav-bg: #ffffff;
+    --theme-nav-border: #e2e8f0;
+    --theme-nav-item-hover: rgba(99, 102, 241, 0.06);
+    --theme-nav-item-active: rgba(99, 102, 241, 0.1);
+}
+
+/* 테마 전환 애니메이션 */
+html {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html *,
+html *::before,
+html *::after {
+    transition: background-color 0.3s ease,
+                border-color 0.3s ease,
+                box-shadow 0.3s ease,
+                color 0.2s ease;
+}
+
+/* 애니메이션 제외 요소 */
+.no-transition,
+.no-transition *,
+.no-transition *::before,
+.no-transition *::after {
+    transition: none !important;
+}

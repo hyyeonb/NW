@@ -7,8 +7,8 @@ body {
     font-family: var(--font-family-base);
     font-size: var(--font-size-body);
     font-weight: var(--font-weight-regular);
-    background: var(--color-bg-dark);
-    color: var(--color-text-secondary);
+    background: var(--theme-bg-primary);
+    color: var(--theme-text-secondary);
     overflow-x: hidden;
     /* 폰트 렌더링 최적화 */
     -webkit-font-smoothing: antialiased;
@@ -17,8 +17,8 @@ body {
     font-feature-settings: "kern" 1;
 }
 
-/* Animated Background - Gradient Orbs */
-body::before {
+/* Animated Background - Gradient Orbs (다크 모드) */
+[data-theme="dark"] body::before {
     content: '';
     position: fixed;
     top: 0;
@@ -26,16 +26,33 @@ body::before {
     right: 0;
     bottom: 0;
     background:
-        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-        radial-gradient(ellipse 60% 40% at 80% 20%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
-        radial-gradient(ellipse 50% 50% at 50% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
-        linear-gradient(180deg, #0a0a0f 0%, #0f0f1a 50%, #0a0a0f 100%);
+        radial-gradient(ellipse 80% 50% at 20% 40%, var(--theme-gradient-orb1) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 80% 20%, var(--theme-gradient-orb2) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 50% at 50% 80%, var(--theme-gradient-orb3) 0%, transparent 50%),
+        linear-gradient(180deg, var(--theme-bg-primary) 0%, var(--theme-bg-secondary) 50%, var(--theme-bg-primary) 100%);
     z-index: -2;
     animation: backgroundPulse 20s ease-in-out infinite;
 }
 
-/* Floating Particles Effect */
-body::after {
+/* Animated Background - Gradient Orbs (라이트 모드) */
+[data-theme="light"] body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        radial-gradient(ellipse 80% 50% at 20% 40%, var(--theme-gradient-orb1) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 80% 20%, var(--theme-gradient-orb2) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 50% at 50% 80%, var(--theme-gradient-orb3) 0%, transparent 50%),
+        linear-gradient(180deg, var(--theme-bg-primary) 0%, var(--theme-bg-secondary) 50%, var(--theme-bg-primary) 100%);
+    z-index: -2;
+    animation: backgroundPulse 20s ease-in-out infinite;
+}
+
+/* Floating Particles Effect (다크 모드) */
+[data-theme="dark"] body::after {
     content: '';
     position: fixed;
     top: 0;
@@ -45,6 +62,22 @@ body::after {
     background-image:
         radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
         radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 100px 100px;
+    z-index: -1;
+    animation: particleFloat 30s linear infinite;
+}
+
+/* Floating Particles Effect (라이트 모드) */
+[data-theme="light"] body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        radial-gradient(circle at 25% 25%, rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+        radial-gradient(circle at 75% 75%, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
     background-size: 100px 100px;
     z-index: -1;
     animation: particleFloat 30s linear infinite;

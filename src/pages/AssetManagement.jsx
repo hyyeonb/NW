@@ -639,10 +639,130 @@ export default function AssetManagement() {
     return '-';
   };
 
-  // 긴 텍스트에 툴팁 필요 여부 확인
-  const needsTooltip = (value, maxLength = 20) => {
-    return value && value.length > maxLength;
-  };
+  // 포트 테이블 컬럼 정의
+  const portColumns = useMemo(() => [
+    {
+      key: 'IF_INDEX',
+      label: 'Index',
+      width: '70px',
+      sortable: true,
+      align: 'center',
+    },
+    {
+      key: 'IF_NAME',
+      label: '이름',
+      width: '120px',
+      sortable: true,
+      render: (value) => value || '-',
+    },
+    {
+      key: 'IF_DESCR',
+      label: '설명',
+      width: '130px',
+      sortable: true,
+      className: 'cell-truncate',
+      render: (value) => value || '-',
+    },
+    {
+      key: 'IF_DESCRIPTION',
+      label: 'Description',
+      width: '130px',
+      sortable: true,
+      className: 'cell-truncate',
+      render: (value) => value || '-',
+    },
+    {
+      key: 'IF_TYPE',
+      label: '타입',
+      width: '100px',
+      sortable: true,
+      render: (value, row) => (
+        <span className={`port-type-badge ${getPortTypeBadgeClass(value)}`}>
+          {row.ifTypeText || getPortTypeText(value)}
+        </span>
+      ),
+    },
+    {
+      key: 'IF_MTU',
+      label: 'MTU',
+      width: '70px',
+      sortable: true,
+      align: 'center',
+      render: (value) => value || '-',
+    },
+    {
+      key: 'IF_HIGH_SPEED',
+      label: '속도',
+      width: '100px',
+      sortable: true,
+      className: 'port-speed',
+      render: (value, row) => formatSpeed(row),
+    },
+    {
+      key: 'IF_MAC_ADDRESS',
+      label: 'MAC',
+      width: '140px',
+      sortable: true,
+      className: 'port-mac',
+      render: (value) => value || '-',
+    },
+    {
+      key: 'IF_ADMIN_STATUS',
+      label: 'Admin',
+      width: '70px',
+      sortable: true,
+      align: 'center',
+      render: (value) => (
+        <span className={`status-badge ${value === 1 ? 'up' : 'down'}`}>
+          {value === 1 ? 'Up' : 'Down'}
+        </span>
+      ),
+    },
+    {
+      key: 'IF_OPER_STATUS',
+      label: 'Oper',
+      width: '70px',
+      sortable: true,
+      align: 'center',
+      render: (value) => (
+        <span className={`status-badge ${value === 1 ? 'up' : 'down'}`}>
+          {value === 1 ? 'Up' : 'Down'}
+        </span>
+      ),
+    },
+    {
+      key: 'IF_OPER_FLAG',
+      label: 'Oper 감시',
+      width: '90px',
+      sortable: true,
+      align: 'center',
+      render: (value, row) => (
+        <span
+          className={`flag-badge clickable ${value === 1 || value === true ? 'active' : 'inactive'}`}
+          onClick={(e) => { e.stopPropagation(); handleTogglePortFlag(row, 'IF_OPER_FLAG'); }}
+          title="클릭하여 토글"
+        >
+          {value === 1 || value === true ? 'ON' : 'OFF'}
+        </span>
+      ),
+    },
+    {
+      key: 'IF_PERF_FLAG',
+      label: '성능 감시',
+      width: '90px',
+      sortable: true,
+      align: 'center',
+      render: (value, row) => (
+        <span
+          className={`flag-badge clickable ${value === 1 || value === true ? 'active' : 'inactive'}`}
+          onClick={(e) => { e.stopPropagation(); handleTogglePortFlag(row, 'IF_PERF_FLAG'); }}
+          title="클릭하여 토글"
+        >
+          {value === 1 || value === true ? 'ON' : 'OFF'}
+        </span>
+      ),
+    },
+  ], []);
 
   // 장비 테이블 컬럼 정의
   const deviceColumns = useMemo(() => [
@@ -848,7 +968,7 @@ export default function AssetManagement() {
                 </button>
                 <button className={`detail-tab ${activeTab === 'port-info' ? 'active' : ''}`} onClick={() => setActiveTab('port-info')}>
                   <i className="bi bi-ethernet"></i> 포트 정보
-                  {portsData?.length > 0 && <span className="tab-badge">{portsData.length}</span>}
+                  {portsDataRaw?.length > 0 && <span className="tab-badge">{portsDataRaw.length}</span>}
                 </button>
               </div>
             </div>
@@ -1201,117 +1321,19 @@ export default function AssetManagement() {
             {/* 포트 정보 탭 */}
             {activeTab === 'port-info' && (
               <div id="port-info-tab" className="detail-tab-content active">
-                {portsLoading ? (
-                  <div id="port-loading" className="port-loading">
-                    <i className="bi bi-arrow-repeat spinning"></i> 포트 정보를 불러오는 중...
-                  </div>
-                ) : portsData?.length > 0 ? (
-                  <div id="port-table-wrapper" className="port-table-wrapper">
-                    <table className="port-table">
-                      <thead>
-                        <tr>
-                          <th className="sortable" onClick={() => handlePortSort('IF_INDEX')}>
-                            Index {renderSortIcon('IF_INDEX', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_NAME')}>
-                            이름 {renderSortIcon('IF_NAME', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_DESCR')}>
-                            설명 {renderSortIcon('IF_DESCR', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_DESCRIPTION')}>
-                            Description {renderSortIcon('IF_DESCRIPTION', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_TYPE')}>
-                            타입 {renderSortIcon('IF_TYPE', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_MTU')}>
-                            MTU {renderSortIcon('IF_MTU', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_HIGH_SPEED')}>
-                            속도 {renderSortIcon('IF_HIGH_SPEED', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_MAC_ADDRESS')}>
-                            MAC {renderSortIcon('IF_MAC_ADDRESS', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_ADMIN_STATUS')}>
-                            Admin {renderSortIcon('IF_ADMIN_STATUS', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_OPER_STATUS')}>
-                            Oper {renderSortIcon('IF_OPER_STATUS', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_OPER_FLAG')}>
-                            Oper 감시 {renderSortIcon('IF_OPER_FLAG', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_PERF_FLAG')}>
-                            성능 감시 {renderSortIcon('IF_PERF_FLAG', portSortField, portSortOrder)}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody id="port-table-tbody">
-                        {sortedPorts.map((port) => (
-                          <tr key={port.IF_INDEX}>
-                            <td>{port.IF_INDEX}</td>
-                            <td>{port.IF_NAME || '-'}</td>
-                            <td className={`${port.IF_DESCR && port.IF_DESCR.length > 15 ? 'tooltip-cell truncate-cell' : ''}`}>
-                              {port.IF_DESCR || '-'}
-                              {port.IF_DESCR && port.IF_DESCR.length > 15 && (
-                                <span className="tooltip-text">{port.IF_DESCR}</span>
-                              )}
-                            </td>
-                            <td className={`${port.IF_DESCRIPTION && port.IF_DESCRIPTION.length > 15 ? 'tooltip-cell truncate-cell' : ''}`}>
-                              {port.IF_DESCRIPTION || '-'}
-                              {port.IF_DESCRIPTION && port.IF_DESCRIPTION.length > 15 && (
-                                <span className="tooltip-text">{port.IF_DESCRIPTION}</span>
-                              )}
-                            </td>
-                            <td>
-                              <span className={`port-type-badge ${getPortTypeBadgeClass(port.IF_TYPE)}`}>
-                                {port.ifTypeText || getPortTypeText(port.IF_TYPE)}
-                              </span>
-                            </td>
-                            <td>{port.IF_MTU || '-'}</td>
-                            <td className="port-speed">{formatSpeed(port)}</td>
-                            <td className="port-mac">{port.IF_MAC_ADDRESS || '-'}</td>
-                            <td>
-                              <span className={`status-badge ${port.IF_ADMIN_STATUS === 1 ? 'up' : 'down'}`}>
-                                {port.IF_ADMIN_STATUS === 1 ? 'Up' : 'Down'}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={`status-badge ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}`}>
-                                {port.IF_OPER_STATUS === 1 ? 'Up' : 'Down'}
-                              </span>
-                            </td>
-                            <td>
-                              <span
-                                className={`flag-badge clickable ${port.IF_OPER_FLAG === 1 || port.IF_OPER_FLAG === true ? 'active' : 'inactive'}`}
-                                onClick={(e) => { e.stopPropagation(); handleTogglePortFlag(port, 'IF_OPER_FLAG'); }}
-                                title="클릭하여 토글"
-                              >
-                                {port.IF_OPER_FLAG === 1 || port.IF_OPER_FLAG === true ? 'ON' : 'OFF'}
-                              </span>
-                            </td>
-                            <td>
-                              <span
-                                className={`flag-badge clickable ${port.IF_PERF_FLAG === 1 || port.IF_PERF_FLAG === true ? 'active' : 'inactive'}`}
-                                onClick={(e) => { e.stopPropagation(); handleTogglePortFlag(port, 'IF_PERF_FLAG'); }}
-                                title="클릭하여 토글"
-                              >
-                                {port.IF_PERF_FLAG === 1 || port.IF_PERF_FLAG === true ? 'ON' : 'OFF'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div id="port-empty" className="port-empty">
-                    <i className="bi bi-ethernet"></i>
-                    <p>등록된 포트가 없습니다.</p>
-                  </div>
-                )}
+                <DataTable
+                  columns={portColumns}
+                  data={sortedPorts}
+                  rowKey="IF_INDEX"
+                  loading={portsLoading}
+                  loadingText="포트 정보를 불러오는 중..."
+                  emptyText="등록된 포트가 없습니다"
+                  emptyIcon="bi-ethernet"
+                  sort={{ field: portSortField, order: portSortOrder }}
+                  onSort={handlePortSort}
+                  maxHeight="calc(100vh - 380px)"
+                  className="port-data-table"
+                />
               </div>
             )}
 

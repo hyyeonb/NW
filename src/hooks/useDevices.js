@@ -318,3 +318,67 @@ export const useResetChartFlags = () => {
     },
   });
 };
+
+// ==================== DevCode (장비군) Hooks ====================
+
+// 장비군 트리 조회
+export const useDevCodeTree = () => {
+  return useQuery({
+    queryKey: ['devCodeTree'],
+    queryFn: async () => {
+      const response = await devicesApi.getDevCodeTree();
+      return response.data?.data || response.data || [];
+    },
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+};
+
+// 장비군 목록 조회 (플랫 리스트)
+export const useDevCodes = () => {
+  return useQuery({
+    queryKey: ['devCodes'],
+    queryFn: async () => {
+      const response = await devicesApi.getDevCodes();
+      return response.data?.data || response.data || [];
+    },
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+};
+
+// 장비군 생성
+export const useCreateDevCode = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: devicesApi.createDevCode,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devCodeTree'] });
+      queryClient.invalidateQueries({ queryKey: ['devCodes'] });
+    },
+  });
+};
+
+// 장비군 수정
+export const useUpdateDevCode = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ devCodeId, data }) => devicesApi.updateDevCode(devCodeId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devCodeTree'] });
+      queryClient.invalidateQueries({ queryKey: ['devCodes'] });
+    },
+  });
+};
+
+// 장비군 삭제
+export const useDeleteDevCode = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: devicesApi.deleteDevCode,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devCodeTree'] });
+      queryClient.invalidateQueries({ queryKey: ['devCodes'] });
+    },
+  });
+};

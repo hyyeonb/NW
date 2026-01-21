@@ -30,6 +30,10 @@ export default function RealtimeFault() {
   // 정렬
   const [sortConfig, setSortConfig] = useState({ key: 'OCCUR_AT', direction: 'desc' });
 
+  // 페이지네이션
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
   // WebSocket 알림 구독 (새 알림 시 리렌더링)
   const alerts = useAlertStore((state) => state.alerts);
 
@@ -186,6 +190,29 @@ export default function RealtimeFault() {
       return 0;
     });
   }, [errors, sortConfig]);
+
+  // 페이지네이션 적용된 데이터
+  const paginatedErrors = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return sortedErrors.slice(startIndex, endIndex);
+  }, [sortedErrors, currentPage, pageSize]);
+
+  // 페이지 변경 핸들러
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // 페이지 사이즈 변경 핸들러
+  const handlePageSizeChange = (size) => {
+    setPageSize(size);
+    setCurrentPage(1); // 페이지 사이즈 변경 시 첫 페이지로 이동
+  };
+
+  // 데이터 변경 시 페이지 초기화 (필터 변경 등)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedLevels, searchDeviceName, searchErrorMessage, searchIp, searchGroupName]);
 
   // 인지 버튼 클릭 핸들러
   const handleAckClick = (error, e) => {
@@ -360,7 +387,7 @@ export default function RealtimeFault() {
       <div className="fault-content glass-card">
         <DataTable
           columns={columns}
-          data={sortedErrors}
+          data={paginatedErrors}
           rowKey="ERROR_ID"
           loading={isLoading}
           loadingText="장애 정보를 불러오는 중..."
@@ -375,7 +402,15 @@ export default function RealtimeFault() {
             if (selectedError?.ERROR_ID === row.ERROR_ID) classes.push('selected');
             return classes.join(' ');
           }}
-          maxHeight="calc(100vh - 300px)"
+          maxHeight="calc(100vh - 350px)"
+          pagination={{
+            currentPage: currentPage,
+            pageSize: pageSize,
+            totalItems: sortedErrors.length,
+            onPageChange: handlePageChange,
+            onPageSizeChange: handlePageSizeChange,
+            pageSizeOptions: [10, 20, 50, 100],
+          }}
         />
       </div>
 

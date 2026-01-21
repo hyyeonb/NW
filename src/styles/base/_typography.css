@@ -1,10 +1,10 @@
 /* ==================
    Typography Base Styles
-   NMS Glassmorphism Design System
+   NMS Glassmorphism Design System (Theme Support)
    ================== */
 
 h1, h2, h3, h4, h5, h6 {
-    color: var(--color-text-primary);
+    color: var(--theme-text-primary);
     font-weight: var(--font-weight-semibold);
     letter-spacing: var(--letter-spacing-tight);
     line-height: var(--line-height-tight);
@@ -12,7 +12,7 @@ h1, h2, h3, h4, h5, h6 {
 
 h1 {
     font-size: var(--font-size-h1);
-    background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+    background: linear-gradient(135deg, var(--theme-text-primary) 0%, var(--theme-text-secondary) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -31,7 +31,7 @@ h2::after {
     left: 0;
     width: 60px;
     height: 3px;
-    background: linear-gradient(90deg, var(--color-primary-500), var(--color-accent-purple));
+    background: linear-gradient(90deg, var(--theme-accent-primary), var(--color-accent-purple));
     border-radius: 2px;
 }
 
@@ -45,24 +45,24 @@ h4 {
 
 /* Paragraph */
 p {
-    color: var(--color-text-secondary);
+    color: var(--theme-text-secondary);
     line-height: var(--line-height-relaxed);
 }
 
 /* Links */
 a {
-    color: var(--color-primary-400);
+    color: var(--theme-accent-light);
     transition: color var(--transition-fast);
 }
 
 a:hover {
-    color: var(--color-primary-300);
+    color: var(--theme-accent-primary);
 }
 
 /* Small Text */
 small {
     font-size: var(--font-size-body-xs);
-    color: var(--color-text-muted);
+    color: var(--theme-text-muted);
 }
 
 /* Code */
@@ -70,9 +70,9 @@ code {
     font-family: var(--font-family-mono);
     font-size: 0.9em;
     padding: 2px 6px;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--theme-glass-bg);
     border-radius: var(--radius-sm);
-    color: var(--color-primary-300);
+    color: var(--theme-accent-light);
 }
 
 /* Labels */
@@ -80,6 +80,6 @@ label {
     display: block;
     font-size: var(--font-size-label);
     font-weight: var(--font-weight-medium);
-    color: var(--color-text-secondary);
+    color: var(--theme-text-secondary);
     margin-bottom: var(--spacing-1);
 }
