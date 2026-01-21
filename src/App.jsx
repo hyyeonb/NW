@@ -176,8 +176,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Navigate to="/main" replace />} />
-              <Route path="main" element={<Main />} />
+              <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="topology" element={<NetworkTopology />} />
               <Route path="mgmt/groups" element={<GroupManagement />} />
@@ -189,7 +188,7 @@ export default function App() {
             </Route>
 
             {/* Fallback */}
-            <Route path="*" element={<Navigate to="/main" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
           </AlertWebSocketProvider>
         </AuthProvider>

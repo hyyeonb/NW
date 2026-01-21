@@ -1,13 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuthStore } from '../stores';
+import { useAuthStore, useThemeStore } from '../stores';
 
 export default function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
   const { user, logout } = useAuthStore();
+  const { resolvedTheme, toggleTheme, initTheme } = useThemeStore();
   const [expandedMenus, setExpandedMenus] = useState({});
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileRef = useRef(null);
+
+  // 테마 초기화
+  useEffect(() => {
+    initTheme();
+  }, [initTheme]);
 
   // 프로필 메뉴 외부 클릭 시 닫기
   useEffect(() => {
@@ -52,7 +58,15 @@ export default function Sidebar({ collapsed, onToggle }) {
         { label: '모델 관리', path: '/mgmt/models', icon: 'bi-cpu' },
       ],
     },
-    { icon: 'bi-gear-fill', label: '설정', path: '/settings' },
+    {
+      icon: 'bi-gear-fill',
+      label: '설정',
+      children: [
+        { label: '테마 설정', icon: 'bi-palette', isThemeToggle: true },
+        { label: '계정 설정', path: '/settings/account', icon: 'bi-person-gear' },
+        { label: '알림 설정', path: '/settings/notifications', icon: 'bi-bell' },
+      ],
+    },
   ];
 
   const toggleMenu = (index) => {
@@ -132,13 +146,29 @@ export default function Sidebar({ collapsed, onToggle }) {
                     <ul className={`submenu ${expandedMenus[index] ? 'expanded' : ''}`}>
                       {item.children.map((child, childIndex) => (
                         <li key={childIndex}>
-                          <Link
-                            to={child.path}
-                            className={`submenu-link ${isActive(child.path) ? 'active' : ''}`}
-                          >
-                            {child.icon && <i className={`bi ${child.icon}`}></i>}
-                            <span>{child.label}</span>
-                          </Link>
+                          {child.isThemeToggle ? (
+                            // 테마 토글 항목
+                            <div
+                              className="submenu-link theme-toggle-item"
+                              onClick={toggleTheme}
+                            >
+                              {child.icon && <i className={`bi ${child.icon}`}></i>}
+                              <span>{child.label}</span>
+                              <div className="theme-toggle-switch">
+                                <i className={`bi ${resolvedTheme === 'dark' ? 'bi-moon-fill' : 'bi-sun-fill'}`}></i>
+                                <span className="theme-label">{resolvedTheme === 'dark' ? '다크' : '라이트'}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            // 일반 링크 항목
+                            <Link
+                              to={child.path}
+                              className={`submenu-link ${isActive(child.path) ? 'active' : ''}`}
+                            >
+                              {child.icon && <i className={`bi ${child.icon}`}></i>}
+                              <span>{child.label}</span>
+                            </Link>
+                          )}
                         </li>
                       ))}
                     </ul>

@@ -1,19 +1,19 @@
 /* ==================
    Navigation Layout
-   NMS Glassmorphism Design System
+   NMS Glassmorphism Design System (Theme Support)
    ================== */
 
 /* Top Navigation Bar */
 .top-nav-bar {
-    background: linear-gradient(180deg, rgba(15, 15, 25, 0.95) 0%, rgba(15, 15, 25, 0.85) 100%);
+    background: var(--theme-bg-panel);
     backdrop-filter: var(--glass-blur-heavy);
     -webkit-backdrop-filter: var(--glass-blur-heavy);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--theme-border-default);
     padding: 0 var(--spacing-6);
     position: sticky;
     top: 0;
     z-index: var(--z-sticky);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--theme-shadow-lg);
 }
 
 .nav-container {
@@ -27,7 +27,7 @@
 /* Logo */
 .logo-section .logo-link {
     text-decoration: none;
-    color: var(--color-text-primary);
+    color: var(--theme-text-primary);
     transition: all var(--transition-normal);
     display: flex;
     align-items: center;
@@ -47,7 +47,7 @@
     font-size: 24px;
     font-weight: var(--font-weight-bold);
     letter-spacing: -0.5px;
-    background: linear-gradient(135deg, #ffffff 0%, var(--color-primary-400) 100%);
+    background: linear-gradient(135deg, var(--theme-text-primary) 0%, var(--theme-accent-light) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -55,7 +55,7 @@
 
 .logo-sub {
     font-size: var(--font-size-badge-sm);
-    color: var(--color-text-muted);
+    color: var(--theme-text-muted);
     letter-spacing: 1px;
     text-transform: uppercase;
 }
@@ -70,7 +70,7 @@
 }
 
 .menu-section a {
-    color: var(--color-text-secondary);
+    color: var(--theme-text-secondary);
     text-decoration: none;
     padding: var(--spacing-3) var(--spacing-5);
     display: block;
@@ -86,7 +86,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, var(--color-primary-500), var(--color-accent-purple));
+    background: linear-gradient(135deg, var(--theme-accent-primary), var(--color-accent-purple));
     opacity: 0;
     transition: opacity var(--transition-normal);
     border-radius: var(--radius-lg);
@@ -100,14 +100,14 @@
     transform: translateX(-50%) scaleX(0);
     width: 20px;
     height: 2px;
-    background: var(--color-primary-400);
+    background: var(--theme-accent-light);
     border-radius: 2px;
     transition: transform var(--transition-normal);
 }
 
 .menu-section a:hover,
 .menu-section a.active {
-    color: var(--color-text-primary);
+    color: var(--theme-text-primary);
 }
 
 .menu-section a:hover::before,
@@ -132,14 +132,12 @@
     top: calc(100% + 12px);
     left: 50%;
     transform: translateX(-50%) translateY(-10px);
-    background: linear-gradient(135deg, rgba(20, 20, 35, 0.98) 0%, rgba(25, 25, 45, 0.95) 100%);
+    background: var(--theme-bg-elevated);
     backdrop-filter: var(--glass-blur-heavy);
     -webkit-backdrop-filter: var(--glass-blur-heavy);
     min-width: max-content;
-    box-shadow:
-        0 20px 60px rgba(0, 0, 0, 0.5),
-        0 0 0 1px rgba(255, 255, 255, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    box-shadow: var(--theme-shadow-xl);
+    border: 1px solid var(--theme-border-panel);
     border-radius: var(--radius-xl);
     list-style: none;
     padding: var(--spacing-2);
@@ -155,9 +153,9 @@
     transform: translateX(-50%) rotate(45deg);
     width: 12px;
     height: 12px;
-    background: rgba(20, 20, 35, 0.98);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--theme-bg-elevated);
+    border-top: 1px solid var(--theme-border-panel);
+    border-left: 1px solid var(--theme-border-panel);
 }
 
 .dropdown:hover .dropdown-menu {
@@ -171,7 +169,7 @@
 }
 
 .dropdown-menu a {
-    color: var(--color-text-secondary);
+    color: var(--theme-text-secondary);
     padding: var(--spacing-3) var(--spacing-4);
     border-radius: var(--radius-md);
     white-space: nowrap;
@@ -187,8 +185,8 @@
 }
 
 .dropdown-menu a:hover {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.1));
-    color: var(--color-text-primary);
+    background: var(--theme-accent-bg);
+    color: var(--theme-text-primary);
 }
 
 /* Profile Section */
@@ -199,17 +197,17 @@
     cursor: pointer;
     padding: 6px 16px 6px 6px;
     border-radius: var(--radius-full);
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--theme-glass-bg);
+    border: 1px solid var(--theme-glass-border);
     transition: all var(--transition-normal);
     position: relative;
 }
 
 .profile-section:hover {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: var(--theme-glass-bg-hover);
+    border-color: var(--theme-border-hover);
     transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--theme-shadow-lg);
 }
 
 .profile-pic {
@@ -217,17 +215,17 @@
     height: 38px;
     border-radius: var(--radius-full);
     border: 2px solid transparent;
-    background: linear-gradient(135deg, var(--color-primary-500), var(--color-accent-purple)) border-box;
+    background: linear-gradient(135deg, var(--theme-accent-primary), var(--color-accent-purple)) border-box;
     transition: all var(--transition-normal);
     object-fit: cover;
 }
 
 .profile-section:hover .profile-pic {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 20px var(--theme-accent-glow);
 }
 
 .username {
-    color: var(--color-text-primary);
+    color: var(--theme-text-primary);
     font-size: var(--font-size-body);
     font-weight: var(--font-weight-medium);
 }

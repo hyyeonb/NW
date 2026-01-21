@@ -3,6 +3,7 @@
    NMS Glassmorphism Design System
    ================== */
 
+@import "./_theme.css";
 @import "./_colors.css";
 @import "./_typography.css";
 @import "./_spacing.css";

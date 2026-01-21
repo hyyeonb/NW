@@ -1,6 +1,6 @@
 /* ==================
    Button Components
-   NMS Glassmorphism Design System
+   NMS Glassmorphism Design System (Theme Support)
    ================== */
 
 .btn {
@@ -72,24 +72,24 @@
 
 /* Button Variants */
 .btn-primary {
-    background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+    background: linear-gradient(135deg, var(--theme-accent-primary) 0%, var(--theme-accent-dark) 100%);
     color: #ffffff;
-    box-shadow: var(--shadow-primary);
+    box-shadow: var(--theme-shadow-accent);
 }
 
 .btn-primary:hover:not(:disabled) {
-    box-shadow: var(--shadow-primary-lg);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
 }
 
 .btn-secondary {
-    background: linear-gradient(135deg, var(--glass-bg-hover) 0%, var(--glass-bg) 100%);
-    color: var(--color-text-primary);
-    border: 1px solid var(--glass-border);
+    background: var(--theme-glass-bg);
+    color: var(--theme-text-primary);
+    border: 1px solid var(--theme-glass-border);
 }
 
 .btn-secondary:hover:not(:disabled) {
-    background: linear-gradient(135deg, var(--glass-bg-active) 0%, var(--glass-bg-hover) 100%);
-    border-color: var(--glass-border-hover);
+    background: var(--theme-glass-bg-hover);
+    border-color: var(--theme-border-hover);
 }
 
 .btn-success {
@@ -129,12 +129,12 @@
 
 .btn-ghost {
     background: transparent;
-    color: var(--color-text-secondary);
+    color: var(--theme-text-secondary);
 }
 
 .btn-ghost:hover:not(:disabled) {
-    background: var(--glass-bg);
-    color: var(--color-text-primary);
+    background: var(--theme-glass-bg);
+    color: var(--theme-text-primary);
 }
 
 /* Icon Button */

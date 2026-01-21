@@ -1,6 +1,6 @@
 /* ==================
    Scrollbar Styles
-   NMS Glassmorphism Design System
+   NMS Glassmorphism Design System (Theme Support)
    ================== */
 
 /* Webkit Scrollbar (Chrome, Safari, Edge) */
@@ -10,19 +10,19 @@
 }
 
 ::-webkit-scrollbar-track {
-    background: rgba(15, 15, 25, 0.5);
+    background: var(--theme-bg-tertiary);
     border-radius: var(--radius-xs);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(139, 92, 246, 0.3));
+    background: linear-gradient(135deg, var(--theme-scrollbar-thumb) 0%, var(--theme-scrollbar-thumb-hover) 100%);
     border-radius: var(--radius-xs);
     border: 2px solid transparent;
     background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.6), rgba(139, 92, 246, 0.5));
+    background: linear-gradient(135deg, var(--theme-scrollbar-thumb-hover) 0%, var(--theme-accent-primary) 100%);
 }
 
 ::-webkit-scrollbar-corner {
@@ -32,7 +32,7 @@
 /* Firefox Scrollbar */
 * {
     scrollbar-width: thin;
-    scrollbar-color: rgba(59, 130, 246, 0.4) rgba(15, 15, 25, 0.5);
+    scrollbar-color: var(--theme-scrollbar-thumb) var(--theme-bg-tertiary);
 }
 
 /* Thin Scrollbar Variant */
