@@ -2514,3 +2514,315 @@
   color: #94a3b8;
   font-weight: 500;
 }
+
+/* ==================== 실시간 장애 현황 위젯 ==================== */
+.realtime-alert-widget {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.widget-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.6);
+  border-bottom: 1px solid #334155;
+  flex-shrink: 0;
+}
+
+.widget-level-filters {
+  display: flex;
+  gap: 4px;
+}
+
+.widget-level-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--level-color);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--level-color);
+  cursor: pointer;
+  transition: all 0.2s;
+  opacity: 0.5;
+}
+
+.widget-level-btn.active {
+  background: var(--level-color);
+  color: white;
+  opacity: 1;
+}
+
+.widget-level-btn:hover {
+  opacity: 1;
+}
+
+.widget-search-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 4px;
+}
+
+.widget-search-box i {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.widget-search-box input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #f1f5f9;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.widget-search-box input::placeholder {
+  color: #64748b;
+}
+
+.widget-alert-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.widget-alert-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.widget-alert-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.widget-alert-list::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 2px;
+}
+
+.widget-loading,
+.widget-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.widget-empty i {
+  font-size: 32px;
+  color: #22c55e;
+}
+
+.widget-alert-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  margin-bottom: 6px;
+  background: #1e293b;
+  border-radius: 8px;
+  border-left: 3px solid;
+  transition: all 0.2s;
+}
+
+.widget-alert-item:last-child {
+  margin-bottom: 0;
+}
+
+.widget-alert-item:hover {
+  background: #334155;
+}
+
+.widget-alert-item.critical {
+  border-left-color: #ef4444;
+}
+
+.widget-alert-item.major {
+  border-left-color: #f97316;
+}
+
+.widget-alert-item.minor {
+  border-left-color: #eab308;
+}
+
+.widget-alert-item.warning {
+  border-left-color: #3b82f6;
+}
+
+.widget-alert-item .alert-level-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.widget-alert-item.critical .alert-level-icon {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.widget-alert-item.major .alert-level-icon {
+  background: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+}
+
+.widget-alert-item.minor .alert-level-icon {
+  background: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+}
+
+.widget-alert-item.warning .alert-level-icon {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.widget-alert-item .alert-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.widget-alert-item .alert-device {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.widget-alert-item .alert-message {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.widget-alert-item .alert-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.widget-alert-item .alert-status {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.widget-alert-item .alert-status.ack {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.widget-alert-item .alert-time {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.widget-more {
+  padding: 8px;
+  text-align: center;
+  font-size: 11px;
+  color: #64748b;
+  background: rgba(15, 23, 42, 0.6);
+  border-top: 1px solid #334155;
+}
+
+/* 실시간 장애 현황 위젯 - 편집 모드 플레이스홀더 */
+.realtime-alert-widget.edit-mode-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+}
+
+.widget-edit-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 24px;
+}
+
+.widget-edit-placeholder i {
+  font-size: 36px;
+  color: #f59e0b;
+  opacity: 0.7;
+}
+
+.widget-edit-placeholder .placeholder-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.widget-edit-placeholder .placeholder-desc {
+  font-size: 12px;
+  color: #64748b;
+  max-width: 200px;
+}
+
+/* 실시간 WebSocket 알림 강조 */
+.widget-alert-item.realtime {
+  animation: alertPulse 2s ease-out;
+  border-left: 3px solid #22c55e;
+}
+
+@keyframes alertPulse {
+  0% {
+    background: rgba(34, 197, 94, 0.3);
+  }
+  100% {
+    background: rgba(15, 23, 42, 0.6);
+  }
+}
+
+.realtime-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-right: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  animation: badgePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}

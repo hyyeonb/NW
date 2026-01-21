@@ -6,6 +6,8 @@ import ForceGraph2D from 'react-force-graph-2d';
 import ReactECharts from 'echarts-for-react';
 import { useTopologyView, useGroupTree, useWidgets, useDefaultDashboard, useUserDashboard, useSaveUserDashboard, useResetUserDashboard } from '../hooks';
 import { useAuthStore } from '../stores/authStore';
+import { useAlertStore } from '../stores/alertStore';
+import { faultApi } from '../api';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import '../styles/dashboard.css';
@@ -2304,62 +2306,8 @@ function WidgetContent({ widget, widgetTypes, isEditMode }) {
       return null; // WidgetContent 외부에서 처리
 
     case 'REALTIME_ALERT':
-      return (
-        <div className="widget-content-inner">
-          <div className="realtime-alert-list">
-            <div className="alert-item critical">
-              <div className="alert-icon"><i className="bi bi-exclamation-circle-fill"></i></div>
-              <div className="alert-info">
-                <div className="alert-title">Server-DB-01 서버 다운</div>
-                <div className="alert-meta">
-                  <span className="alert-badge critical">Critical</span>
-                  <span className="alert-time">방금 전</span>
-                </div>
-              </div>
-            </div>
-            <div className="alert-item critical">
-              <div className="alert-icon"><i className="bi bi-exclamation-circle-fill"></i></div>
-              <div className="alert-info">
-                <div className="alert-title">Switch-Core-01 포트 다운</div>
-                <div className="alert-meta">
-                  <span className="alert-badge critical">Critical</span>
-                  <span className="alert-time">2분 전</span>
-                </div>
-              </div>
-            </div>
-            <div className="alert-item major">
-              <div className="alert-icon"><i className="bi bi-exclamation-triangle-fill"></i></div>
-              <div className="alert-info">
-                <div className="alert-title">Server-Web-02 CPU 95%</div>
-                <div className="alert-meta">
-                  <span className="alert-badge major">Major</span>
-                  <span className="alert-time">5분 전</span>
-                </div>
-              </div>
-            </div>
-            <div className="alert-item minor">
-              <div className="alert-icon"><i className="bi bi-info-circle-fill"></i></div>
-              <div className="alert-info">
-                <div className="alert-title">Router-01 메모리 사용률 80%</div>
-                <div className="alert-meta">
-                  <span className="alert-badge minor">Minor</span>
-                  <span className="alert-time">10분 전</span>
-                </div>
-              </div>
-            </div>
-            <div className="alert-item warning">
-              <div className="alert-icon"><i className="bi bi-exclamation-diamond-fill"></i></div>
-              <div className="alert-info">
-                <div className="alert-title">NAS-01 디스크 사용률 75%</div>
-                <div className="alert-meta">
-                  <span className="alert-badge warning">Warning</span>
-                  <span className="alert-time">15분 전</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
+      // 실제 데이터를 사용하는 별도 컴포넌트 사용
+      return null; // WidgetContent 외부에서 처리
 
     case 'ALERT_SUMMARY':
       const alertCntData = widget.cntData || {};
@@ -2399,34 +2347,36 @@ function WidgetContent({ widget, widgetTypes, isEditMode }) {
       );
 
     case 'DEVICE_SUMMARY':
+      // cntData에서 장비 수 데이터 추출
+      const deviceCntData = widget.cntData || {};
       return (
         <div className="widget-content-inner">
           <div className="device-summary-grid">
             <div className="device-card">
               <div className="device-icon network"><i className="bi bi-diagram-3-fill"></i></div>
               <div className="device-content">
-                <div className="device-count">89</div>
+                <div className="device-count">{deviceCntData.networkCnt ?? 0}</div>
                 <div className="device-label">네트워크</div>
               </div>
             </div>
             <div className="device-card">
               <div className="device-icon server"><i className="bi bi-hdd-stack-fill"></i></div>
               <div className="device-content">
-                <div className="device-count">156</div>
+                <div className="device-count">{deviceCntData.serverCnt ?? 0}</div>
                 <div className="device-label">서버</div>
               </div>
             </div>
             <div className="device-card">
               <div className="device-icon transfer"><i className="bi bi-arrow-left-right"></i></div>
               <div className="device-content">
-                <div className="device-count">34</div>
+                <div className="device-count">{deviceCntData.tranCnt ?? 0}</div>
                 <div className="device-label">전송</div>
               </div>
             </div>
             <div className="device-card">
               <div className="device-icon fms"><i className="bi bi-building-fill"></i></div>
               <div className="device-content">
-                <div className="device-count">21</div>
+                <div className="device-count">{deviceCntData.fmsCnt ?? 0}</div>
                 <div className="device-label">FMS</div>
               </div>
             </div>
@@ -2444,6 +2394,241 @@ function WidgetContent({ widget, widgetTypes, isEditMode }) {
         </div>
       );
   }
+}
+
+// 실시간 장애 현황 위젯 컴포넌트
+const ERROR_LEVELS = [
+  { id: 'C', label: 'Cr', color: '#ef4444', name: 'Critical' },
+  { id: 'M', label: 'Mj', color: '#f97316', name: 'Major' },
+  { id: 'N', label: 'Mn', color: '#eab308', name: 'Minor' },
+  { id: 'W', label: 'Wr', color: '#3b82f6', name: 'Warning' },
+];
+
+function RealtimeAlertWidget({ isEditMode }) {
+  const [apiErrors, setApiErrors] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedLevels, setSelectedLevels] = useState(['C', 'M', 'N', 'W']);
+  const [searchText, setSearchText] = useState('');
+  const alerts = useAlertStore((state) => state.alerts);
+
+  // WebSocket 알림을 API 포맷으로 변환
+  const convertAlertToError = useCallback((alert) => {
+    // severity를 ERROR_LEVEL로 매핑
+    const severityToLevel = {
+      'CRITICAL': 'C',
+      'MAJOR': 'M',
+      'MINOR': 'N',
+      'WARNING': 'W',
+    };
+    return {
+      ERROR_ID: alert.alertId || `ws-${alert.deviceId}-${alert.timestamp}`,
+      ERROR_LEVEL: severityToLevel[alert.severity] || 'W',
+      DEVICE_NAME: alert.deviceName || alert.deviceId || '-',
+      ERROR_MESSAGE: alert.message || alert.alertType || '-',
+      ERROR_FLAG: alert.isCleared ? 2 : 0,
+      OCCUR_AT: alert.occurredAt || alert.timestamp || new Date().toISOString(),
+      isWebSocket: true, // WebSocket에서 온 알림 표시
+    };
+  }, []);
+
+  // WebSocket 알림 + API 데이터 병합
+  const combinedErrors = useMemo(() => {
+    // WebSocket 알림 변환 (해소되지 않은 것만)
+    const wsErrors = alerts
+      .filter(a => !a.isCleared)
+      .map(convertAlertToError);
+
+    // API 데이터와 병합 (중복 제거)
+    const wsErrorIds = new Set(wsErrors.map(e => e.DEVICE_NAME + e.ERROR_MESSAGE));
+    const uniqueApiErrors = apiErrors.filter(e =>
+      !wsErrorIds.has(e.DEVICE_NAME + e.ERROR_MESSAGE)
+    );
+
+    // WebSocket 알림을 맨 앞에 두고 병합
+    const merged = [...wsErrors, ...uniqueApiErrors];
+
+    // 필터 적용 (등급, 검색어)
+    return merged.filter(error => {
+      const matchLevel = selectedLevels.includes(error.ERROR_LEVEL);
+      const matchSearch = !searchText.trim() ||
+        (error.DEVICE_NAME && error.DEVICE_NAME.toLowerCase().includes(searchText.toLowerCase()));
+      return matchLevel && matchSearch;
+    });
+  }, [alerts, apiErrors, selectedLevels, searchText, convertAlertToError]);
+
+  // 장애 목록 조회 (편집 모드가 아닐 때만)
+  const fetchErrors = useCallback(async () => {
+    if (isEditMode) return;
+    setIsLoading(true);
+    try {
+      const params = {};
+      if (searchText.trim()) {
+        params.deviceName = searchText.trim();
+      }
+      const response = await faultApi.getErrors(params);
+      const data = response.data?.data || {};
+      setApiErrors(data.list || []);
+    } catch (error) {
+      console.error('장애 목록 조회 실패:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchText, isEditMode]);
+
+  // 초기 로드 (편집 모드가 아닐 때만)
+  useEffect(() => {
+    if (!isEditMode) {
+      fetchErrors();
+    }
+  }, [isEditMode]);
+
+  // 검색어 변경 시 debounce 적용하여 API 재조회
+  useEffect(() => {
+    if (isEditMode) return;
+    const timer = setTimeout(() => {
+      fetchErrors();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchText, isEditMode]);
+
+  // 등급 토글
+  const toggleLevel = (levelId) => {
+    setSelectedLevels(prev => {
+      if (prev.includes(levelId)) {
+        if (prev.length === 1) return prev;
+        return prev.filter(l => l !== levelId);
+      }
+      return [...prev, levelId];
+    });
+  };
+
+  // 날짜 포맷
+  const formatTime = (dateStr) => {
+    if (!dateStr) return '-';
+    try {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diff = Math.floor((now - date) / 1000);
+
+      if (diff < 60) return '방금 전';
+      if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+      return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // 등급 클래스
+  const getLevelClass = (level) => {
+    switch (level) {
+      case 'C': return 'critical';
+      case 'M': return 'major';
+      case 'N': return 'minor';
+      case 'W': return 'warning';
+      default: return '';
+    }
+  };
+
+  // 등급 아이콘
+  const getLevelIcon = (level) => {
+    switch (level) {
+      case 'C': return 'bi-exclamation-circle-fill';
+      case 'M': return 'bi-exclamation-triangle-fill';
+      case 'N': return 'bi-exclamation-diamond-fill';
+      case 'W': return 'bi-info-circle-fill';
+      default: return 'bi-circle-fill';
+    }
+  };
+
+  // 편집 모드일 때는 플레이스홀더 표시
+  if (isEditMode) {
+    return (
+      <div className="realtime-alert-widget edit-mode-placeholder">
+        <div className="widget-edit-placeholder">
+          <i className="bi bi-exclamation-triangle"></i>
+          <span className="placeholder-title">실시간 장애 현황</span>
+          <span className="placeholder-desc">편집 모드에서는 장애 목록이 표시되지 않습니다</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="realtime-alert-widget">
+      {/* 필터 영역 */}
+      <div className="widget-filter-bar">
+        <div className="widget-level-filters">
+          {ERROR_LEVELS.map((level) => (
+            <button
+              key={level.id}
+              className={`widget-level-btn ${selectedLevels.includes(level.id) ? 'active' : ''}`}
+              style={{ '--level-color': level.color }}
+              onClick={() => toggleLevel(level.id)}
+              title={level.name}
+            >
+              {level.label}
+            </button>
+          ))}
+        </div>
+        <div className="widget-search-box">
+          <i className="bi bi-search"></i>
+          <input
+            type="text"
+            placeholder="장비명 검색..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* 장애 목록 */}
+      <div className="widget-alert-list">
+        {isLoading && combinedErrors.length === 0 ? (
+          <div className="widget-loading">
+            <div className="loading-spinner"></div>
+            <span>로딩 중...</span>
+          </div>
+        ) : combinedErrors.length === 0 ? (
+          <div className="widget-empty">
+            <i className="bi bi-check-circle"></i>
+            <span>발생한 장애가 없습니다</span>
+          </div>
+        ) : (
+          combinedErrors.slice(0, 20).map((error, index) => (
+            <div
+              key={error.ERROR_ID || `error-${index}`}
+              className={`widget-alert-item ${getLevelClass(error.ERROR_LEVEL)} ${error.isWebSocket ? 'realtime' : ''}`}
+            >
+              <div className="alert-level-icon">
+                <i className={`bi ${getLevelIcon(error.ERROR_LEVEL)}`}></i>
+              </div>
+              <div className="alert-content">
+                <div className="alert-device">
+                  {error.isWebSocket && <span className="realtime-badge">NEW</span>}
+                  {error.DEVICE_NAME || '-'}
+                </div>
+                <div className="alert-message">{error.ERROR_MESSAGE || '-'}</div>
+              </div>
+              <div className="alert-meta">
+                <span className={`alert-status ${error.ERROR_FLAG === 1 ? 'ack' : ''}`}>
+                  {error.ERROR_FLAG === 1 ? '인지' : '발생'}
+                </span>
+                <span className="alert-time">{formatTime(error.OCCUR_AT)}</span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* 더보기 */}
+      {combinedErrors.length > 20 && (
+        <div className="widget-more">
+          <span>+{combinedErrors.length - 20}건 더 있음</span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function Dashboard() {
@@ -3315,6 +3500,8 @@ export default function Dashboard() {
                     )
                   ) : widget.type === 'CUSTOM' ? (
                     <MemoizedCustomWidgetContent widget={widget} isEditMode={isEditMode} />
+                  ) : widget.type === 'REALTIME_ALERT' ? (
+                    <RealtimeAlertWidget isEditMode={isEditMode} />
                   ) : (
                     <WidgetContent widget={widget} widgetTypes={WIDGET_TYPES} isEditMode={isEditMode} />
                   )}
