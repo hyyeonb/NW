@@ -378,74 +378,125 @@ export default function ModelManagement() {
       {/* 우측: 모델 상세 정보 */}
       <div className="model-detail-panel">
         {selectedModel ? (
-          <>
-            <div className="panel-header">
-              <h3><i className="bi bi-cpu"></i> 모델 정보</h3>
-            </div>
-
-            <div className="detail-content">
-              <div className="detail-section">
-                <div className="detail-row">
-                  <span className="detail-label">모델명</span>
-                  <span className="detail-value" title={selectedModel.MODEL_NAME || '-'}>{selectedModel.MODEL_NAME || '-'}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">모델 OID</span>
-                  <span className="detail-value oid" title={selectedModel.MODEL_OID || '-'}>{selectedModel.MODEL_OID || '-'}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">벤더</span>
-                  <span className="detail-value" title={selectedModel.VENDOR_NAME || '-'}>{selectedModel.VENDOR_NAME || '-'}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">장비군</span>
-                  <span className="detail-value" title={selectedModel.DEV_CODE_NM || '-'}>{selectedModel.DEV_CODE_NM || '-'}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">등록일</span>
-                  <span className="detail-value">
-                    {selectedModel.CREATE_AT ? new Date(selectedModel.CREATE_AT).toLocaleDateString('ko-KR') : '-'}
+          <div className="model-detail-content">
+            {/* 모델 헤더 영역 */}
+            <div className="model-hero">
+              <div className="model-hero-icon">
+                <i className="bi bi-cpu-fill"></i>
+              </div>
+              <div className="model-hero-info">
+                <h2 className="model-hero-name">{selectedModel.MODEL_NAME || '이름 없음'}</h2>
+                <div className="model-hero-meta">
+                  <span className="meta-badge vendor">
+                    <i className="bi bi-building"></i>
+                    {selectedModel.VENDOR_NAME || '벤더 미지정'}
                   </span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">수정일</span>
-                  <span className="detail-value">
-                    {selectedModel.MODIFY_AT ? new Date(selectedModel.MODIFY_AT).toLocaleDateString('ko-KR') : '-'}
-                  </span>
+                  {selectedModel.DEV_CODE_NM && (
+                    <span className="meta-badge device-type">
+                      <i className="bi bi-diagram-3"></i>
+                      {selectedModel.DEV_CODE_NM}
+                    </span>
+                  )}
                 </div>
               </div>
-
-              {/* OID 설정 섹션 */}
-              <div className="detail-section oid-section">
-                <div className="section-header">
-                  <h4><i className="bi bi-sliders"></i> SNMP OID 설정</h4>
-                  <span className="oid-count-badge">{configuredOidCount}개 설정됨</span>
-                </div>
-                <p className="section-desc">CPU, 메모리 등 수집 항목의 OID를 모델별로 설정합니다.</p>
-                <button className="btn btn-secondary btn-sm" onClick={handleOpenOidModal}>
-                  <i className="bi bi-gear"></i> OID 설정
-                </button>
-              </div>
-
-              <div className="detail-actions">
+              <div className="model-hero-actions">
                 <button
-                  className="btn btn-primary"
+                  className="action-btn edit"
                   onClick={() => handleOpenEditModal(selectedModel)}
+                  title="모델 수정"
                 >
-                  <i className="bi bi-pencil"></i> 수정
+                  <i className="bi bi-pencil-fill"></i>
                 </button>
                 <button
-                  className="btn btn-danger"
+                  className="action-btn delete"
                   onClick={() => handleDeleteModel(selectedModel)}
+                  title="모델 삭제"
                 >
-                  <i className="bi bi-trash"></i> 삭제
+                  <i className="bi bi-trash-fill"></i>
                 </button>
               </div>
             </div>
-          </>
+
+            {/* 정보 카드 그리드 */}
+            <div className="model-info-grid">
+              {/* OID 정보 카드 */}
+              <div className="info-card oid-card">
+                <div className="oid-card-content">
+                  <span className="oid-card-label">모델 식별 OID</span>
+                  <div className="oid-card-value-wrap">
+                    <code className="oid-card-value">{selectedModel.MODEL_OID || '미설정'}</code>
+                    {selectedModel.MODEL_OID && (
+                      <button
+                        className="oid-copy-btn"
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedModel.MODEL_OID);
+                        }}
+                        title="OID 복사"
+                      >
+                        <i className="bi bi-copy"></i>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* SNMP OID 설정 카드 */}
+              <div className="info-card snmp-card" onClick={handleOpenOidModal}>
+                <div className="snmp-card-visual">
+                  <div className="snmp-ring">
+                    <svg viewBox="0 0 36 36">
+                      <path
+                        className="ring-bg"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <path
+                        className="ring-fill"
+                        strokeDasharray={`${Math.min(configuredOidCount * 10, 100)}, 100`}
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                    </svg>
+                    <span className="ring-value">{configuredOidCount}</span>
+                  </div>
+                </div>
+                <div className="snmp-card-info">
+                  <span className="snmp-card-title">SNMP 수집 설정</span>
+                  <span className="snmp-card-desc">OID {configuredOidCount}개 설정됨</span>
+                </div>
+                <i className="bi bi-chevron-right card-arrow"></i>
+              </div>
+
+              {/* 등록 정보 카드 */}
+              <div className="info-card date-card">
+                <div className="date-rows">
+                  <div className="date-row">
+                    <div className="date-led created"></div>
+                    <span className="date-label">생성일</span>
+                    <span className="date-value">
+                      {selectedModel.CREATE_AT
+                        ? new Date(selectedModel.CREATE_AT).toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })
+                        : '-'}
+                    </span>
+                  </div>
+                  <div className="date-row">
+                    <div className="date-led modified"></div>
+                    <span className="date-label">수정일</span>
+                    <span className="date-value">
+                      {selectedModel.MODIFY_AT
+                        ? new Date(selectedModel.MODIFY_AT).toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })
+                        : '-'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="no-selection">
-            <p>선택 된 모델이 없습니다</p>
+            <div className="no-selection-icon">
+              <i className="bi bi-cpu"></i>
+            </div>
+            <h3>모델을 선택하세요</h3>
+            <p>좌측 트리에서 모델을 선택하면<br/>상세 정보가 표시됩니다</p>
           </div>
         )}
         </div>

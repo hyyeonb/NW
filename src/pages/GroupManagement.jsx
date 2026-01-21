@@ -436,38 +436,42 @@ export default function GroupManagement() {
   ], []);
 
   return (
-    <div className="page-container">
-      <GroupTree
-        onEditGroup={handleEditGroup}
-        onAddGroup={handleAddGroup}
-        onDeleteGroup={handleDeleteGroup}
-        onSetIcon={handleSetIcon}
-        onMoveGroup={handleMoveGroup}
-      />
-
-      <main className="page-main-content">
-        {/* 페이지 헤더 */}
-        <div className="page-header">
-          <div className="page-header-left">
-            <h1 className="page-title">
-              <i className="bi bi-diagram-3"></i>
-              그룹 관리
-            </h1>
-            <span className="page-subtitle">조직 및 장비 그룹을 관리합니다</span>
-          </div>
+    <div className="group-management-container">
+      {/* 페이지 헤더 */}
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">
+            <i className="bi bi-diagram-3"></i>
+            그룹 관리
+          </h1>
+          <span className="page-subtitle">조직 및 장비 그룹을 관리합니다</span>
         </div>
+      </div>
 
+      {/* 패널 래퍼 - 사이드바와 메인 컨텐츠를 하나로 묶음 */}
+      <div className="page-panels-wrapper">
+        <GroupTree
+          onEditGroup={handleEditGroup}
+          onAddGroup={handleAddGroup}
+          onDeleteGroup={handleDeleteGroup}
+          onSetIcon={handleSetIcon}
+          onMoveGroup={handleMoveGroup}
+        />
 
-
-        {/* 웰컴 메시지 - 선택된 그룹이 없을 때 */}
-        {!selectedGroup && viewMode === 'info' && (
-          <p id="welcome-message">그룹을 선택하여 정보를 확인하세요.</p>
-        )}
+        <main className="page-main-content">
+          {/* 웰컴 메시지 - 선택된 그룹이 없을 때 */}
+          {!selectedGroup && viewMode === 'info' && (
+            <div className="welcome-card">
+              <i className="bi bi-folder2-open"></i>
+              <p>그룹을 선택하여 정보를 확인하세요.</p>
+            </div>
+          )}
 
         {/* 그룹 정보 표시 */}
         {selectedGroup && viewMode === 'info' && (
-          <div id="group-info" className="group-info" style={{ display: 'block' }}>
-            <h3 style={{ color: '#ffffff', fontSize: '18px', marginBottom: '15px' }}>
+          <div id="group-info" className="group-info">
+            <h3 className="section-title">
+              <i className="bi bi-info-circle"></i>
               그룹 상세 정보
             </h3>
             <div className="info-inline">
@@ -516,7 +520,7 @@ export default function GroupManagement() {
                   },
                   pageSizeOptions: [10, 20, 50],
                 }}
-                maxHeight="calc(100vh - 400px)"
+                maxHeight="calc(100vh - 450px)"
               />
             </div>
           </div>
@@ -638,7 +642,8 @@ export default function GroupManagement() {
             </div>
           </form>
         )}
-      </main>
+        </main>
+      </div>
 
       {/* 아이콘 선택 모달 */}
       {iconModalGroup && <IconSelectorModal />}

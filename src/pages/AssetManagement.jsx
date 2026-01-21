@@ -11,8 +11,6 @@ import {
   useDeviceScope,
   useUpdateDeviceScope,
   useDeviceTraffic,
-  useTogglePortChartFlag,
-  useResetChartFlags,
   useDeviceErrorLevels,
 } from '../hooks';
 import { devicesApi } from '../api/devices';
@@ -48,6 +46,9 @@ export default function AssetManagement() {
 
   // 장비 인라인 편집 상태
   const [editFormData, setEditFormData] = useState({});
+
+  // 커스텀 툴팁 상태
+  const [tooltip, setTooltip] = useState({ visible: false, content: '', x: 0, y: 0 });
   const [editSaving, setEditSaving] = useState(false);
 
   // 장비 테이블 정렬 상태 (기본: ID 오름차순)
@@ -62,9 +63,11 @@ export default function AssetManagement() {
   const [searchDeviceName, setSearchDeviceName] = useState('');
   const [searchDeviceIp, setSearchDeviceIp] = useState('');
 
-  // 차트 플래그 토글/초기화 mutation
-  const toggleChartFlag = useTogglePortChartFlag();
-  const resetChartFlags = useResetChartFlags();
+  // 차트 표시할 포트 Set (세션 기반 - IF_INDEX 저장)
+  const [chartPortsSet, setChartPortsSet] = useState(new Set());
+
+  // CPU/MEM 데이터 상태
+  const [cpuMemData, setCpuMemData] = useState(null);
 
   // 그룹 변경 시 페이지 및 검색 초기화
   useEffect(() => {
@@ -79,6 +82,18 @@ export default function AssetManagement() {
     deviceName: searchDeviceName.trim(),
     deviceIp: searchDeviceIp.trim()
   }), [searchDeviceName, searchDeviceIp]);
+
+  // 툴팁 핸들러
+  const showTooltip = (e, content) => {
+    const rect = e.target.getBoundingClientRect();
+    setTooltip({
+      visible: true,
+      content,
+      x: rect.left + rect.width / 2,
+      y: rect.top - 10
+    });
+  };
+  const hideTooltip = () => setTooltip({ ...tooltip, visible: false });
 
   // 검색 초기화 함수
   const handleSearchReset = () => {
@@ -98,6 +113,27 @@ export default function AssetManagement() {
   // 장비별 활성 장애 등급 조회
   const { deviceErrorMap } = useDeviceErrorLevels();
 
+  // CPU/MEM 데이터 조회
+  useEffect(() => {
+    if (!detailDevice?.DEVICE_ID) {
+      setCpuMemData(null);
+      return;
+    }
+    const fetchCpuMem = async () => {
+      try {
+        const response = await devicesApi.getDeviceCpuMem(detailDevice.DEVICE_ID);
+        setCpuMemData(response.data?.data || null);
+      } catch (error) {
+        console.error('CPU/MEM 데이터 조회 실패:', error);
+        setCpuMemData(null);
+      }
+    };
+    fetchCpuMem();
+    // 30초마다 갱신
+    const interval = setInterval(fetchCpuMem, 30000);
+    return () => clearInterval(interval);
+  }, [detailDevice?.DEVICE_ID]);
+
   // 가상 인터페이스 필터링 (docker, veth, br-, lo 등 제외)
   const portsData = useMemo(() => {
     if (!portsDataRaw) return [];
@@ -108,35 +144,57 @@ export default function AssetManagement() {
     });
   }, [portsDataRaw]);
 
-  // 차트 표시할 포트 Set (IF_CHART_FLAG=true인 포트들)
-  const chartEnabledPorts = useMemo(() => {
-    if (!portsData) return new Set();
-    return new Set(
-      portsData
-        .filter(p => p.IF_CHART_FLAG === true || p.IF_CHART_FLAG === 1)
-        .map(p => p.IF_INDEX)
-    );
-  }, [portsData]);
+  // 포트 데이터 로드 시 sessionStorage에서 복원 또는 OPER 활성 포트로 초기화
+  useEffect(() => {
+    if (portsData && portsData.length > 0 && detailDevice?.DEVICE_ID) {
+      const storageKey = `chartPorts_${detailDevice.DEVICE_ID}`;
+      const saved = sessionStorage.getItem(storageKey);
 
-  // 트래픽 차트 데이터 (IF_CHART_FLAG 기반 필터링만 - 플래그 없으면 빈 차트)
+      if (saved) {
+        // sessionStorage에 저장된 값 복원
+        try {
+          const savedPorts = JSON.parse(saved);
+          setChartPortsSet(new Set(savedPorts));
+        } catch {
+          // 파싱 실패 시 기본값
+          const operActivePorts = new Set(
+            portsData
+              .filter(p => p.IF_OPER_STATUS === 1 || p.IF_OPER_STATUS === 'up')
+              .map(p => p.IF_INDEX)
+          );
+          setChartPortsSet(operActivePorts);
+        }
+      } else {
+        // 저장된 값 없으면 OPER 활성 포트로 초기화
+        const operActivePorts = new Set(
+          portsData
+            .filter(p => p.IF_OPER_STATUS === 1 || p.IF_OPER_STATUS === 'up')
+            .map(p => p.IF_INDEX)
+        );
+        setChartPortsSet(operActivePorts);
+      }
+    }
+  }, [portsData, detailDevice?.DEVICE_ID]);
+
+  // 트래픽 차트 데이터 (세션 기반 chartPortsSet 필터링)
   const trafficChartData = useMemo(() => {
     if (!trafficData || !trafficData.series || trafficData.series.length === 0) {
       return { timeLabels: [], series: [] };
     }
 
-    // IF_CHART_FLAG=true인 포트가 없으면 빈 차트 (서버에서 자동 설정될 때까지 대기)
-    if (chartEnabledPorts.size === 0) {
+    // 선택된 포트가 없으면 빈 차트
+    if (chartPortsSet.size === 0) {
       return { timeLabels: [], series: [] };
     }
 
-    // IF_CHART_FLAG=true인 포트만 표시
+    // 선택된 포트만 표시
     const filteredSeries = trafficData.series.filter(item => {
       // series에 ifIndex가 있다고 가정
       if (item.ifIndex !== undefined) {
-        return chartEnabledPorts.has(item.ifIndex);
+        return chartPortsSet.has(item.ifIndex);
       }
       // name 기반 매칭 (포트 이름이 series name에 포함되어 있는지)
-      return Array.from(chartEnabledPorts).some(ifIndex => {
+      return Array.from(chartPortsSet).some(ifIndex => {
         const port = portsData?.find(p => p.IF_INDEX === ifIndex);
         if (port) {
           const portName = port.IF_NAME || port.IF_DESCR || '';
@@ -146,22 +204,38 @@ export default function AssetManagement() {
       });
     });
     return { timeLabels: trafficData.timeLabels, series: filteredSeries };
-  }, [trafficData, chartEnabledPorts, portsData]);
+  }, [trafficData, chartPortsSet, portsData]);
 
-  // 포트 차트 플래그 토글 핸들러 (DB 저장)
+  // 포트 차트 토글 핸들러 (세션 기반)
   const handleToggleChartPort = (port) => {
-    if (detailDevice?.DEVICE_ID) {
-      toggleChartFlag.mutate({
-        deviceId: detailDevice.DEVICE_ID,
-        ifIndex: port.IF_INDEX
-      });
-    }
+    setChartPortsSet(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(port.IF_INDEX)) {
+        newSet.delete(port.IF_INDEX);
+      } else {
+        newSet.add(port.IF_INDEX);
+      }
+      // sessionStorage에 저장
+      if (detailDevice?.DEVICE_ID) {
+        sessionStorage.setItem(`chartPorts_${detailDevice.DEVICE_ID}`, JSON.stringify([...newSet]));
+      }
+      return newSet;
+    });
   };
 
-  // 차트 플래그 초기화 (TOP 5 재설정)
+  // 차트 포트 초기화 (sessionStorage에서 삭제)
   const handleResetChartFlags = () => {
-    if (detailDevice?.DEVICE_ID) {
-      resetChartFlags.mutate(detailDevice.DEVICE_ID);
+    if (portsData) {
+      const operActivePorts = new Set(
+        portsData
+          .filter(p => p.IF_OPER_STATUS === 1 || p.IF_OPER_STATUS === 'up')
+          .map(p => p.IF_INDEX)
+      );
+      setChartPortsSet(operActivePorts);
+      // sessionStorage에서 삭제 (기본값으로 복귀)
+      if (detailDevice?.DEVICE_ID) {
+        sessionStorage.removeItem(`chartPorts_${detailDevice.DEVICE_ID}`);
+      }
     }
   };
 
@@ -772,21 +846,6 @@ export default function AssetManagement() {
       width: '180px',
       sortable: true,
       className: 'cell-truncate',
-      render: (value, row) => (
-        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {deviceErrorMap?.get(row.DEVICE_ID) && (
-            <span
-              className={`fault-led fault-led-${deviceErrorMap.get(row.DEVICE_ID)}`}
-              title={`장애 발생 (${
-                deviceErrorMap.get(row.DEVICE_ID) === 'C' ? 'Critical' :
-                deviceErrorMap.get(row.DEVICE_ID) === 'M' ? 'Major' :
-                deviceErrorMap.get(row.DEVICE_ID) === 'N' ? 'Minor' : 'Warning'
-              })`}
-            />
-          )}
-          {value}
-        </span>
-      ),
     },
     {
       key: 'GROUP_NAME',
@@ -842,30 +901,53 @@ export default function AssetManagement() {
       className: 'cell-date',
       render: (value) => formatDate(value),
     },
+    {
+      key: 'STATUS',
+      label: '상태',
+      width: '60px',
+      align: 'center',
+      render: (_, row) => {
+        const errorLevel = deviceErrorMap?.get(row.DEVICE_ID);
+        if (!errorLevel) {
+          return <span className="status-led status-led-normal" title="정상" />;
+        }
+        const levelName = errorLevel === 'C' ? 'Critical' :
+                          errorLevel === 'M' ? 'Major' :
+                          errorLevel === 'N' ? 'Minor' : 'Warning';
+        return (
+          <span
+            className={`status-led status-led-${errorLevel}`}
+            title={`장애: ${levelName}`}
+          />
+        );
+      },
+    },
   ], [deviceErrorMap]);
 
   return (
-    <div className="page-container">
-      <GroupTree />
-      <main className="page-main-content">
-        {/* 페이지 헤더 */}
-        <div className="page-header">
-          <div className="page-header-left">
-            <h1 className="page-title">
-              <i className="bi bi-hdd-rack"></i>
-              자산 관리
-            </h1>
-            <span className="page-subtitle">등록된 장비를 조회하고 관리합니다</span>
-            {selectedGroup && (
-              <span className="selected-group-badge">
-                <i className="bi bi-folder2"></i>
-                {selectedGroup.GROUP_NAME}
-              </span>
-            )}
-          </div>
+    <div className="asset-management-container">
+      {/* 페이지 헤더 */}
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">
+            <i className="bi bi-hdd-rack"></i>
+            자산 관리
+          </h1>
+          <span className="page-subtitle">등록된 장비를 조회하고 관리합니다</span>
+          {selectedGroup && (
+            <span className="selected-group-badge">
+              <i className="bi bi-folder2"></i>
+              {selectedGroup.GROUP_NAME}
+            </span>
+          )}
         </div>
+      </div>
 
-        {!selectedGroup ? (
+      {/* 패널 래퍼 - 사이드바와 메인 컨텐츠를 하나로 묶음 */}
+      <div className="page-panels-wrapper">
+        <GroupTree />
+        <main className="page-main-content">
+          {!selectedGroup ? (
           <p id="welcome-message">그룹을 선택하여 해당 그룹의 장비 목록을 확인하세요.</p>
         ) : isLoading ? (
           <p style={{ color: '#94a3b8' }}>로딩 중...</p>
@@ -945,11 +1027,12 @@ export default function AssetManagement() {
                   setPage(1);
                 },
               }}
-              maxHeight="calc(100vh - 340px)"
+              maxHeight="calc(100vh - 420px)"
             />
           </div>
         )}
-      </main>
+        </main>
+      </div>
 
       {/* 장비 상세 보기 모달 */}
       {detailDevice && (
@@ -996,8 +1079,9 @@ export default function AssetManagement() {
                             시스템명
                             {(detailDevice.DEVICE_DESC || detailDevice.sysDescr) && (
                               <span
-                                className="sys-descr-tooltip"
-                                title={detailDevice.DEVICE_DESC || detailDevice.sysDescr}
+                                className="sys-descr-icon"
+                                onMouseEnter={(e) => showTooltip(e, detailDevice.DEVICE_DESC || detailDevice.sysDescr)}
+                                onMouseLeave={hideTooltip}
                               >
                                 <i className="bi bi-question-circle"></i>
                               </span>
@@ -1072,15 +1156,55 @@ export default function AssetManagement() {
                       <div className="info-box-body pie-body">
                         <div className="pie-wrapper">
                           <ReactECharts
-                            option={{series:[{type:'pie',radius:['55%','80%'],center:['50%','50%'],data:[{value:45,itemStyle:{color:'#3b82f6'}},{value:55,itemStyle:{color:'rgba(255,255,255,0.1)'}}],label:{show:true,position:'center',formatter:'45%',fontSize:20,fontWeight:'bold',color:'#3b82f6'},labelLine:{show:false},silent:true}]}}
-                            style={{height:'120px',width:'120px'}}
+                            option={{
+                              series: [{
+                                type: 'pie',
+                                radius: ['55%', '80%'],
+                                center: ['50%', '50%'],
+                                data: [
+                                  { value: cpuMemData?.CPU_USAGE || 0, itemStyle: { color: '#3b82f6' } },
+                                  { value: 100 - (cpuMemData?.CPU_USAGE || 0), itemStyle: { color: 'rgba(255,255,255,0.1)' } }
+                                ],
+                                label: {
+                                  show: true,
+                                  position: 'center',
+                                  formatter: cpuMemData?.CPU_USAGE != null ? `${Number(cpuMemData.CPU_USAGE).toFixed(1)}%` : '-',
+                                  fontSize: 18,
+                                  fontWeight: 'bold',
+                                  color: '#3b82f6'
+                                },
+                                labelLine: { show: false },
+                                silent: true
+                              }]
+                            }}
+                            style={{ height: '120px', width: '120px' }}
                           />
                           <span className="pie-name">CPU</span>
                         </div>
                         <div className="pie-wrapper">
                           <ReactECharts
-                            option={{series:[{type:'pie',radius:['55%','80%'],center:['50%','50%'],data:[{value:72,itemStyle:{color:'#10b981'}},{value:28,itemStyle:{color:'rgba(255,255,255,0.1)'}}],label:{show:true,position:'center',formatter:'72%',fontSize:20,fontWeight:'bold',color:'#10b981'},labelLine:{show:false},silent:true}]}}
-                            style={{height:'120px',width:'120px'}}
+                            option={{
+                              series: [{
+                                type: 'pie',
+                                radius: ['55%', '80%'],
+                                center: ['50%', '50%'],
+                                data: [
+                                  { value: cpuMemData?.MEM_USAGE || 0, itemStyle: { color: '#10b981' } },
+                                  { value: 100 - (cpuMemData?.MEM_USAGE || 0), itemStyle: { color: 'rgba(255,255,255,0.1)' } }
+                                ],
+                                label: {
+                                  show: true,
+                                  position: 'center',
+                                  formatter: cpuMemData?.MEM_USAGE != null ? `${Number(cpuMemData.MEM_USAGE).toFixed(1)}%` : '-',
+                                  fontSize: 18,
+                                  fontWeight: 'bold',
+                                  color: '#10b981'
+                                },
+                                labelLine: { show: false },
+                                silent: true
+                              }]
+                            }}
+                            style={{ height: '120px', width: '120px' }}
                           />
                           <span className="pie-name">MEM</span>
                         </div>
@@ -1118,7 +1242,7 @@ export default function AssetManagement() {
                                       {group.ports.filter(p => p.parsed.portNum % 2 === 1).map(port => (
                                         <div
                                           key={port.IF_INDEX}
-                                          className={`port-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartEnabledPorts.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
+                                          className={`port-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartPortsSet.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
                                           title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
                                           onClick={() => handleToggleChartPort(port)}
                                         >
@@ -1126,7 +1250,7 @@ export default function AssetManagement() {
                                           <div className="port-connector">
                                             <div className="port-led"></div>
                                           </div>
-                                          {chartEnabledPorts.has(port.IF_INDEX) && <span className="chart-icon"></span>}
+                                          {chartPortsSet.has(port.IF_INDEX) && <span className="chart-icon"></span>}
                                         </div>
                                       ))}
                                     </div>
@@ -1135,7 +1259,7 @@ export default function AssetManagement() {
                                       {group.ports.filter(p => p.parsed.portNum % 2 === 0).map(port => (
                                         <div
                                           key={port.IF_INDEX}
-                                          className={`port-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartEnabledPorts.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
+                                          className={`port-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartPortsSet.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
                                           title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
                                           onClick={() => handleToggleChartPort(port)}
                                         >
@@ -1143,7 +1267,7 @@ export default function AssetManagement() {
                                           <div className="port-connector">
                                             <div className="port-led"></div>
                                           </div>
-                                          {chartEnabledPorts.has(port.IF_INDEX) && <span className="chart-icon"></span>}
+                                          {chartPortsSet.has(port.IF_INDEX) && <span className="chart-icon"></span>}
                                         </div>
                                       ))}
                                     </div>
@@ -1167,7 +1291,7 @@ export default function AssetManagement() {
                                       {group.ports.map(port => (
                                         <div
                                           key={port.IF_INDEX}
-                                          className={`port-jack uplink-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartEnabledPorts.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
+                                          className={`port-jack uplink-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartPortsSet.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
                                           title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
                                           onClick={() => handleToggleChartPort(port)}
                                         >
@@ -1175,7 +1299,7 @@ export default function AssetManagement() {
                                           <div className="port-connector sfp">
                                             <div className="port-led"></div>
                                           </div>
-                                          {chartEnabledPorts.has(port.IF_INDEX) && <span className="chart-icon"></span>}
+                                          {chartPortsSet.has(port.IF_INDEX) && <span className="chart-icon"></span>}
                                         </div>
                                       ))}
                                     </div>
@@ -1195,11 +1319,11 @@ export default function AssetManagement() {
                       <div className="info-box-header">
                         <i className="bi bi-graph-up-arrow"></i> 포트별 트래픽
                         <span className="time-label">
-                          {chartEnabledPorts.size > 0
-                            ? `선택: ${chartEnabledPorts.size}개 포트`
+                          {chartPortsSet.size > 0
+                            ? `선택: ${chartPortsSet.size}개 포트`
                             : 'TOP 5 (포트 클릭으로 선택)'}
                         </span>
-                        {chartEnabledPorts.size > 0 && (
+                        {chartPortsSet.size > 0 && (
                           <button
                             className="chart-clear-btn"
                             onClick={handleResetChartFlags}
@@ -1212,7 +1336,7 @@ export default function AssetManagement() {
                       </div>
                       <div className="info-box-body">
                         <ReactECharts
-                          key={`traffic-${Array.from(chartEnabledPorts).join('-')}`}
+                          key={`traffic-${Array.from(chartPortsSet).join('-')}`}
                           notMerge={true}
                           option={{
                             tooltip:{trigger:'axis',backgroundColor:'rgba(15,23,42,0.95)',borderColor:'rgba(59,130,246,0.3)',textStyle:{color:'#e2e8f0',fontSize:11},formatter:(params)=>{
@@ -1225,8 +1349,8 @@ export default function AssetManagement() {
                               });
                               return result;
                             }},
-                            legend:{show:true,bottom:0,left:'center',textStyle:{color:'#94a3b8',fontSize:10},itemWidth:12,itemHeight:8,itemGap:12},
-                            grid:{left:'3%',right:'3%',bottom:'20%',top:'5%',containLabel:true},
+                            legend:{type:'scroll',show:true,bottom:0,left:'center',width:'90%',textStyle:{color:'#94a3b8',fontSize:10},itemWidth:12,itemHeight:8,itemGap:10,pageButtonItemGap:5,pageButtonGap:10,pageIconColor:'#94a3b8',pageIconInactiveColor:'#4a5568',pageTextStyle:{color:'#94a3b8',fontSize:10}},
+                            grid:{left:'3%',right:'3%',bottom:'15%',top:'5%',containLabel:true},
                             xAxis:{type:'category',boundaryGap:false,data:trafficChartData.timeLabels||[],axisLabel:{color:'#64748b',fontSize:9},axisLine:{lineStyle:{color:'rgba(255,255,255,0.1)'}},splitLine:{show:false}},
                             yAxis:{type:'value',axisLabel:{color:'#64748b',fontSize:9,formatter:v=>v>=1000000?(v/1000000).toFixed(0)+'M':v>=1000?(v/1000).toFixed(0)+'K':v},axisLine:{show:false},splitLine:{lineStyle:{color:'rgba(255,255,255,0.05)'}}},
                             series:trafficChartData.series&&trafficChartData.series.length>0?trafficChartData.series.map(item=>({name:item.name,type:'line',smooth:true,symbol:'circle',symbolSize:4,showSymbol:false,lineStyle:{width:2},areaStyle:{opacity:0.05},data:item.data})):[{name:'데이터 없음',type:'line',data:[]}]
@@ -1624,6 +1748,22 @@ export default function AssetManagement() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 커스텀 툴팁 */}
+      {tooltip.visible && (
+        <div
+          className="custom-tooltip"
+          style={{
+            position: 'fixed',
+            left: tooltip.x,
+            top: tooltip.y,
+            transform: 'translate(-50%, -100%)',
+            zIndex: 99999
+          }}
+        >
+          {tooltip.content}
         </div>
       )}
     </div>

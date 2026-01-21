@@ -116,17 +116,15 @@ export const devicesApi = {
   getPortTraffic: (deviceId, ifIndex, minutes = 60) =>
     apiClient.get(`/mgmt/devices/${deviceId}/ports/${ifIndex}/traffic`, { params: { minutes } }),
 
-  // 차트 표시 포트 조회 (없으면 TOP 5 자동 설정)
-  getChartEnabledPorts: (deviceId) =>
-    apiClient.get(`/mgmt/devices/${deviceId}/ports/chart-enabled`),
+  // ==================== CPU/MEM 관련 ====================
 
-  // 포트 차트 플래그 토글
-  togglePortChartFlag: (deviceId, ifIndex) =>
-    apiClient.patch(`/mgmt/devices/${deviceId}/ports/${ifIndex}/chart-flag`),
+  // 장비 CPU/MEM 최신 데이터 조회
+  getDeviceCpuMem: (deviceId) =>
+    apiClient.get(`/mgmt/devices/${deviceId}/cpu-mem`),
 
-  // 차트 플래그 초기화 (TOP 5 재설정)
-  resetChartFlags: (deviceId) =>
-    apiClient.post(`/mgmt/devices/${deviceId}/ports/chart-flag/reset`),
+  // 장비 CPU/MEM 시계열 데이터 조회
+  getDeviceCpuMemHistory: (deviceId, minutes = 60) =>
+    apiClient.get(`/mgmt/devices/${deviceId}/cpu-mem/history`, { params: { minutes } }),
 
   // ==================== Vendor 관련 ====================
 

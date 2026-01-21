@@ -890,7 +890,7 @@ select:focus {
 
 .scope-desc {
     font-size: 12px;
-    color: #64748b;
+    color: #8b9ab0;
 }
 
 .detail-modal-footer .btn {
@@ -1025,7 +1025,7 @@ select:focus {
     align-items: center;
     justify-content: center;
     padding: 60px;
-    color: #64748b;
+    color: #8b9ab0;
 }
 
 .port-empty i {
@@ -1214,7 +1214,7 @@ select:focus {
 
 .monitor-badge.off {
     background: linear-gradient(135deg, rgba(100, 116, 139, 0.3) 0%, rgba(100, 116, 139, 0.15) 100%);
-    color: #64748b;
+    color: #8b9ab0;
 }
 
 /* ==================
@@ -1693,7 +1693,7 @@ select:focus {
     grid-column: 1 / -1;
     text-align: center;
     padding: 20px;
-    color: #64748b;
+    color: #8b9ab0;
     font-size: 12px;
 }
 
@@ -1716,7 +1716,7 @@ select:focus {
 
 .traffic-info-label {
     font-size: 10px;
-    color: #64748b;
+    color: #8b9ab0;
     font-weight: 400;
     margin-left: 6px;
 }
@@ -1826,7 +1826,7 @@ select:focus {
 
 .section-title .info-label {
     font-size: 9px;
-    color: #64748b;
+    color: #8b9ab0;
     font-weight: 400;
     text-transform: none;
 }
@@ -1893,7 +1893,7 @@ select:focus {
     grid-column: 1 / -1;
     text-align: center;
     padding: 15px;
-    color: #64748b;
+    color: #8b9ab0;
     font-size: 11px;
 }
 
@@ -2139,7 +2139,7 @@ select:focus {
 }
 
 .port-summary-badge .separator {
-    color: #64748b;
+    color: #8b9ab0;
 }
 
 /* 스위치 패널 - 실제 장비 형태 */
@@ -2239,7 +2239,7 @@ select:focus {
 .no-ports-msg {
     text-align: center;
     padding: 20px;
-    color: #64748b;
+    color: #8b9ab0;
     font-size: 12px;
 }
 
@@ -2534,7 +2534,7 @@ select:focus {
 }
 
 .port-badge .up { color: #10b981; }
-.port-badge .sep { color: #64748b; margin: 0 3px; }
+.port-badge .sep { color: #8b9ab0; margin: 0 3px; }
 .port-badge .down { color: #ef4444; }
 
 /* 스위치 섀시 - 실제 네트워크 스위치 모양 */
@@ -2807,7 +2807,7 @@ select:focus {
 .no-port {
     text-align: center;
     padding: 20px;
-    color: #64748b;
+    color: #8b9ab0;
     font-size: 12px;
 }
 
@@ -2828,7 +2828,7 @@ select:focus {
 .time-label {
     margin-left: auto;
     font-size: 10px;
-    color: #64748b;
+    color: #8b9ab0;
     font-weight: 400;
 }
 
@@ -3033,7 +3033,7 @@ select:focus {
 }
 
 .port-count-badge .sep {
-    color: #64748b;
+    color: #8b9ab0;
 }
 
 .port-count-badge .down {
@@ -3128,7 +3128,7 @@ select:focus {
 .no-data-msg {
     text-align: center;
     padding: 30px;
-    color: #64748b;
+    color: #8b9ab0;
     font-size: 13px;
 }
 
@@ -3140,7 +3140,7 @@ select:focus {
 .chart-period-label {
     margin-left: auto;
     font-size: 10px;
-    color: #64748b;
+    color: #8b9ab0;
     font-weight: 400;
 }
 
@@ -3214,6 +3214,44 @@ select:focus {
     box-shadow: 0 0 8px 2px rgba(6, 182, 212, 0.6);
 }
 
+/* 테이블 상태 LED - 글래스모피즘 */
+.status-led {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.status-led-normal {
+    background: rgba(16, 185, 129, 0.6);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 4px rgba(16, 185, 129, 0.3);
+}
+
+.status-led-C {
+    background: rgba(239, 68, 68, 0.6);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+}
+
+.status-led-M {
+    background: rgba(245, 158, 11, 0.6);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+}
+
+.status-led-N {
+    background: rgba(59, 130, 246, 0.6);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
+}
+
+.status-led-W {
+    background: rgba(6, 182, 212, 0.6);
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    box-shadow: 0 0 5px rgba(6, 182, 212, 0.3);
+}
+
 @keyframes led-pulse {
     0%, 100% {
         opacity: 1;
@@ -3239,7 +3277,7 @@ select:focus {
 
 .sys-descr-tooltip i {
     font-size: 12px;
-    color: #64748b;
+    color: #8b9ab0;
     transition: all 0.2s ease;
 }
 
@@ -3295,4 +3333,111 @@ select:focus {
     opacity: 1;
     visibility: visible;
     transition-delay: 0.3s;
+}
+
+/* 시스템 설명 아이콘 */
+.sys-descr-icon {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    cursor: help;
+}
+
+.sys-descr-icon i {
+    font-size: 12px;
+    color: #64748b;
+    transition: color 0.2s ease;
+}
+
+.sys-descr-icon:hover i {
+    color: #3b82f6;
+}
+
+/* 커스텀 툴팁 (JS 기반) */
+.custom-tooltip {
+    padding: 10px 14px;
+    background: rgba(15, 23, 42, 0.98);
+    color: #e2e8f0;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-width: 400px;
+    border-radius: 8px;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+}
+
+/* 말줄임 커스텀 툴팁 */
+.truncate-tooltip {
+    position: relative;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: default;
+}
+
+.truncate-tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    padding: 10px 14px;
+    background: rgba(15, 23, 42, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: #e2e8f0;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    max-width: 300px;
+    min-width: 100px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    pointer-events: none;
+}
+
+.truncate-tooltip:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0.3s;
+}
+
+/* 테이블 셀 말줄임 커스텀 툴팁 */
+.cell-truncate {
+    position: relative;
+}
+
+.cell-truncate::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    padding: 8px 12px;
+    background: rgba(15, 23, 42, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    color: #e2e8f0;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+    max-width: 400px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.15s ease;
+    pointer-events: none;
+}
+
+.cell-truncate:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0.2s;
 }

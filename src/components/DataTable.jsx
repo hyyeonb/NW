@@ -34,22 +34,19 @@ function DraggableHeader({ column, children, sortable, onSort, sort, enableReord
   } = useSortable({
     id: column.id,
     disabled: !enableReorder,
+    transition: {
+      duration: 150,
+      easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+    },
   });
 
-  // 드래그 시 원본 요소가 직접 이동
+  // X축만 이동 (수평 드래그)
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: transform ? `translateX(${transform.x}px)` : undefined,
     transition,
-    opacity: isDragging ? 0.9 : 1,
-    cursor: enableReorder ? (isDragging ? 'grabbing' : 'grab') : 'default',
     width: column.columnDef.width,
     textAlign: column.columnDef.align || 'left',
-    zIndex: isDragging ? 100 : 'auto',
-    position: isDragging ? 'relative' : undefined,
-    background: isDragging ? 'var(--theme-accent-primary)' : undefined,
-    color: isDragging ? '#ffffff' : undefined,
-    borderRadius: isDragging ? '6px' : undefined,
-    boxShadow: isDragging ? '0 4px 20px rgba(99, 102, 241, 0.4)' : undefined,
+    zIndex: isDragging ? 100 : undefined,
   };
 
   // 정렬 아이콘 렌더링
@@ -63,6 +60,7 @@ function DraggableHeader({ column, children, sortable, onSort, sort, enableReord
       : <i className="bi bi-chevron-down sort-icon active"></i>;
   };
 
+  // 클릭 핸들러 (드래그가 아닐 때만 정렬)
   const handleClick = (e) => {
     if (sortable && onSort && !isDragging) {
       onSort(column.id);
@@ -75,11 +73,10 @@ function DraggableHeader({ column, children, sortable, onSort, sort, enableReord
       style={style}
       className={`${sortable ? 'sortable' : ''} ${isDragging ? 'dragging' : ''} ${column.columnDef.className || ''}`}
       onClick={handleClick}
+      {...attributes}
+      {...listeners}
     >
-      <div className="th-content" {...attributes} {...listeners}>
-        <span className="th-label">{children}</span>
-        {enableReorder && <i className="bi bi-grip-vertical drag-handle"></i>}
-      </div>
+      <span className="th-label">{children}</span>
       {renderSortIcon()}
     </th>
   );

@@ -3,7 +3,62 @@
    NMS Glassmorphism Design System (Theme Support)
    ================== */
 
-/* Page Container */
+/* ==================
+   New Page Management Container (모델 관리 스타일)
+   헤더가 상단에 고정, 아래에 패널 래퍼
+   ================== */
+.group-management-container,
+.asset-management-container {
+    max-width: 100%;
+    margin: var(--spacing-3) 0;
+    padding: 0 var(--spacing-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+    height: calc(100vh - 80px);
+    animation: fadeInUp 0.6s ease;
+}
+
+/* 패널 래퍼 - 사이드바와 메인 컨텐츠를 감싸는 컨테이너 */
+.page-panels-wrapper {
+    display: flex;
+    gap: var(--spacing-4);
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    padding: 10px;
+    border-radius: calc(var(--radius-3xl) + 10px);
+    background: linear-gradient(
+        135deg,
+        rgba(99, 102, 241, 0.25) 0%,
+        rgba(139, 92, 246, 0.12) 25%,
+        rgba(59, 130, 246, 0.18) 50%,
+        rgba(139, 92, 246, 0.12) 75%,
+        rgba(99, 102, 241, 0.25) 100%
+    );
+    box-shadow:
+        0 0 30px rgba(99, 102, 241, 0.08),
+        0 0 60px rgba(139, 92, 246, 0.04);
+    overflow: hidden;
+}
+
+/* 패널 래퍼 내부 배경 */
+.page-panels-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: var(--theme-bg-primary);
+    border-radius: calc(var(--radius-3xl) + 9px);
+    z-index: 0;
+}
+
+/* 패널 래퍼 내부 요소들 z-index */
+.page-panels-wrapper > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Legacy Page Container (기존 호환) */
 .page-container {
     max-width: 100%;
     margin: var(--spacing-3) 0;
@@ -86,28 +141,31 @@
     -webkit-backdrop-filter: var(--glass-blur);
     padding: var(--spacing-6);
     border-radius: var(--radius-3xl);
-    border: 1px solid var(--theme-glass-border);
-    box-shadow: var(--theme-shadow-md);
+    border: 1px solid var(--theme-border-subtle);
+    box-shadow: var(--theme-shadow-sm);
     display: flex;
     flex-direction: column;
     transition: all var(--transition-normal);
     overflow: visible;
     position: relative;
+    flex: 0 0 var(--page-sidebar-width);
 }
 
+/* 상단 하이라이트 */
 .page-sidebar::before {
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
+    left: 20px;
+    right: 20px;
     height: 1px;
     background: linear-gradient(90deg, transparent, var(--theme-glass-highlight), transparent);
+    pointer-events: none;
 }
 
 .page-sidebar:hover {
     border-color: var(--theme-border-hover);
-    box-shadow: var(--theme-shadow-lg);
+    box-shadow: var(--theme-shadow-md);
 }
 
 .page-sidebar .sidebar-content {
@@ -143,27 +201,31 @@
     -webkit-backdrop-filter: var(--glass-blur);
     padding: var(--spacing-5);
     border-radius: var(--radius-3xl);
-    border: 1px solid var(--theme-glass-border);
-    box-shadow: var(--theme-shadow-md);
+    border: 1px solid var(--theme-border-subtle);
+    box-shadow: var(--theme-shadow-sm);
     transition: all var(--transition-normal);
     position: relative;
     overflow: visible;
     display: flex;
     flex-direction: column;
+    flex: 1;
 }
 
+/* 상단 하이라이트 */
 .page-main-content::before {
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
+    left: 20px;
+    right: 20px;
     height: 1px;
     background: linear-gradient(90deg, transparent, var(--theme-glass-highlight), transparent);
+    pointer-events: none;
 }
 
 .page-main-content:hover {
     border-color: var(--theme-border-hover);
+    box-shadow: var(--theme-shadow-md);
 }
 
 .page-main-content h2 {
@@ -321,10 +383,34 @@
     }
 }
 
+@media (max-width: 1024px) {
+    .group-management-container,
+    .asset-management-container {
+        height: auto;
+        min-height: calc(100vh - 80px);
+    }
+
+    .page-panels-wrapper {
+        flex-direction: column;
+    }
+
+    .page-sidebar {
+        flex: none;
+        max-height: 400px;
+    }
+}
+
 @media (max-width: 768px) {
-    .page-container {
+    .page-container,
+    .group-management-container,
+    .asset-management-container {
         padding: 0 var(--spacing-3);
         margin: var(--spacing-3) 0;
+    }
+
+    .page-panels-wrapper {
+        padding: 1px;
+        border-radius: var(--radius-2xl);
     }
 
     .page-sidebar,

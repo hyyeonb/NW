@@ -413,7 +413,8 @@ export default function GroupTree({ onEditGroup, onAddGroup, onDeleteGroup, onSe
 
   return (
     <aside className="page-sidebar" id="group-tree-sidebar">
-      <div className="sidebar-content">
+      {/* 고정 영역: 헤더 + 검색박스 */}
+      <div className="sidebar-header-fixed">
         <h1>그룹 목록</h1>
         {/* 그룹 검색 */}
         <div className="group-search-box">
@@ -435,6 +436,9 @@ export default function GroupTree({ onEditGroup, onAddGroup, onDeleteGroup, onSe
             </button>
           )}
         </div>
+      </div>
+      {/* 스크롤 영역: 트리 컨텐츠 */}
+      <div className="sidebar-content">
         {treeContent}
       </div>
 

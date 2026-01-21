@@ -29,9 +29,10 @@
 
 /* 테이블 기본 스타일 */
 .data-table {
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
-    table-layout: auto;
+    table-layout: fixed;
 }
 
 /* 테이블 헤더 */
@@ -59,8 +60,30 @@
     letter-spacing: 0.8px;
     border-bottom: none;
     white-space: nowrap;
-    background: transparent;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: var(--theme-bg-panel-header);
     position: relative;
+    cursor: grab;
+    user-select: none;
+    /* 드래그 시 부드러운 전환 */
+    transition: transform 150ms cubic-bezier(0.25, 1, 0.5, 1),
+                background 100ms ease,
+                color 100ms ease,
+                box-shadow 100ms ease;
+    will-change: transform;
+}
+
+/* 헤더 호버 */
+.data-table th:hover {
+    background: var(--theme-accent-bg);
+    color: var(--theme-text-secondary);
+}
+
+/* 헤더 클릭/드래그 중 */
+.data-table th:active {
+    cursor: grabbing;
+    background: rgba(99, 102, 241, 0.15);
 }
 
 /* 헤더 하단 그라디언트 라인 */
@@ -80,15 +103,19 @@
     );
 }
 
+/* sortable 헤더는 클릭 시 정렬 표시 */
 .data-table th.sortable {
-    cursor: pointer;
-    user-select: none;
-    transition: all 0.2s ease;
+    cursor: grab;
 }
 
-.data-table th.sortable:hover {
-    background: var(--theme-accent-bg);
-    color: var(--theme-text-secondary);
+/* 선택 체크박스 헤더는 드래그 비활성 */
+.data-table th.select-cell {
+    cursor: default;
+}
+
+.data-table th.select-cell:hover {
+    background: var(--theme-bg-panel-header);
+    color: var(--theme-text-muted);
 }
 
 /* 정렬 아이콘 */
@@ -139,6 +166,9 @@
     font-size: 13px;
     color: var(--theme-text-secondary);
     vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* 선택 체크박스 셀 */
@@ -452,71 +482,24 @@
    컬럼 드래그 리오더링
    ================== */
 
-/* 헤더 컨텐츠 래퍼 */
-.data-table th .th-content {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
+/* 헤더 라벨 */
 .data-table th .th-label {
-    flex: 1;
-}
-
-/* 드래그 핸들 */
-.data-table th .drag-handle {
-    opacity: 0;
-    font-size: 12px;
-    color: var(--theme-text-muted);
-    cursor: grab;
-    transition: opacity 0.2s ease, color 0.2s ease;
-}
-
-.data-table th:hover .drag-handle {
-    opacity: 0.6;
-}
-
-.data-table th .drag-handle:hover {
-    opacity: 1;
-    color: var(--theme-accent-light);
-}
-
-.data-table th .drag-handle:active {
-    cursor: grabbing;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* 드래그 중인 헤더 */
 .data-table th.dragging {
-    opacity: 0.5;
-    background: var(--theme-accent-bg) !important;
+    background: linear-gradient(135deg, var(--theme-accent-primary), var(--theme-accent-secondary, #8b5cf6)) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+    cursor: grabbing !important;
 }
 
-/* 드래그 오버레이 */
-.drag-overlay-header {
-    display: inline-flex;
-    align-items: center;
-    padding: 10px 16px;
-    background: linear-gradient(135deg, var(--theme-accent-primary), var(--theme-accent-secondary, #8b5cf6));
-    color: #ffffff;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
-    white-space: nowrap;
-    cursor: grabbing;
-    pointer-events: none;
-    transform-origin: center center;
-}
-
-/* 드래그 시 커서 변경 */
-.data-table th[style*="cursor: grab"] {
-    cursor: grab;
-}
-
-.data-table th[style*="cursor: grab"]:active {
-    cursor: grabbing;
+.data-table th.dragging .th-label,
+.data-table th.dragging .sort-icon {
+    color: rgba(255, 255, 255, 0.8);
+    opacity: 1;
 }
 
 /* 컬럼 순서 초기화 버튼 (옵션) */

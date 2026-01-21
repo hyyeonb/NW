@@ -7,7 +7,8 @@ export const useActiveErrors = () => {
     queryKey: ['activeErrors'],
     queryFn: async () => {
       const response = await faultApi.getErrors();
-      return response.data?.data || [];
+      // 응답 형식: { data: { list: [...], totalCount, ... } }
+      return response.data?.data?.list || response.data?.data || [];
     },
     refetchInterval: 30000, // 30초마다 자동 갱신
     staleTime: 10000,

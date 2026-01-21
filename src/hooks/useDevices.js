@@ -289,36 +289,6 @@ export const useChartEnabledPorts = (deviceId) => {
   });
 };
 
-// 포트 차트 플래그 토글
-export const useTogglePortChartFlag = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ deviceId, ifIndex }) => {
-      const response = await devicesApi.togglePortChartFlag(deviceId, ifIndex);
-      return response.data;
-    },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['chartEnabledPorts', variables.deviceId] });
-      queryClient.invalidateQueries({ queryKey: ['devicePorts', variables.deviceId] });
-    },
-  });
-};
-
-// 차트 플래그 초기화 (TOP 5 재설정)
-export const useResetChartFlags = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (deviceId) => {
-      const response = await devicesApi.resetChartFlags(deviceId);
-      return response.data;
-    },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['chartEnabledPorts', variables] });
-      queryClient.invalidateQueries({ queryKey: ['devicePorts', variables] });
-    },
-  });
-};
-
 // ==================== DevCode (장비군) Hooks ====================
 
 // 장비군 트리 조회

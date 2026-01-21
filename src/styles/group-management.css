@@ -4,6 +4,246 @@
    ================== */
 
 /* ==================
+   그룹/자산 관리 - 내부 컴포넌트 글로우 효과
+   ================== */
+.group-management-container .page-sidebar,
+.group-management-container .page-main-content,
+.asset-management-container .page-sidebar,
+.asset-management-container .page-main-content {
+    border: 1px solid transparent;
+    background: var(--theme-bg-panel);
+    position: relative;
+}
+
+.group-management-container .page-main-content,
+.asset-management-container .page-main-content {
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 메인 컨텐츠 스크롤바 스타일 */
+.group-management-container .page-main-content::-webkit-scrollbar,
+.asset-management-container .page-main-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-management-container .page-main-content::-webkit-scrollbar-track,
+.asset-management-container .page-main-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-management-container .page-main-content::-webkit-scrollbar-thumb,
+.asset-management-container .page-main-content::-webkit-scrollbar-thumb {
+    background: var(--theme-scrollbar-thumb);
+    border-radius: 3px;
+}
+
+.group-management-container .page-main-content::-webkit-scrollbar-thumb:hover,
+.asset-management-container .page-main-content::-webkit-scrollbar-thumb:hover {
+    background: var(--theme-scrollbar-thumb-hover);
+}
+
+/* 사이드바 레이아웃 - 헤더 고정, 트리만 스크롤 */
+.group-management-container .page-sidebar,
+.asset-management-container .page-sidebar {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.group-management-container .sidebar-header-fixed,
+.asset-management-container .sidebar-header-fixed {
+    flex-shrink: 0;
+    padding-bottom: 0;
+}
+
+.group-management-container .sidebar-header-fixed h1,
+.asset-management-container .sidebar-header-fixed h1 {
+    font-size: var(--font-size-h3);
+    color: var(--theme-text-primary);
+    margin-bottom: var(--spacing-4);
+    padding-bottom: var(--spacing-3);
+    border-bottom: 1px solid var(--theme-border-default);
+    position: relative;
+}
+
+.group-management-container .sidebar-header-fixed h1::after,
+.asset-management-container .sidebar-header-fixed h1::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 40px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--theme-accent-primary), var(--color-accent-purple));
+    border-radius: 2px;
+}
+
+.group-management-container .sidebar-content,
+.asset-management-container .sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin-top: var(--spacing-3);
+}
+
+/* 사이드바 스크롤바 스타일 */
+.group-management-container .sidebar-content::-webkit-scrollbar,
+.asset-management-container .sidebar-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-management-container .sidebar-content::-webkit-scrollbar-track,
+.asset-management-container .sidebar-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-management-container .sidebar-content::-webkit-scrollbar-thumb,
+.asset-management-container .sidebar-content::-webkit-scrollbar-thumb {
+    background: var(--theme-scrollbar-thumb);
+    border-radius: 3px;
+}
+
+.group-management-container .sidebar-content::-webkit-scrollbar-thumb:hover,
+.asset-management-container .sidebar-content::-webkit-scrollbar-thumb:hover {
+    background: var(--theme-scrollbar-thumb-hover);
+}
+
+/* gm-tree 스타일 오버라이드 - 부모가 스크롤 담당 */
+.group-management-container .gm-tree,
+.asset-management-container .gm-tree {
+    margin-top: 0;
+    max-height: none;
+    overflow-y: visible;
+    overflow-x: visible;
+}
+
+/* 은은한 그라데이션 테두리 */
+.group-management-container .page-sidebar::after,
+.group-management-container .page-main-content::after,
+.asset-management-container .page-sidebar::after,
+.asset-management-container .page-main-content::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+        145deg,
+        rgba(99, 102, 241, 0.2) 0%,
+        rgba(139, 92, 246, 0.08) 30%,
+        rgba(59, 130, 246, 0.15) 60%,
+        rgba(99, 102, 241, 0.1) 100%
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* 내부 은은한 빛 */
+.group-management-container .page-sidebar,
+.group-management-container .page-main-content {
+    box-shadow:
+        var(--theme-shadow-sm),
+        inset 0 0 40px rgba(99, 102, 241, 0.02),
+        0 0 15px rgba(99, 102, 241, 0.03);
+}
+
+.group-management-container .page-sidebar:hover,
+.group-management-container .page-main-content:hover {
+    box-shadow:
+        var(--theme-shadow-md),
+        inset 0 0 50px rgba(99, 102, 241, 0.03),
+        0 0 20px rgba(99, 102, 241, 0.05);
+}
+
+/* ==================
+   환영 카드 - Glass Welcome
+   ================== */
+.welcome-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    margin-top: 24px;
+    text-align: center;
+    min-height: 280px;
+    animation: fadeInUp 0.5s ease;
+    /* glow-border-pulse에서 상속 받은 스타일 보완 */
+    background: var(--theme-bg-panel) !important;
+}
+
+.welcome-card i {
+    font-size: 72px;
+    margin-bottom: 24px;
+    background: linear-gradient(135deg, var(--theme-accent-primary) 0%, var(--theme-accent-purple) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 25px rgba(99, 102, 241, 0.4));
+    animation: iconFloat 3s ease-in-out infinite;
+}
+
+@keyframes iconFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.welcome-card p {
+    color: var(--theme-text-tertiary);
+    font-size: 17px;
+    margin: 0;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==================
+   섹션 타이틀
+   ================== */
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--theme-text-primary);
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--theme-border-subtle);
+}
+
+.section-title i {
+    color: var(--theme-accent-primary);
+    font-size: 20px;
+}
+
+/* ==================
+   그룹 정보 - Glass Panel
+   ================== */
+.group-info {
+    padding: 28px;
+    animation: fadeInUp 0.4s ease;
+    /* glow-border-animated에서 상속 */
+    background: var(--theme-bg-panel) !important;
+}
+
+/* ==================
    그룹 폼 - Glass Card
    ================== */
 .group-form {
@@ -51,21 +291,31 @@
     text-transform: uppercase;
 }
 
-.group-info {
-    margin-top: 24px;
-}
-
 /* 한 줄 그룹 정보 - Glass Info Bar */
 .info-inline {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 14px;
-    padding: 16px 20px;
-    background: var(--theme-bg-tertiary);
-    border-radius: 12px;
-    border: 1px solid var(--theme-border-default);
-    backdrop-filter: blur(10px);
+    gap: 20px;
+    padding: 20px 24px;
+    background: var(--theme-glass-bg);
+    backdrop-filter: var(--theme-glass-blur);
+    -webkit-backdrop-filter: var(--theme-glass-blur);
+    border-radius: 14px;
+    border: 1px solid var(--theme-glass-border);
+    box-shadow: var(--theme-shadow-sm);
+    position: relative;
+}
+
+/* 상단 하이라이트 */
+.info-inline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20px;
+    right: 20px;
+    height: 1px;
+    background: var(--theme-glass-highlight);
 }
 
 .info-item-inline {
@@ -349,9 +599,9 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: var(--theme-modal-backdrop);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
     z-index: 10000;
     display: flex;
     align-items: center;
@@ -812,29 +1062,55 @@
 }
 
 /* ==================
+   모달 콘텐츠 기본 - Glass Modal Content
+   ================== */
+.modal-content {
+    background: var(--theme-bg-elevated);
+    backdrop-filter: var(--theme-glass-blur-heavy) var(--theme-glass-saturate);
+    -webkit-backdrop-filter: var(--theme-glass-blur-heavy) var(--theme-glass-saturate);
+    border: 1px solid var(--theme-glass-border);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: var(--theme-shadow-2xl);
+    position: relative;
+    animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--theme-glass-highlight);
+    border-radius: 20px 20px 0 0;
+}
+
+/* ==================
    첫 그룹 등록 모달
    ================== */
 .first-group-modal {
     max-width: 450px !important;
-    animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .first-group-modal .modal-title {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
+    gap: 12px;
+    margin-bottom: 12px;
     font-size: 20px;
-    color: var(--theme-text-secondary);
+    font-weight: 600;
+    color: var(--theme-text-primary);
 }
 
 .first-group-modal .modal-title i {
-    color: var(--theme-accent-light);
+    color: var(--theme-accent-primary);
     font-size: 24px;
 }
 
 .first-group-modal .form-group {
-    margin-bottom: 16px;
+    margin-bottom: 18px;
 }
 
 .first-group-modal .form-group label {
@@ -842,30 +1118,36 @@
     margin-bottom: 8px;
     color: var(--theme-text-tertiary);
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .first-group-modal .form-group input {
     width: 100%;
-    padding: 12px 14px;
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
-    color: var(--theme-text-secondary);
+    padding: 14px 16px;
+    background: var(--theme-input-bg);
+    border: 1px solid var(--theme-input-border);
+    border-radius: 10px;
+    color: var(--theme-text-primary);
     font-size: 14px;
     transition: all 0.2s ease;
 }
 
 .first-group-modal .form-group input:focus {
     outline: none;
-    border-color: rgba(59, 130, 246, 0.5);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--theme-input-focus-border);
+    box-shadow: var(--theme-input-focus-glow);
+}
+
+.first-group-modal .form-group input::placeholder {
+    color: var(--theme-text-muted);
 }
 
 .first-group-modal .modal-footer {
     margin-top: 24px;
-    padding-top: 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 20px;
+    border-top: 1px solid var(--theme-border-subtle);
     display: flex;
     justify-content: flex-end;
 }
