@@ -7,7 +7,7 @@ import ReactECharts from 'echarts-for-react';
 import { useTopologyView, useGroupTree, useWidgets, useDefaultDashboard, useUserDashboard, useSaveUserDashboard, useResetUserDashboard } from '../hooks';
 import { useAuthStore } from '../stores/authStore';
 import { useAlertStore } from '../stores/alertStore';
-import { faultApi } from '../api';
+import { faultApi, dashboardApi } from '../api';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import '../styles/dashboard.css';
@@ -714,6 +714,35 @@ const DEVICE_COLOR_PALETTE = [
 
 // 사용자 정의 위젯 차트 컨텐츠 (백엔드 데이터 사용)
 function CustomWidgetContent({ widget, isEditMode }) {
+  const containerRef = useRef(null);
+  const [tooltipOnLeft, setTooltipOnLeft] = useState(false);
+
+  // 컨테이너 위치에 따라 툴팁 방향 결정
+  useEffect(() => {
+    const updateTooltipPosition = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const chartCenterX = rect.left + rect.width / 2;
+        const screenWidth = window.innerWidth;
+        // 위젯이 화면 오른쪽 절반에 있으면 툴팁을 왼쪽에
+        setTooltipOnLeft(chartCenterX > screenWidth / 2);
+      }
+    };
+
+    // 초기 계산 (레이아웃 완료 후)
+    const timer = setTimeout(updateTooltipPosition, 100);
+
+    // 리사이즈 및 주기적 업데이트
+    window.addEventListener('resize', updateTooltipPosition);
+    const interval = setInterval(updateTooltipPosition, 1000);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+      window.removeEventListener('resize', updateTooltipPosition);
+    };
+  }, [widget.id]);
+
   // config 파싱 및 기본값 적용
   const config = useMemo(() => {
     let parsedConfig = {};
@@ -734,7 +763,6 @@ function CustomWidgetContent({ widget, isEditMode }) {
     if (!hasConfigData && widget.type) {
       const defaultType = DEFAULT_WIDGET_TYPES[widget.type];
       if (defaultType?.defaultConfig) {
-        console.log(`[${widget.type}] 기본 config 적용:`, defaultType.defaultConfig);
         parsedConfig = { ...defaultType.defaultConfig, ...parsedConfig };
       }
     }
@@ -752,13 +780,6 @@ function CustomWidgetContent({ widget, isEditMode }) {
   // 백엔드에서 받은 chartData 사용
   const rawChartData = widget.chartData || [];
 
-  console.log('=== CustomWidgetContent Debug ===', {
-    widgetId: widget.userDashboardWidgetId,
-    config: config,
-    rawChartData: rawChartData,
-    chartType: chartType,
-    elements: elements
-  });
 
   if (elements.length === 0) {
     return (
@@ -1083,10 +1104,8 @@ function CustomWidgetContent({ widget, isEditMode }) {
       })()
     : [];
 
-  console.log('=== 변환된 chartData ===', chartData);
-
   // ECharts 옵션 생성
-  const getChartOption = () => {
+  const getChartOption = (tooltipOnLeft = false) => {
     const elementMeta = elements.length > 0 ? MONITORING_ELEMENTS[elements[0]] : null;
     const elementName = elementMeta?.name || '모니터링';
 
@@ -1170,12 +1189,11 @@ function CustomWidgetContent({ widget, isEditMode }) {
           'MEMORY_USAGE': '#ec4899',
         };
 
-        // 3. 각 메트릭별로 시리즈 생성
-        const series = uniqueMetrics.map((metric, index) => {
-          // 해당 메트릭의 데이터만 필터링
+        // 3. 각 메트릭별로 데이터 및 시리즈 생성
+        const metricDataMap = uniqueMetrics.map((metric, index) => {
           const metricData = rawChartData
-            .filter(item => item.metric === metric)
-            .slice(0, 10) // Top 10만 표시
+            .filter(item => item.metric === metric && item.piePct != null && item.piePct > 0)
+            .slice(0, 10)
             .map((item, idx) => ({
               name: item.deviceName,
               value: item.piePct,
@@ -1184,11 +1202,16 @@ function CustomWidgetContent({ widget, isEditMode }) {
               }
             }));
 
-          // 위치 가져오기
           const position = positions[index] || { center: ['50%', '50%'], titleTop: '25%' };
-          const baseColor = metricBaseColors[metric] || '#14b8a6';
+          const hasData = metricData.length > 0;
 
-          return {
+          return { metric, metricData, position, hasData };
+        });
+
+        // 데이터가 있는 메트릭의 시리즈만 생성
+        const series = metricDataMap
+          .filter(m => m.hasData)
+          .map(({ metric, metricData, position }) => ({
             name: getShortMetricName(metric),
             type: 'pie',
             radius: ['18%', '35%'],
@@ -1222,8 +1245,72 @@ function CustomWidgetContent({ widget, isEditMode }) {
               itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }
             },
             data: metricData
+          }));
+
+        // 데이터 없는 메트릭을 위한 빈 파이 차트 시리즈 (회색 링 + 중앙 텍스트)
+        const emptySeries = metricDataMap
+          .filter(m => !m.hasData)
+          .map(({ metric, position }) => ({
+            name: getShortMetricName(metric),
+            type: 'pie',
+            radius: ['18%', '35%'],
+            center: position.center,
+            silent: true,
+            label: {
+              show: true,
+              position: 'center',
+              formatter: '데이터 없음',
+              color: '#64748b',
+              fontSize: 11
+            },
+            labelLine: { show: false },
+            itemStyle: {
+              color: 'rgba(51, 65, 85, 0.3)',
+              borderColor: '#475569',
+              borderWidth: 1,
+              borderType: 'dashed'
+            },
+            emphasis: {
+              scale: false
+            },
+            data: [{ value: 1, name: '데이터 없음' }]
+          }));
+
+        // 전체 데이터가 없을 때
+        if (series.length === 0) {
+          return {
+            backgroundColor: 'transparent',
+            tooltip: { show: false },
+            graphic: [{
+              type: 'group',
+              left: 'center',
+              top: 'middle',
+              children: [
+                {
+                  type: 'circle',
+                  shape: { r: 50 },
+                  style: {
+                    fill: 'transparent',
+                    stroke: '#334155',
+                    lineWidth: 2,
+                    lineDash: [5, 5]
+                  }
+                },
+                {
+                  type: 'text',
+                  style: {
+                    text: '데이터 없음',
+                    fill: '#64748b',
+                    font: 'bold 13px sans-serif',
+                    textAlign: 'center',
+                    textVerticalAlign: 'middle'
+                  }
+                }
+              ]
+            }],
+            series: []
           };
-        });
+        }
 
         // 4. 각 메트릭의 타이틀 표시를 위한 title 요소
         const titles = uniqueMetrics.map((metric, index) => {
@@ -1247,16 +1334,67 @@ function CustomWidgetContent({ widget, isEditMode }) {
           title: titles,
           tooltip: {
             trigger: 'item',
-            formatter: '{a}<br/>{b}: {d}%',
+            formatter: (params) => {
+              // 빈 데이터 시리즈는 툴팁 표시 안함
+              if (params.data.name === '데이터 없음') return '';
+              return `${params.seriesName}<br/>${params.name}: ${params.percent}%`;
+            },
             backgroundColor: '#1e293b',
             borderColor: '#334155',
             textStyle: { color: '#f1f5f9' }
           },
-          series: series
+          series: [...series, ...emptySeries]
         };
       }
 
-      // 기본 Pie Chart: 단일 메트릭
+      // 기본 Pie Chart: 단일 메트릭 (value가 null이 아니고 0보다 큰 것만)
+      const pieData = chartData
+        .filter(item => item.value != null && item.value > 0)
+        .map(item => ({
+          name: item.deviceName,
+          value: item.value,
+          itemStyle: { color: item.color }
+        }));
+
+      // 데이터가 없을 때 빈 상태 표시
+      const hasData = pieData.length > 0;
+
+      // 데이터 없을 때는 빈 상태 표시
+      if (!hasData) {
+        return {
+          backgroundColor: 'transparent',
+          tooltip: { show: false },
+          graphic: [{
+            type: 'group',
+            left: 'center',
+            top: 'middle',
+            children: [
+              {
+                type: 'circle',
+                shape: { r: 50 },
+                style: {
+                  fill: 'transparent',
+                  stroke: '#334155',
+                  lineWidth: 2,
+                  lineDash: [5, 5]
+                }
+              },
+              {
+                type: 'text',
+                style: {
+                  text: '데이터 없음',
+                  fill: '#64748b',
+                  font: 'bold 13px sans-serif',
+                  textAlign: 'center',
+                  textVerticalAlign: 'middle'
+                }
+              }
+            ]
+          }],
+          series: []
+        };
+      }
+
       return {
         backgroundColor: 'transparent',
         tooltip: {
@@ -1306,11 +1444,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
             label: { show: true, fontSize: 13, fontWeight: 'bold' },
             itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }
           },
-          data: chartData.map(item => ({
-            name: item.deviceName,
-            value: item.value,
-            itemStyle: { color: item.color }
-          }))
+          data: pieData
         }]
       };
     }
@@ -1521,32 +1655,24 @@ function CustomWidgetContent({ widget, isEditMode }) {
           borderColor: '#334155',
           borderWidth: 2,
           textStyle: { color: '#f1f5f9', fontSize: 11 },
-          confine: true,
+          confine: false,
           enterable: true,
-          hideDelay: 100,
+          hideDelay: 500,
           appendToBody: true,
-          extraCssText: 'max-width: 350px; max-height: 80vh;',
+          alwaysShowContent: false,
+          triggerOn: 'mousemove|click',
+          extraCssText: 'max-width: 300px; max-height: 60vh; box-shadow: 0 4px 20px rgba(0,0,0,0.5); pointer-events: auto;',
+          // 고정 위치: 컴포넌트에서 계산한 위치 사용 (안정적)
           position: function (point, params, dom, rect, size) {
-            // 마우스 위치에 따라 툴팁을 반대편에 배치 (마우스를 가리지 않음)
-            const mouseX = point[0];
-            const viewWidth = size.viewSize[0];
             const tooltipWidth = size.contentSize[0];
+            const viewWidth = size.viewSize[0];
 
-            let x, y;
-
-            // 마우스가 좌측 절반에 있으면 → 툴팁을 우측에
-            if (mouseX < viewWidth / 2) {
-              x = viewWidth - tooltipWidth - 10;
+            // tooltipOnLeft 값에 따라 위치 결정 (컴포넌트에서 미리 계산됨)
+            if (tooltipOnLeft) {
+              return [-tooltipWidth - 10, 0];
+            } else {
+              return [viewWidth + 10, 0];
             }
-            // 마우스가 우측 절반에 있으면 → 툴팁을 좌측에
-            else {
-              x = 10;
-            }
-
-            // 세로 위치는 상단 고정
-            y = 10;
-
-            return [x, y];
           },
           formatter: (params) => {
             if (!params || params.length === 0) return '';
@@ -1559,34 +1685,64 @@ function CustomWidgetContent({ widget, isEditMode }) {
             // 툴팁 헤더
             let header = `<div style="font-weight: bold; margin-bottom: 6px; border-bottom: 1px solid #334155; padding-bottom: 4px;">${fullTimestamp}</div>`;
 
-            // 툴팁 아이템들 (스크롤 가능)
+            // 툴팁 아이템들 (스크롤 가능) - 모든 chartData 항목 표시
             let items = '';
 
+            // params에서 값 맵 생성 (seriesName -> value, color)
+            const paramsMap = new Map();
             params.forEach(param => {
-              // null이나 undefined 값 필터링
-              if (param.value == null || isNaN(param.value)) {
-                return;
-              }
-
-              const color = param.color;
-              const marker = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:6px;"></span>`;
-              // 각 시리즈의 unit 찾기
-              const dataItem = chartData.find(d => (d.displayName || d.deviceName) === param.seriesName);
-              const unit = dataItem?.unit || '%';
-              // 절대값으로 표시 + K/M/G 단위 적용
-              const displayValue = formatLargeValue(Math.abs(param.value), unit);
-              items += `<div style="margin-top: 4px; white-space: nowrap; font-size: 12px;">${marker}${param.seriesName}: <strong>${displayValue}${unit}</strong></div>`;
+              paramsMap.set(param.seriesName, {
+                value: param.value,
+                color: param.color
+              });
             });
 
+            // 모든 chartData 항목을 순회하며 툴팁 생성
+            chartData.forEach((dataItem) => {
+              const seriesName = dataItem.displayName || dataItem.deviceName;
+              const color = dataItem.color || '#3b82f6';
+              const unit = dataItem?.unit || '%';
+
+              // params에서 값 찾기, 없으면 values 배열에서 직접 가져오기
+              let value;
+              if (paramsMap.has(seriesName)) {
+                value = paramsMap.get(seriesName).value;
+              } else if (Array.isArray(dataItem.value) && dataIndex < dataItem.value.length) {
+                value = dataItem.value[dataIndex];
+              } else if (Array.isArray(dataItem.values) && dataIndex < dataItem.values.length) {
+                value = dataItem.values[dataIndex];
+              }
+
+              const marker = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:6px;"></span>`;
+
+              // 값이 없으면 '-' 표시
+              if (value == null || isNaN(value)) {
+                items += `<div style="margin-top: 4px; white-space: nowrap; font-size: 12px; opacity: 0.5;">${marker}${seriesName}: <strong>-</strong></div>`;
+              } else {
+                // 절대값으로 표시 + K/M/G 단위 적용
+                const displayValue = formatLargeValue(Math.abs(value), unit);
+                items += `<div style="margin-top: 4px; white-space: nowrap; font-size: 12px;">${marker}${seriesName}: <strong>${displayValue}${unit}</strong></div>`;
+              }
+            });
+
+            // 항목 수에 따라 스크롤 힌트 표시 (각 항목 약 24px, max-height 280px → 약 11개 표시 가능)
+            const itemCount = chartData.length;
+            const scrollHint = itemCount > 11
+              ? `<div style="text-align: center; padding: 6px 0 2px; color: #64748b; font-size: 10px; border-top: 1px solid #334155; margin-top: 6px;">
+                  <span style="opacity: 0.8;">↕ 스크롤하여 ${itemCount}개 항목 모두 보기</span>
+                </div>`
+              : '';
+
             // 스크롤 가능한 컨테이너로 감싸기 (스크롤바 스타일 추가)
-            return `${header}<div style="max-height: 350px; overflow-y: auto; overflow-x: hidden; padding-right: 8px; scrollbar-width: thin; scrollbar-color: #64748b #1e293b;">
+            return `${header}<div style="max-height: 280px; overflow-y: auto; overflow-x: hidden; padding-right: 8px; scrollbar-width: thin; scrollbar-color: #64748b #1e293b;">
               <style>
                 ::-webkit-scrollbar { width: 6px; }
                 ::-webkit-scrollbar-track { background: #1e293b; }
                 ::-webkit-scrollbar-thumb { background: #64748b; border-radius: 3px; }
+                ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
               </style>
               ${items}
-            </div>`;
+            </div>${scrollHint}`;
           }
         },
         legend: {
@@ -1777,11 +1933,11 @@ function CustomWidgetContent({ widget, isEditMode }) {
   };
 
   return (
-    <div className="widget-content-inner">
+    <div className="widget-content-inner" ref={containerRef}>
       <div className="custom-widget-content echarts-container">
         {chartData.length > 0 ? (
           <ReactECharts
-            option={getChartOption()}
+            option={getChartOption(tooltipOnLeft)}
             style={{ height: '100%', width: '100%' }}
             opts={{ renderer: 'canvas' }}
           />
@@ -2081,7 +2237,15 @@ function CustomWidgetContent_OLD({ widget, isEditMode }) {
   );
 }
 
-const MemoizedCustomWidgetContent = memo(CustomWidgetContent);
+const MemoizedCustomWidgetContent = memo(CustomWidgetContent, (prevProps, nextProps) => {
+  // chartData나 cntData가 변경되면 리렌더링
+  if (prevProps.widget.chartData !== nextProps.widget.chartData) return false;
+  if (prevProps.widget.cntData !== nextProps.widget.cntData) return false;
+  if (prevProps.widget.id !== nextProps.widget.id) return false;
+  if (prevProps.widget.config !== nextProps.widget.config) return false;
+  if (prevProps.isEditMode !== nextProps.isEditMode) return false;
+  return true;
+});
 
 // 사용자 정의 위젯 설정 모달
 function CustomWidgetModal({ onClose, onSave, initialData = null }) {
@@ -2310,41 +2474,8 @@ function WidgetContent({ widget, widgetTypes, isEditMode }) {
       return null; // WidgetContent 외부에서 처리
 
     case 'ALERT_SUMMARY':
-      const alertCntData = widget.cntData || {};
-      return (
-        <div className="widget-content-inner">
-          <div className="alert-summary-grid">
-            <div className="summary-card critical">
-              <div className="summary-icon"><i className="bi bi-exclamation-circle-fill"></i></div>
-              <div className="summary-content">
-                <div className="summary-count">{alertCntData.criticalCnt ?? 0}</div>
-                <div className="summary-label">Critical</div>
-              </div>
-            </div>
-            <div className="summary-card major">
-              <div className="summary-icon"><i className="bi bi-exclamation-triangle-fill"></i></div>
-              <div className="summary-content">
-                <div className="summary-count">{alertCntData.majorCnt ?? 0}</div>
-                <div className="summary-label">Major</div>
-              </div>
-            </div>
-            <div className="summary-card minor">
-              <div className="summary-icon"><i className="bi bi-info-circle-fill"></i></div>
-              <div className="summary-content">
-                <div className="summary-count">{alertCntData.minorCnt ?? 0}</div>
-                <div className="summary-label">Minor</div>
-              </div>
-            </div>
-            <div className="summary-card warning">
-              <div className="summary-icon"><i className="bi bi-exclamation-diamond-fill"></i></div>
-              <div className="summary-content">
-                <div className="summary-count">{alertCntData.warningCnt ?? 0}</div>
-                <div className="summary-label">Warning</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
+      // 별도 컴포넌트로 처리 (강조 효과 포함)
+      return null;
 
     case 'DEVICE_SUMMARY':
       // cntData에서 장비 수 데이터 추출
@@ -2396,6 +2527,90 @@ function WidgetContent({ widget, widgetTypes, isEditMode }) {
   }
 }
 
+// 장애 현황 위젯 컴포넌트
+function AlertSummaryWidget({ cntData, isEditMode }) {
+  const [prevCounts, setPrevCounts] = useState(null);
+  const [highlightedLevels, setHighlightedLevels] = useState(new Set());
+
+  // 카운트 변경 감지 및 강조 효과
+  useEffect(() => {
+    if (isEditMode || !cntData) return;
+
+    const currentCounts = {
+      critical: cntData.criticalCnt ?? 0,
+      major: cntData.majorCnt ?? 0,
+      minor: cntData.minorCnt ?? 0,
+      warning: cntData.warningCnt ?? 0,
+    };
+
+    // 이전 값과 비교하여 증가한 등급 찾기
+    if (prevCounts !== null) {
+      const newHighlights = new Set();
+
+      if (currentCounts.critical > prevCounts.critical) {
+        newHighlights.add('critical');
+      }
+      if (currentCounts.major > prevCounts.major) {
+        newHighlights.add('major');
+      }
+      if (currentCounts.minor > prevCounts.minor) {
+        newHighlights.add('minor');
+      }
+      if (currentCounts.warning > prevCounts.warning) {
+        newHighlights.add('warning');
+      }
+
+      if (newHighlights.size > 0) {
+        setHighlightedLevels(newHighlights);
+        // 3초 후 강조 효과 제거
+        const timer = setTimeout(() => {
+          setHighlightedLevels(new Set());
+        }, 3000);
+        return () => clearTimeout(timer);
+      }
+    }
+
+    setPrevCounts(currentCounts);
+  }, [cntData, isEditMode]);
+
+  const alertCntData = cntData || {};
+
+  return (
+    <div className="widget-content-inner">
+      <div className="alert-summary-grid">
+        <div className={`summary-card critical${highlightedLevels.has('critical') ? ' card-highlight' : ''}`}>
+          <div className="summary-icon"><i className="bi bi-exclamation-circle-fill"></i></div>
+          <div className="summary-content">
+            <div className="summary-count">{alertCntData.criticalCnt ?? 0}</div>
+            <div className="summary-label">Critical</div>
+          </div>
+        </div>
+        <div className={`summary-card major${highlightedLevels.has('major') ? ' card-highlight' : ''}`}>
+          <div className="summary-icon"><i className="bi bi-exclamation-triangle-fill"></i></div>
+          <div className="summary-content">
+            <div className="summary-count">{alertCntData.majorCnt ?? 0}</div>
+            <div className="summary-label">Major</div>
+          </div>
+        </div>
+        <div className={`summary-card minor${highlightedLevels.has('minor') ? ' card-highlight' : ''}`}>
+          <div className="summary-icon"><i className="bi bi-info-circle-fill"></i></div>
+          <div className="summary-content">
+            <div className="summary-count">{alertCntData.minorCnt ?? 0}</div>
+            <div className="summary-label">Minor</div>
+          </div>
+        </div>
+        <div className={`summary-card warning${highlightedLevels.has('warning') ? ' card-highlight' : ''}`}>
+          <div className="summary-icon"><i className="bi bi-exclamation-diamond-fill"></i></div>
+          <div className="summary-content">
+            <div className="summary-count">{alertCntData.warningCnt ?? 0}</div>
+            <div className="summary-label">Warning</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // 실시간 장애 현황 위젯 컴포넌트
 const ERROR_LEVELS = [
   { id: 'C', label: 'Cr', color: '#ef4444', name: 'Critical' },
@@ -2404,67 +2619,110 @@ const ERROR_LEVELS = [
   { id: 'W', label: 'Wr', color: '#3b82f6', name: 'Warning' },
 ];
 
-function RealtimeAlertWidget({ isEditMode }) {
-  const [apiErrors, setApiErrors] = useState([]);
+function RealtimeAlertWidget({ isEditMode, initialData }) {
+  // 초기 데이터: 백엔드에서 widget.chartData로 받은 데이터 사용
+  const getInitialData = useCallback(() => {
+    if (Array.isArray(initialData) && initialData.length > 0) return initialData;
+    if (initialData?.list && initialData.list.length > 0) return initialData.list;
+    return [];
+  }, [initialData]);
+
+  const [apiErrors, setApiErrors] = useState(getInitialData);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedLevels, setSelectedLevels] = useState(['C', 'M', 'N', 'W']);
-  const [searchText, setSearchText] = useState('');
+  const [hasFetched, setHasFetched] = useState(false);
   const alerts = useAlertStore((state) => state.alerts);
 
-  // WebSocket 알림을 API 포맷으로 변환
-  const convertAlertToError = useCallback((alert) => {
-    // severity를 ERROR_LEVEL로 매핑
-    const severityToLevel = {
-      'CRITICAL': 'C',
-      'MAJOR': 'M',
-      'MINOR': 'N',
-      'WARNING': 'W',
-    };
-    return {
-      ERROR_ID: alert.alertId || `ws-${alert.deviceId}-${alert.timestamp}`,
-      ERROR_LEVEL: severityToLevel[alert.severity] || 'W',
-      DEVICE_NAME: alert.deviceName || alert.deviceId || '-',
-      ERROR_MESSAGE: alert.message || alert.alertType || '-',
-      ERROR_FLAG: alert.isCleared ? 2 : 0,
-      OCCUR_AT: alert.occurredAt || alert.timestamp || new Date().toISOString(),
-      isWebSocket: true, // WebSocket에서 온 알림 표시
-    };
-  }, []);
+  // 새로 추가된 행 강조를 위한 상태
+  const [highlightedIds, setHighlightedIds] = useState(new Set());
+  const prevErrorIdsRef = useRef(new Set());
 
-  // WebSocket 알림 + API 데이터 병합
-  const combinedErrors = useMemo(() => {
-    // WebSocket 알림 변환 (해소되지 않은 것만)
-    const wsErrors = alerts
-      .filter(a => !a.isCleared)
-      .map(convertAlertToError);
+  // 검색 필터 (여러 필드)
+  const [searchFilters, setSearchFilters] = useState({
+    deviceName: '',
+    deviceIp: '',
+    groupName: '',
+    errorMessage: '',
+  });
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
 
-    // API 데이터와 병합 (중복 제거)
-    const wsErrorIds = new Set(wsErrors.map(e => e.DEVICE_NAME + e.ERROR_MESSAGE));
-    const uniqueApiErrors = apiErrors.filter(e =>
-      !wsErrorIds.has(e.DEVICE_NAME + e.ERROR_MESSAGE)
-    );
+  // initialData가 변경되면 apiErrors 업데이트
+  useEffect(() => {
+    if (Array.isArray(initialData)) {
+      setApiErrors(initialData);
+    } else if (initialData?.list) {
+      setApiErrors(initialData.list);
+    }
+  }, [initialData]);
 
-    // WebSocket 알림을 맨 앞에 두고 병합
-    const merged = [...wsErrors, ...uniqueApiErrors];
+  // 새로운 장애 ID 감지 및 강조 효과
+  useEffect(() => {
+    if (isEditMode || apiErrors.length === 0) return;
 
-    // 필터 적용 (등급, 검색어)
-    return merged.filter(error => {
-      const matchLevel = selectedLevels.includes(error.ERROR_LEVEL);
-      const matchSearch = !searchText.trim() ||
-        (error.DEVICE_NAME && error.DEVICE_NAME.toLowerCase().includes(searchText.toLowerCase()));
-      return matchLevel && matchSearch;
+    const currentErrorIds = new Set(apiErrors.map(e => e.ERROR_ID).filter(Boolean));
+    const prevIds = prevErrorIdsRef.current;
+
+    // 이전에 없던 새로운 ID 찾기
+    const newIds = new Set();
+    currentErrorIds.forEach(id => {
+      if (!prevIds.has(id)) {
+        newIds.add(id);
+      }
     });
-  }, [alerts, apiErrors, selectedLevels, searchText, convertAlertToError]);
 
-  // 장애 목록 조회 (편집 모드가 아닐 때만)
-  const fetchErrors = useCallback(async () => {
+    // 새로운 장애가 있고, 이전 데이터가 있었다면 강조 상태 설정
+    if (newIds.size > 0 && prevIds.size > 0) {
+      setHighlightedIds(newIds);
+      // 3초 후 강조 효과 제거
+      const timer = setTimeout(() => {
+        setHighlightedIds(new Set());
+      }, 3000);
+
+      // 현재 ID를 이전 ID로 저장 (강조 설정 후 바로 업데이트)
+      prevErrorIdsRef.current = currentErrorIds;
+      return () => clearTimeout(timer);
+    }
+
+    // 현재 ID를 이전 ID로 저장
+    prevErrorIdsRef.current = currentErrorIds;
+  }, [apiErrors, isEditMode]);
+
+  // API 데이터에 필터 적용
+  const combinedErrors = useMemo(() => {
+    return apiErrors.filter(error => {
+      // 등급 필터
+      const matchLevel = selectedLevels.includes(error.ERROR_LEVEL);
+      if (!matchLevel) return false;
+
+      // 검색 필터 (클라이언트 필터링 - 빠른 응답을 위해)
+      const { deviceName, deviceIp, groupName, errorMessage } = searchFilters;
+
+      if (deviceName.trim()) {
+        const name = (error.DEVICE_NAME || '').toLowerCase();
+        if (!name.includes(deviceName.toLowerCase())) return false;
+      }
+      if (deviceIp.trim()) {
+        const ip = (error.DEVICE_IP || '').toLowerCase();
+        if (!ip.includes(deviceIp.toLowerCase())) return false;
+      }
+      if (groupName.trim()) {
+        const group = (error.GROUP_NAME || '').toLowerCase();
+        if (!group.includes(groupName.toLowerCase())) return false;
+      }
+      if (errorMessage.trim()) {
+        const msg = (error.ERROR_MESSAGE || '').toLowerCase();
+        if (!msg.includes(errorMessage.toLowerCase())) return false;
+      }
+
+      return true;
+    });
+  }, [apiErrors, selectedLevels, searchFilters]);
+
+  // 장애 목록 조회
+  const fetchErrors = useCallback(async (params = {}) => {
     if (isEditMode) return;
     setIsLoading(true);
     try {
-      const params = {};
-      if (searchText.trim()) {
-        params.deviceName = searchText.trim();
-      }
       const response = await faultApi.getErrors(params);
       const data = response.data?.data || {};
       setApiErrors(data.list || []);
@@ -2472,24 +2730,26 @@ function RealtimeAlertWidget({ isEditMode }) {
       console.error('장애 목록 조회 실패:', error);
     } finally {
       setIsLoading(false);
-    }
-  }, [searchText, isEditMode]);
-
-  // 초기 로드 (편집 모드가 아닐 때만)
-  useEffect(() => {
-    if (!isEditMode) {
-      fetchErrors();
+      setHasFetched(true);
     }
   }, [isEditMode]);
 
-  // 검색어 변경 시 debounce 적용하여 API 재조회
+  // 초기 데이터가 없으면 API에서 조회
   useEffect(() => {
-    if (isEditMode) return;
-    const timer = setTimeout(() => {
+    if (isEditMode || hasFetched) return;
+    const initData = getInitialData();
+    if (initData.length === 0) {
       fetchErrors();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchText, isEditMode]);
+    } else {
+      setHasFetched(true);
+    }
+  }, [isEditMode, hasFetched]);
+
+  // WebSocket 알림 수신 시 목록 새로고침
+  useEffect(() => {
+    if (isEditMode || !hasFetched || alerts.length === 0) return;
+    fetchErrors();
+  }, [alerts.length]);
 
   // 등급 토글
   const toggleLevel = (levelId) => {
@@ -2502,18 +2762,51 @@ function RealtimeAlertWidget({ isEditMode }) {
     });
   };
 
-  // 날짜 포맷
-  const formatTime = (dateStr) => {
+  // 검색 필터 변경
+  const handleFilterChange = (field, value) => {
+    setSearchFilters(prev => ({ ...prev, [field]: value }));
+  };
+
+  // 검색 초기화
+  const handleResetFilters = () => {
+    setSearchFilters({
+      deviceName: '',
+      deviceIp: '',
+      groupName: '',
+      errorMessage: '',
+    });
+  };
+
+  // 검색어가 있는지 확인
+  const hasActiveFilters = Object.values(searchFilters).some(v => v.trim());
+
+  // 날짜 포맷 (상세 형식)
+  const formatDateTime = (dateStr) => {
     if (!dateStr) return '-';
     try {
-      const date = new Date(dateStr);
-      const now = new Date();
-      const diff = Math.floor((now - date) / 1000);
+      let date;
+      if (typeof dateStr === 'number') {
+        date = new Date(dateStr);
+      } else if (typeof dateStr === 'string') {
+        const normalized = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
+        date = new Date(normalized);
+      } else {
+        date = new Date(dateStr);
+      }
 
-      if (diff < 60) return '방금 전';
-      if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
-      if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
-      return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+      if (isNaN(date.getTime())) {
+        return dateStr;
+      }
+
+      // 상세 날짜/시간 형식 (YYYY-MM-DD HH:mm:ss)
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     } catch {
       return dateStr;
     }
@@ -2530,14 +2823,14 @@ function RealtimeAlertWidget({ isEditMode }) {
     }
   };
 
-  // 등급 아이콘
-  const getLevelIcon = (level) => {
+  // 등급 라벨
+  const getLevelLabel = (level) => {
     switch (level) {
-      case 'C': return 'bi-exclamation-circle-fill';
-      case 'M': return 'bi-exclamation-triangle-fill';
-      case 'N': return 'bi-exclamation-diamond-fill';
-      case 'W': return 'bi-info-circle-fill';
-      default: return 'bi-circle-fill';
+      case 'C': return 'Cr';
+      case 'M': return 'Mj';
+      case 'N': return 'Mn';
+      case 'W': return 'Wr';
+      default: return '-';
     }
   };
 
@@ -2575,15 +2868,64 @@ function RealtimeAlertWidget({ isEditMode }) {
           <i className="bi bi-search"></i>
           <input
             type="text"
-            placeholder="장비명 검색..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            placeholder="장비명..."
+            value={searchFilters.deviceName}
+            onChange={(e) => handleFilterChange('deviceName', e.target.value)}
           />
         </div>
+        <button
+          className={`widget-filter-toggle ${showAdvancedSearch ? 'active' : ''} ${hasActiveFilters ? 'has-filters' : ''}`}
+          onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+          title="상세 검색"
+        >
+          <i className="bi bi-filter"></i>
+        </button>
+        {hasActiveFilters && (
+          <button
+            className="widget-filter-reset"
+            onClick={handleResetFilters}
+            title="검색 초기화"
+          >
+            <i className="bi bi-x-circle"></i>
+          </button>
+        )}
       </div>
 
-      {/* 장애 목록 */}
-      <div className="widget-alert-list">
+      {/* 상세 검색 영역 */}
+      {showAdvancedSearch && (
+        <div className="widget-advanced-search">
+          <div className="search-field">
+            <label>IP</label>
+            <input
+              type="text"
+              placeholder="IP 주소"
+              value={searchFilters.deviceIp}
+              onChange={(e) => handleFilterChange('deviceIp', e.target.value)}
+            />
+          </div>
+          <div className="search-field">
+            <label>그룹</label>
+            <input
+              type="text"
+              placeholder="그룹명"
+              value={searchFilters.groupName}
+              onChange={(e) => handleFilterChange('groupName', e.target.value)}
+            />
+          </div>
+          <div className="search-field">
+            <label>내용</label>
+            <input
+              type="text"
+              placeholder="장애 내용"
+              value={searchFilters.errorMessage}
+              onChange={(e) => handleFilterChange('errorMessage', e.target.value)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 장애 테이블 */}
+      <div className="widget-alert-table-container">
         {isLoading && combinedErrors.length === 0 ? (
           <div className="widget-loading">
             <div className="loading-spinner"></div>
@@ -2595,36 +2937,60 @@ function RealtimeAlertWidget({ isEditMode }) {
             <span>발생한 장애가 없습니다</span>
           </div>
         ) : (
-          combinedErrors.slice(0, 20).map((error, index) => (
-            <div
-              key={error.ERROR_ID || `error-${index}`}
-              className={`widget-alert-item ${getLevelClass(error.ERROR_LEVEL)} ${error.isWebSocket ? 'realtime' : ''}`}
-            >
-              <div className="alert-level-icon">
-                <i className={`bi ${getLevelIcon(error.ERROR_LEVEL)}`}></i>
-              </div>
-              <div className="alert-content">
-                <div className="alert-device">
-                  {error.isWebSocket && <span className="realtime-badge">NEW</span>}
-                  {error.DEVICE_NAME || '-'}
-                </div>
-                <div className="alert-message">{error.ERROR_MESSAGE || '-'}</div>
-              </div>
-              <div className="alert-meta">
-                <span className={`alert-status ${error.ERROR_FLAG === 1 ? 'ack' : ''}`}>
-                  {error.ERROR_FLAG === 1 ? '인지' : '발생'}
-                </span>
-                <span className="alert-time">{formatTime(error.OCCUR_AT)}</span>
-              </div>
-            </div>
-          ))
+          <table className="widget-alert-table">
+            <thead>
+              <tr>
+                <th className="col-level">등급</th>
+                <th className="col-status">상태</th>
+                <th className="col-device">장비명</th>
+                <th className="col-ip">IP 주소</th>
+                <th className="col-group">그룹명</th>
+                <th className="col-message">장애 내용</th>
+                <th className="col-time">발생 시간</th>
+              </tr>
+            </thead>
+            <tbody>
+              {combinedErrors.slice(0, 50).map((error, index) => (
+                <tr
+                  key={error.ERROR_ID || `error-${index}`}
+                  className={`${getLevelClass(error.ERROR_LEVEL)}${highlightedIds.has(error.ERROR_ID) ? ' row-highlight' : ''}`}
+                >
+                  <td className="col-level">
+                    <span className={`level-badge ${getLevelClass(error.ERROR_LEVEL)}`}>
+                      {getLevelLabel(error.ERROR_LEVEL)}
+                    </span>
+                  </td>
+                  <td className="col-status">
+                    <span className={`status-badge ${error.ERROR_FLAG === 1 ? 'ack' : 'active'}`}>
+                      {error.ERROR_FLAG === 1 ? '인지' : '발생'}
+                    </span>
+                  </td>
+                  <td className="col-device" title={error.DEVICE_NAME || '-'}>
+                    {error.DEVICE_NAME || '-'}
+                  </td>
+                  <td className="col-ip" title={error.DEVICE_IP || '-'}>
+                    {error.DEVICE_IP || '-'}
+                  </td>
+                  <td className="col-group" title={error.GROUP_NAME || '-'}>
+                    {error.GROUP_NAME || '-'}
+                  </td>
+                  <td className="col-message" title={error.ERROR_MESSAGE || '-'}>
+                    {error.ERROR_MESSAGE || '-'}
+                  </td>
+                  <td className="col-time" title={formatDateTime(error.OCCUR_AT)}>
+                    {formatDateTime(error.OCCUR_AT)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
       {/* 더보기 */}
-      {combinedErrors.length > 20 && (
+      {combinedErrors.length > 50 && (
         <div className="widget-more">
-          <span>+{combinedErrors.length - 20}건 더 있음</span>
+          <span>+{combinedErrors.length - 50}건 더 있음</span>
         </div>
       )}
     </div>
@@ -2650,6 +3016,8 @@ export default function Dashboard() {
   const [initialWidgetCount, setInitialWidgetCount] = useState(0); // 편집 시작 시 위젯 개수
   const [showResetConfirm, setShowResetConfirm] = useState(false); // 초기화 확인 모달
   const [isResettingDashboard, setIsResettingDashboard] = useState(false); // 초기화 진행 중
+  const [refreshingWidgets, setRefreshingWidgets] = useState(new Set()); // 새로고침 중인 위젯 ID
+  const [isReloadingAfterSave, setIsReloadingAfterSave] = useState(false); // 저장 후 데이터 리로딩 중
 
   // 사용자 정보 가져오기
   const { user } = useAuthStore();
@@ -2662,7 +3030,7 @@ export default function Dashboard() {
   const { data: defaultDashboard, isLoading: defaultDashboardLoading } = useDefaultDashboard();
 
   // API에서 사용자 대시보드 조회 (R_USER_DASHBOARD_WIDGET_T)
-  const { data: userDashboard, isLoading: userDashboardLoading, refetch: refetchUserDashboard } = useUserDashboard(userId);
+  const { data: userDashboard, isLoading: userDashboardLoading, isFetching: userDashboardFetching, refetch: refetchUserDashboard } = useUserDashboard(userId);
 
   // 사용자 대시보드 저장 mutation (편집 완료 시만 사용)
   const { mutate: saveUserDashboard, isPending: isSaving } = useSaveUserDashboard(userId);
@@ -2699,31 +3067,18 @@ export default function Dashboard() {
   // 대시보드 데이터 초기화 (기본 대시보드 또는 사용자 대시보드)
   // 기본 대시보드 응답: { defaultDashboardWidgetId, widgetId, widgetCode, name, icon, category, x, y, width, height }
   useEffect(() => {
-    console.log('🔄 useEffect 실행', {
-      isInitialized,
-      widgetsLoading,
-      defaultDashboardLoading,
-      userDashboardLoading,  // 추가
-      userDashboardLength: userDashboard?.length,
-      defaultDashboardLength: defaultDashboard?.length
-    });
-
-    // ✅ userDashboardLoading도 체크 (중요!)
-    if (widgetsLoading || defaultDashboardLoading || userDashboardLoading) {
-      console.log('⏳ 로딩 중, 스킵');
+    // 로딩 중이거나 refetching 중이면 스킵 (캐시 무효화 후 새 데이터 로드 대기)
+    if (widgetsLoading || defaultDashboardLoading || userDashboardLoading || userDashboardFetching) {
       return;
     }
 
-    // 초기화 조건: isInitialized가 false이거나, 리셋 중일 때만
-    // 저장 중이거나 편집 모드일 때는 초기화하지 않음 (무한 루프 방지)
+    // 이미 초기화되었고 리셋 중이 아니면 스킵
     if (isInitialized && !isResetting) {
-      console.log('⏭️ 이미 초기화되었고 리셋 중이 아님, 스킵');
       return;
     }
 
     // 편집 모드일 때는 초기화하지 않음
     if (isEditMode) {
-      console.log('⏭️ 편집 모드 중, 스킵');
       return;
     }
 
@@ -2731,11 +3086,6 @@ export default function Dashboard() {
     const dashboardData = (userDashboard && userDashboard.length > 0)
       ? userDashboard
       : defaultDashboard;
-
-    console.log('=== 🔵 대시보드 초기화 시작 ===');
-    console.log('사용자 대시보드:', userDashboard);
-    console.log('기본 대시보드:', defaultDashboard);
-    console.log('최종 선택:', dashboardData);
 
     if (!dashboardData || dashboardData.length === 0) {
       // API 데이터가 없으면 폴백 사용
@@ -2752,8 +3102,6 @@ export default function Dashboard() {
 
     dashboardData.forEach((item, index) => {
       const id = `w${item.defaultDashboardWidgetId || item.userDashboardWidgetId || index}`;
-
-      console.log(`=== 위젯 ${index} 원본 데이터 ===`, item);
 
       // 위젯 너비와 위치를 그리드 칼럼 수에 맞게 제한
       const width = Math.min(item.width ?? 1, maxCols);
@@ -2814,17 +3162,11 @@ export default function Dashboard() {
       });
     });
 
-    console.log('=== 변환된 widgets ===', newWidgets);
-    console.log('=== 변환된 layout ===', newLayout);
-    console.log('=== 레이아웃 요약 ===');
-    newLayout.forEach((item, idx) => {
-      console.log(`위젯 ${idx}: x=${item.x}, y=${item.y}, w=${item.w}, h=${item.h}`);
-    });
-
     setWidgets(newWidgets);
     setLayout(newLayout);
     setIsInitialized(true);
-  }, [defaultDashboard, userDashboard, widgetsLoading, defaultDashboardLoading, userDashboardLoading, isInitialized, isSaving, isResetting, isEditMode, WIDGET_TYPES]);
+    setIsReloadingAfterSave(false); // 리로딩 완료
+  }, [defaultDashboard, userDashboard, widgetsLoading, defaultDashboardLoading, userDashboardLoading, userDashboardFetching, isInitialized, isSaving, isResetting, isEditMode, WIDGET_TYPES]);
 
   // 컨테이너 너비 감지
   useEffect(() => {
@@ -2837,7 +3179,6 @@ export default function Dashboard() {
       const width = container.clientWidth;
       // 이전 값과 비교해서 실제로 변경되었을 때만 업데이트 (무한 루프 방지)
       if (width > 0 && Math.abs(width - lastWidth) > 1) {
-        console.log('=== updateWidth 호출 ===', { 이전: lastWidth, 현재: width });
         lastWidth = width;
         setContainerWidth(width);
       }
@@ -2865,6 +3206,111 @@ export default function Dashboard() {
       window.removeEventListener('resize', updateWidth);
     };
   }, [isInitialized]);
+
+  // 알림 구독
+  const alerts = useAlertStore((state) => state.alerts);
+
+  // 특정 위젯 데이터 갱신 함수
+  const refreshWidget = useCallback(async (widget) => {
+    // 이미 새로고침 중이면 스킵
+    if (refreshingWidgets.has(widget.id)) return;
+
+    // 새로고침 시작
+    setRefreshingWidgets(prev => new Set(prev).add(widget.id));
+
+    try {
+      // REALTIME_ALERT와 ALERT_LIST는 faultApi에서 직접 조회
+      if (widget.type === 'REALTIME_ALERT' || widget.type === 'ALERT_LIST') {
+        const response = await faultApi.getErrors({});
+        const data = response.data?.data || {};
+        setWidgets(prev => prev.map(w => {
+          if (w.id === widget.id) {
+            return {
+              ...w,
+              chartData: data.list || [],
+            };
+          }
+          return w;
+        }));
+        return;
+      }
+
+      let response;
+      // 사용자 위젯인 경우
+      if (widget.userDashboardWidgetId) {
+        console.log('[refreshWidget] Refreshing user widget:', widget.userDashboardWidgetId);
+        response = await dashboardApi.refreshUserWidget(widget.userDashboardWidgetId);
+      }
+      // 기본 대시보드 위젯인 경우
+      else if (widget.defaultDashboardWidgetId) {
+        console.log('[refreshWidget] Refreshing default widget:', widget.defaultDashboardWidgetId);
+        response = await dashboardApi.refreshDefaultWidget(widget.defaultDashboardWidgetId);
+      }
+      // 위젯 ID가 없는 경우 경고
+      else {
+        console.warn('[refreshWidget] Widget has no ID for refresh:', widget.type, widget.id);
+        return;
+      }
+
+      if (response?.data?.data) {
+        const newData = response.data.data;
+        console.log('[refreshWidget] Got new data for widget:', widget.type, newData);
+        // 위젯 상태 업데이트 (새 데이터로 완전히 교체)
+        setWidgets(prev => prev.map(w => {
+          if (w.id === widget.id) {
+            return {
+              ...w,
+              chartData: 'chartData' in newData ? newData.chartData : w.chartData,
+              cntData: 'cntData' in newData ? newData.cntData : w.cntData,
+            };
+          }
+          return w;
+        }));
+      }
+    } catch (error) {
+      console.error('위젯 데이터 갱신 실패:', error);
+    } finally {
+      // 새로고침 완료
+      setRefreshingWidgets(prev => {
+        const next = new Set(prev);
+        next.delete(widget.id);
+        return next;
+      });
+    }
+  }, [refreshingWidgets]);
+
+  // 알림 발생 시 관련 위젯 갱신 (debounce 적용)
+  const lastAlertRef = useRef(null);
+  useEffect(() => {
+    if (!isInitialized || isEditMode) return;
+
+    // 새로운 알림이 있는지 확인 (alerts 배열은 최신이 앞에 있음)
+    const latestAlert = alerts[0];
+    if (!latestAlert) return;
+
+    // 같은 알림이면 무시 (중복 방지)
+    const alertKey = latestAlert.alertId || latestAlert.timestamp;
+    if (lastAlertRef.current === alertKey) return;
+    lastAlertRef.current = alertKey;
+
+    console.log('[Dashboard] New alert detected, refreshing widgets...', latestAlert);
+
+    // debounce: 여러 알림이 연속으로 오면 마지막 것만 처리
+    const timer = setTimeout(() => {
+      // 갱신이 필요한 위젯 타입들 (장애 관련 위젯들)
+      const refreshTargetTypes = ['ALERT_SUMMARY', 'DEVICE_SUMMARY', 'REALTIME_ALERT', 'ALERT_LIST'];
+
+      // 해당 타입의 위젯들을 찾아서 갱신
+      widgets.forEach(widget => {
+        if (refreshTargetTypes.includes(widget.type)) {
+          console.log('[Dashboard] Refreshing widget:', widget.type, widget.id);
+          refreshWidget(widget);
+        }
+      });
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [alerts, isInitialized, isEditMode, widgets, refreshWidget]);
 
   // 레이아웃 변경 핸들러
   const handleLayoutChange = useCallback((newLayout) => {
@@ -3212,39 +3658,22 @@ export default function Dashboard() {
 
       // 즉시 UI 업데이트 (사용자에게 빠른 피드백)
       setIsEditMode(false);
+      setIsReloadingAfterSave(true); // 리로딩 시작
 
       // 백그라운드에서 저장
       saveUserDashboard(widgetsToSave, {
-        onSuccess: (response) => {
+        onSuccess: async (response) => {
           console.log('대시보드가 성공적으로 저장되었습니다.');
 
           // 저장 API 응답에서 데이터 추출
           const freshData = response?.data?.data || response?.data || [];
           console.log('=== 저장 후 응답 데이터 ===', freshData);
 
-          // 응답 데이터가 있으면 캐시 업데이트
-          if (Array.isArray(freshData)) {
-            queryClient.setQueryData(['userDashboard', userId], freshData);
-          }
+          // 서버에서 최신 데이터를 다시 가져옴 (캐시 무효화는 hook에서 자동 처리)
+          await refetchUserDashboard();
 
-          // 위젯 ID 및 데이터 업데이트
-          if (freshData && freshData.length > 0) {
-            setWidgets(prev => prev.map(widget => {
-              const matched = freshData.find(d =>
-                (widget.userDashboardWidgetId && d.userDashboardWidgetId === widget.userDashboardWidgetId) ||
-                (!widget.userDashboardWidgetId && d.widgetId === widget.widgetId && d.title === widget.title)
-              );
-              if (matched) {
-                return {
-                  ...widget,
-                  userDashboardWidgetId: matched.userDashboardWidgetId,
-                  chartData: matched.chartData || widget.chartData || [],
-                  cntData: matched.cntData || widget.cntData || null,
-                };
-              }
-              return widget;
-            }));
-          }
+          // 새로 추가된 위젯의 chartData를 포함한 전체 데이터를 다시 로드
+          setIsInitialized(false);
         },
         onError: (error) => {
           console.error('대시보드 저장 실패:', error);
@@ -3396,6 +3825,16 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-page">
+      {/* 저장 후 데이터 리로딩 오버레이 */}
+      {isReloadingAfterSave && (
+        <div className="dashboard-reload-overlay">
+          <div className="reload-content">
+            <div className="loading-spinner"></div>
+            <span>위젯 데이터 로딩 중...</span>
+          </div>
+        </div>
+      )}
+
       {/* 헤더 */}
       <div className="dashboard-header">
         <div className="dashboard-title">
@@ -3474,6 +3913,17 @@ export default function Dashboard() {
                     <span>{widget.title}</span>
                   </div>
                   <div className="widget-header-actions">
+                    {/* 새로고침 버튼 (편집 모드가 아닐 때만) */}
+                    {!isEditMode && !isTopology && (
+                      <button
+                        className={`widget-refresh-btn ${refreshingWidgets.has(widget.id) ? 'refreshing' : ''}`}
+                        onClick={() => refreshWidget(widget)}
+                        disabled={refreshingWidgets.has(widget.id)}
+                        title="새로고침"
+                      >
+                        <i className={`bi bi-arrow-clockwise ${refreshingWidgets.has(widget.id) ? 'spinning' : ''}`}></i>
+                      </button>
+                    )}
                     {isTopology && !isEditMode && (
                       <button className="topology-fullscreen-btn" onClick={handleExpandTopology} title="전체 화면">
                         <i className="bi bi-arrows-fullscreen"></i>
@@ -3501,7 +3951,9 @@ export default function Dashboard() {
                   ) : widget.type === 'CUSTOM' ? (
                     <MemoizedCustomWidgetContent widget={widget} isEditMode={isEditMode} />
                   ) : widget.type === 'REALTIME_ALERT' ? (
-                    <RealtimeAlertWidget isEditMode={isEditMode} />
+                    <RealtimeAlertWidget isEditMode={isEditMode} initialData={widget.chartData} />
+                  ) : widget.type === 'ALERT_SUMMARY' ? (
+                    <AlertSummaryWidget cntData={widget.cntData} isEditMode={isEditMode} />
                   ) : (
                     <WidgetContent widget={widget} widgetTypes={WIDGET_TYPES} isEditMode={isEditMode} />
                   )}

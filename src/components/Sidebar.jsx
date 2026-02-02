@@ -48,6 +48,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       children: [
         { label: '그룹 관리', path: '/mgmt/groups', icon: 'bi-folder' },
         { label: '자산 관리', path: '/mgmt/assets', icon: 'bi-hdd-network' },
+        { label: '자산 설정정보 관리', path: '/mgmt/asset-config', icon: 'bi-sliders' },
         { label: '신규 자산 관리', path: '/mgmt/new-assets', icon: 'bi-plus-circle' },
         { label: '모델 관리', path: '/mgmt/models', icon: 'bi-cpu' },
       ],

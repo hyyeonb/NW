@@ -492,6 +492,7 @@
   justify-content: center;
   min-height: 0;
   overflow: hidden;
+  position: relative;
 }
 
 /* 토폴로지 그래프가 있는 위젯 컨텐츠는 패딩 없이 전체 사용 */
@@ -613,6 +614,49 @@
   gap: 16px;
   color: #64748b;
   font-size: 14px;
+}
+
+/* 저장 후 리로딩 오버레이 */
+.dashboard-reload-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.dashboard-reload-overlay .reload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 48px;
+  background: rgba(30, 41, 59, 0.95);
+  border-radius: 16px;
+  border: 1px solid #334155;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.dashboard-reload-overlay .reload-content span {
+  color: #e2e8f0;
+  font-size: 15px;
+  font-weight: 500;
 }
 
 /* 토폴로지 오버레이 (로딩/에러) */
@@ -2753,6 +2797,288 @@
   border-top: 1px solid #334155;
 }
 
+/* 실시간 장애 현황 위젯 - 필터 토글 & 상세 검색 */
+.widget-filter-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.widget-filter-toggle:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+.widget-filter-toggle.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.widget-filter-toggle.has-filters::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+}
+
+.widget-filter-reset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.widget-filter-reset:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* 상세 검색 영역 */
+.widget-advanced-search {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.8);
+  border-bottom: 1px solid #334155;
+  flex-wrap: wrap;
+}
+
+.widget-advanced-search .search-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 100px;
+}
+
+.widget-advanced-search .search-field label {
+  font-size: 10px;
+  color: #64748b;
+  white-space: nowrap;
+  min-width: 24px;
+}
+
+.widget-advanced-search .search-field input {
+  flex: 1;
+  padding: 4px 8px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #f1f5f9;
+  font-size: 11px;
+  outline: none;
+  min-width: 0;
+}
+
+.widget-advanced-search .search-field input:focus {
+  border-color: #3b82f6;
+}
+
+.widget-advanced-search .search-field input::placeholder {
+  color: #475569;
+}
+
+/* 실시간 장애 현황 위젯 - 테이블 스타일 */
+.widget-alert-table-container {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* 테이블 컨테이너 스크롤바 */
+.widget-alert-table-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.widget-alert-table-container::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 3px;
+}
+
+.widget-alert-table-container::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
+}
+
+.widget-alert-table-container::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.widget-alert-table-container::-webkit-scrollbar-corner {
+  background: rgba(30, 41, 59, 0.5);
+}
+
+.widget-alert-table {
+  width: 100%;
+  min-width: 650px;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.widget-alert-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #1e293b;
+}
+
+.widget-alert-table th {
+  padding: 6px 4px;
+  text-align: left;
+  font-weight: 600;
+  color: #94a3b8;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid #334155;
+  white-space: nowrap;
+}
+
+.widget-alert-table td {
+  padding: 6px 4px;
+  color: #e2e8f0;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+  vertical-align: middle;
+}
+
+.widget-alert-table tbody tr {
+  transition: background 0.15s;
+}
+
+.widget-alert-table tbody tr:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.widget-alert-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 컬럼 너비 */
+.widget-alert-table .col-level {
+  width: 40px;
+  text-align: center;
+}
+
+.widget-alert-table .col-status {
+  width: 44px;
+  text-align: center;
+}
+
+.widget-alert-table .col-device {
+  width: 90px;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-alert-table .col-ip {
+  width: 100px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+}
+
+.widget-alert-table .col-group {
+  width: 80px;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-alert-table .col-message {
+  min-width: 80px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-alert-table .col-time {
+  width: 130px;
+  white-space: nowrap;
+  color: #94a3b8;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* 등급 배지 */
+.widget-alert-table .level-badge {
+  display: inline-block;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.widget-alert-table .level-badge.critical {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.widget-alert-table .level-badge.major {
+  background: rgba(249, 115, 22, 0.2);
+  color: #f97316;
+}
+
+.widget-alert-table .level-badge.minor {
+  background: rgba(234, 179, 8, 0.2);
+  color: #eab308;
+}
+
+.widget-alert-table .level-badge.warning {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+/* 상태 배지 */
+.widget-alert-table .status-badge {
+  display: inline-block;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.widget-alert-table .status-badge.active {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.widget-alert-table .status-badge.ack {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+
 /* 실시간 장애 현황 위젯 - 편집 모드 플레이스홀더 */
 .realtime-alert-widget.edit-mode-placeholder {
   display: flex;
@@ -2824,5 +3150,281 @@
   }
   50% {
     opacity: 0.7;
+  }
+}
+
+/* 위젯 새로고침 버튼 */
+.widget-refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.widget-refresh-btn:hover {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.widget-refresh-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.widget-refresh-btn.refreshing {
+  color: #3b82f6;
+}
+
+.widget-refresh-btn i {
+  font-size: 14px;
+}
+
+.widget-refresh-btn i.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==================== 새 장애 행 하이라이트 애니메이션 (등급별 색상) ==================== */
+
+/* Critical - 빨간색 */
+.widget-alert-table tbody tr.critical.row-highlight {
+  animation: rowHighlightCritical 3s ease-out;
+}
+
+@keyframes rowHighlightCritical {
+  0% {
+    background: rgba(239, 68, 68, 0.5);
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.7);
+  }
+  30% {
+    background: rgba(239, 68, 68, 0.35);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+  }
+  70% {
+    background: rgba(239, 68, 68, 0.15);
+    box-shadow: none;
+  }
+  100% {
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+/* Major - 주황색 */
+.widget-alert-table tbody tr.major.row-highlight {
+  animation: rowHighlightMajor 3s ease-out;
+}
+
+@keyframes rowHighlightMajor {
+  0% {
+    background: rgba(249, 115, 22, 0.5);
+    box-shadow: 0 0 12px rgba(249, 115, 22, 0.7);
+  }
+  30% {
+    background: rgba(249, 115, 22, 0.35);
+    box-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
+  }
+  70% {
+    background: rgba(249, 115, 22, 0.15);
+    box-shadow: none;
+  }
+  100% {
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+/* Minor - 노란색 */
+.widget-alert-table tbody tr.minor.row-highlight {
+  animation: rowHighlightMinor 3s ease-out;
+}
+
+@keyframes rowHighlightMinor {
+  0% {
+    background: rgba(234, 179, 8, 0.5);
+    box-shadow: 0 0 12px rgba(234, 179, 8, 0.7);
+  }
+  30% {
+    background: rgba(234, 179, 8, 0.35);
+    box-shadow: 0 0 8px rgba(234, 179, 8, 0.5);
+  }
+  70% {
+    background: rgba(234, 179, 8, 0.15);
+    box-shadow: none;
+  }
+  100% {
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+/* Warning - 파란색 */
+.widget-alert-table tbody tr.warning.row-highlight {
+  animation: rowHighlightWarning 3s ease-out;
+}
+
+@keyframes rowHighlightWarning {
+  0% {
+    background: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.7);
+  }
+  30% {
+    background: rgba(59, 130, 246, 0.35);
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+  }
+  70% {
+    background: rgba(59, 130, 246, 0.15);
+    box-shadow: none;
+  }
+  100% {
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+/* 새 장애 행의 텍스트도 강조 */
+.widget-alert-table tbody tr.row-highlight td {
+  color: #ffffff;
+  transition: color 0.3s ease;
+}
+
+.widget-alert-table tbody tr.row-highlight .level-badge,
+.widget-alert-table tbody tr.row-highlight .status-badge {
+  transform: scale(1.05);
+  transition: transform 0.3s ease;
+}
+
+/* ==================== 장애 현황 카드 하이라이트 애니메이션 ==================== */
+.summary-card.card-highlight {
+  animation: cardPulse 3s ease-out;
+}
+
+.summary-card.critical.card-highlight {
+  animation: cardPulseCritical 3s ease-out;
+}
+
+.summary-card.major.card-highlight {
+  animation: cardPulseMajor 3s ease-out;
+}
+
+.summary-card.minor.card-highlight {
+  animation: cardPulseMinor 3s ease-out;
+}
+
+.summary-card.warning.card-highlight {
+  animation: cardPulseWarning 3s ease-out;
+}
+
+@keyframes cardPulseCritical {
+  0% {
+    transform: scale(1.08);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.4);
+    border-color: #ef4444;
+  }
+  25% {
+    transform: scale(1.04);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.6), 0 0 30px rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: none;
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+}
+
+@keyframes cardPulseMajor {
+  0% {
+    transform: scale(1.08);
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.8), 0 0 40px rgba(249, 115, 22, 0.4);
+    border-color: #f97316;
+  }
+  25% {
+    transform: scale(1.04);
+    box-shadow: 0 0 15px rgba(249, 115, 22, 0.6), 0 0 30px rgba(249, 115, 22, 0.3);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: none;
+    border-color: rgba(249, 115, 22, 0.3);
+  }
+}
+
+@keyframes cardPulseMinor {
+  0% {
+    transform: scale(1.08);
+    box-shadow: 0 0 20px rgba(234, 179, 8, 0.8), 0 0 40px rgba(234, 179, 8, 0.4);
+    border-color: #eab308;
+  }
+  25% {
+    transform: scale(1.04);
+    box-shadow: 0 0 15px rgba(234, 179, 8, 0.6), 0 0 30px rgba(234, 179, 8, 0.3);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 10px rgba(234, 179, 8, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: none;
+    border-color: rgba(234, 179, 8, 0.3);
+  }
+}
+
+@keyframes cardPulseWarning {
+  0% {
+    transform: scale(1.08);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 0 40px rgba(59, 130, 246, 0.4);
+    border-color: #3b82f6;
+  }
+  25% {
+    transform: scale(1.04);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.6), 0 0 30px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: none;
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+}
+
+/* 카드 하이라이트 시 카운트 숫자 강조 */
+.summary-card.card-highlight .summary-count {
+  animation: countPulse 0.5s ease-out 3;
+}
+
+@keyframes countPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
   }
 }
