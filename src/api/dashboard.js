@@ -48,4 +48,14 @@ export const dashboardApi = {
   // 위젯의 실제 차트 데이터 조회
   getWidgetData: (userDashboardWidgetId) =>
     apiClient.get(`/dashboard/widget-data/${userDashboardWidgetId}`),
+
+  // ==================== 위젯 데이터 갱신 ====================
+
+  // 기본 대시보드 특정 위젯 데이터 갱신
+  refreshDefaultWidget: (widgetId) =>
+    apiClient.get(`/dashboard/default-widget/${widgetId}`),
+
+  // 사용자 대시보드 특정 위젯 데이터 갱신
+  refreshUserWidget: (userDashboardWidgetId) =>
+    apiClient.get(`/dashboard/user-widget/refresh/${userDashboardWidgetId}`),
 };

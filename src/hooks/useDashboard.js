@@ -54,9 +54,14 @@ export const useUserDashboard = (userId) => {
 
 // 사용자 대시보드 저장
 export const useSaveUserDashboard = (userId) => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (widgets) => dashboardApi.saveUserDashboard(userId, widgets),
-    // onSuccess는 호출하는 곳에서 처리 (Dashboard.jsx)
+    onSuccess: () => {
+      // 저장 성공 시 캐시 무효화 (페이지 이동 후 복귀 시 최신 데이터 보장)
+      queryClient.invalidateQueries({ queryKey: ['userDashboard', userId] });
+    },
+    // 추가 onSuccess 처리는 호출하는 곳에서 (Dashboard.jsx)
   });
 };
 
