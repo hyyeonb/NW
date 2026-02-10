@@ -426,7 +426,7 @@
 }
 
 .form-field input::placeholder {
-    color: #64748b;
+    color: #8b9ab0;
     font-size: 11px;
 }
 
@@ -616,7 +616,7 @@
     font-size: 56px;
     margin-bottom: 20px;
     opacity: 0.3;
-    color: #64748b;
+    color: #8b9ab0;
 }
 
 .device-table td {

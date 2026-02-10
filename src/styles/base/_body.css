@@ -1,15 +1,17 @@
 /* ==================
    Body & Background Styles
    NMS Glassmorphism Design System
+   Apple Liquid Glass 2025 Inspired
    ================== */
 
 body {
     font-family: var(--font-family-base);
     font-size: var(--font-size-body);
     font-weight: var(--font-weight-regular);
-    background: var(--color-bg-dark);
-    color: var(--color-text-secondary);
+    background: var(--theme-bg-primary);
+    color: var(--theme-text-secondary);
     overflow-x: hidden;
+    min-height: 100vh;
     /* 폰트 렌더링 최적화 */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -17,8 +19,8 @@ body {
     font-feature-settings: "kern" 1;
 }
 
-/* Animated Background - Gradient Orbs */
-body::before {
+/* Animated Background - Mesh Gradient (다크 모드) */
+[data-theme="dark"] body::before {
     content: '';
     position: fixed;
     top: 0;
@@ -26,33 +28,79 @@ body::before {
     right: 0;
     bottom: 0;
     background:
-        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-        radial-gradient(ellipse 60% 40% at 80% 20%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
-        radial-gradient(ellipse 50% 50% at 50% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
-        linear-gradient(180deg, #0a0a0f 0%, #0f0f1a 50%, #0a0a0f 100%);
+        /* 메인 Orb 효과 */
+        radial-gradient(ellipse 100% 80% at 10% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse 80% 60% at 90% 10%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse 70% 50% at 50% 90%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 70% 60%, rgba(6, 182, 212, 0.04) 0%, transparent 50%),
+        /* 베이스 그라데이션 */
+        linear-gradient(180deg,
+            var(--theme-bg-primary) 0%,
+            var(--theme-bg-secondary) 30%,
+            var(--theme-bg-tertiary) 70%,
+            var(--theme-bg-primary) 100%
+        );
     z-index: -2;
-    animation: backgroundPulse 20s ease-in-out infinite;
+    animation: meshGradient 25s ease-in-out infinite;
 }
 
-/* Floating Particles Effect */
-body::after {
+/* Subtle Noise Texture (다크 모드) */
+[data-theme="dark"] body::after {
     content: '';
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background-image:
-        radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-        radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-    background-size: 100px 100px;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    opacity: 0.02;
     z-index: -1;
-    animation: particleFloat 30s linear infinite;
+    pointer-events: none;
 }
 
-@keyframes particleFloat {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(-100px); }
+/* Animated Background - Soft Gradient (라이트 모드) */
+[data-theme="light"] body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        radial-gradient(ellipse 100% 80% at 10% 20%, rgba(99, 102, 241, 0.04) 0%, transparent 50%),
+        radial-gradient(ellipse 80% 60% at 90% 10%, rgba(139, 92, 246, 0.03) 0%, transparent 50%),
+        radial-gradient(ellipse 70% 50% at 50% 90%, rgba(59, 130, 246, 0.02) 0%, transparent 50%),
+        linear-gradient(180deg,
+            var(--theme-bg-primary) 0%,
+            var(--theme-bg-secondary) 50%,
+            var(--theme-bg-primary) 100%
+        );
+    z-index: -2;
+}
+
+/* Light Noise Texture (라이트 모드) */
+[data-theme="light"] body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    opacity: 0.015;
+    z-index: -1;
+    pointer-events: none;
+}
+
+@keyframes meshGradient {
+    0%, 100% {
+        opacity: 1;
+        filter: hue-rotate(0deg);
+    }
+    50% {
+        opacity: 0.95;
+        filter: hue-rotate(5deg);
+    }
 }
 
 /* Selection Styling */

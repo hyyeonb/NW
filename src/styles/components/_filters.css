@@ -1,6 +1,6 @@
 /* ==================
    Filter Bar Component
-   NMS Glassmorphism Design System
+   NMS Modern Design System (Theme Support)
    ================== */
 
 /* 필터 바 컨테이너 */
@@ -8,23 +8,18 @@
     display: flex;
     align-items: flex-end;
     gap: 10px;
-    padding: 12px 16px;
+    padding: 14px 18px;
     flex-wrap: wrap;
     flex-shrink: 0;
 }
 
 .filter-bar.glass-card {
-    background: linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.03) 0%,
-        rgba(255, 255, 255, 0.01) 100%
-    );
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 10px;
+    background: var(--theme-bg-panel);
+    border: 1px solid var(--theme-border-panel);
+    border-radius: 12px;
     margin-bottom: 12px;
     overflow: visible;
+    box-shadow: var(--theme-shadow-md);
 }
 
 /* 필터 그룹 */
@@ -37,40 +32,76 @@
 
 .filter-group label {
     font-size: 10px;
-    font-weight: 500;
-    color: #94a3b8;
+    font-weight: 600;
+    color: var(--theme-text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.5px;
     white-space: nowrap;
 }
 
 /* 필터 입력 필드 */
 .filter-input {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    padding: 6px 10px;
+    background: var(--theme-bg-panel-header);
+    border: 1px solid var(--theme-border-input);
+    border-radius: 8px;
+    padding: 6px 12px;
     font-size: 12px;
-    color: #f1f5f9;
-    height: 32px;
-    width: 120px;
+    color: var(--theme-text-secondary);
+    height: 34px;
+    width: 130px;
     transition: all 0.2s ease;
 }
 
 .filter-input:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--theme-accent-primary);
+    background: var(--theme-bg-panel-hover);
 }
 
 .filter-input:focus {
     outline: none;
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--theme-accent-primary);
+    box-shadow: 0 0 0 3px var(--theme-accent-bg);
+    background: var(--theme-bg-panel-hover);
 }
 
 .filter-input::placeholder {
-    color: #64748b;
+    color: var(--theme-text-disabled);
+}
+
+/* 필터 셀렉트 (드롭다운) */
+.filter-select {
+    background: var(--theme-bg-panel-header);
+    border: 1px solid var(--theme-border-input);
+    border-radius: 8px;
+    padding: 6px 28px 6px 12px;
+    font-size: 12px;
+    color: var(--theme-text-secondary);
+    height: 34px;
+    width: 130px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+}
+
+.filter-select:hover {
+    border-color: var(--theme-accent-primary);
+    background-color: var(--theme-bg-panel-hover);
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--theme-accent-primary);
+    box-shadow: 0 0 0 3px var(--theme-accent-bg);
+    background-color: var(--theme-bg-panel-hover);
+}
+
+.filter-select option {
+    background: var(--theme-bg-secondary, #1a1a2e);
+    color: var(--theme-text-secondary);
 }
 
 /* 필터 액션 버튼 */
@@ -82,57 +113,59 @@
 }
 
 .filter-actions .btn {
-    height: 32px;
-    padding: 0 14px;
+    height: 34px;
+    padding: 0 16px;
     display: inline-flex;
     align-items: center;
     gap: 5px;
     font-size: 12px;
-    font-weight: 500;
-    border-radius: 6px;
+    font-weight: 600;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
     border: none;
 }
 
 .filter-actions .btn-primary {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: linear-gradient(180deg, var(--theme-accent-primary) 0%, var(--theme-accent-dark) 100%);
     color: white;
-    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+    border: 1px solid var(--theme-accent-primary);
+    box-shadow: var(--theme-shadow-accent);
 }
 
 .filter-actions .btn-primary:hover {
+    background: linear-gradient(180deg, var(--theme-accent-light) 0%, var(--theme-accent-primary) 100%);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
 }
 
 .filter-actions .btn-sm {
-    height: 32px;
-    padding: 0 12px;
+    height: 34px;
+    padding: 0 14px;
     font-size: 12px;
 }
 
 .filter-actions .btn-icon-only,
 .filter-actions button.btn-icon-only {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     padding: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    color: #94a3b8;
+    background: var(--theme-bg-panel-header);
+    border: 1px solid var(--theme-border-input);
+    border-radius: 8px;
+    color: var(--theme-text-muted);
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .filter-actions .btn-icon-only:hover,
 .filter-actions button.btn-icon-only:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-    color: #f1f5f9;
+    background: var(--theme-accent-bg);
+    border-color: var(--theme-accent-primary);
+    color: var(--theme-accent-light);
 }
 
 /* 등급 체크박스 그룹 */
@@ -158,23 +191,24 @@
 .level-checkbox input[type="checkbox"] {
     width: 16px;
     height: 16px;
-    accent-color: var(--level-color, #6366f1);
+    accent-color: var(--level-color, var(--theme-accent-primary));
     cursor: pointer;
 }
 
 .level-checkbox .checkbox-label {
     font-size: 12px;
     font-weight: 500;
+    color: var(--theme-text-secondary);
 }
 
 /* DatePicker 입력 스타일 */
 .date-picker-input {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--theme-bg-panel-header);
+    border: 1px solid var(--theme-border-input);
     border-radius: 6px;
     padding: 6px 10px;
     font-size: 12px;
-    color: #f1f5f9;
+    color: var(--theme-text-secondary);
     height: 32px;
     min-width: 110px;
     cursor: pointer;
@@ -182,14 +216,14 @@
 }
 
 .date-picker-input:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--theme-accent-primary);
+    background: var(--theme-bg-panel-hover);
 }
 
 .date-picker-input:focus {
     outline: none;
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    border-color: var(--theme-accent-primary);
+    box-shadow: 0 0 0 3px var(--theme-accent-bg);
 }
 
 /* 작은 날짜 선택기 (yy.M.d 형식용) */
@@ -205,7 +239,8 @@
         gap: 10px;
     }
 
-    .filter-input {
+    .filter-input,
+    .filter-select {
         width: 120px;
     }
 
@@ -225,6 +260,7 @@
     }
 
     .filter-input,
+    .filter-select,
     .date-picker-input {
         width: 100%;
         min-width: auto;

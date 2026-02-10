@@ -11,8 +11,6 @@ import {
   useDeviceScope,
   useUpdateDeviceScope,
   useDeviceTraffic,
-  useTogglePortChartFlag,
-  useResetChartFlags,
   useDeviceErrorLevels,
 } from '../hooks';
 import { devicesApi } from '../api/devices';
@@ -46,8 +44,19 @@ export default function AssetManagement() {
   // SNMP 수집 결과 모달 상태
   const [snmpResultModal, setSnmpResultModal] = useState(null);
 
+  // 장비 설정 사이드바 상태
+  const [showSettingsSidebar, setShowSettingsSidebar] = useState(false);
+  const [sshConfig, setSshConfig] = useState({
+    CONNECT_AS: 'SSH',
+    SSH_USER: '',
+    SSH_PASS: '',
+    SSH_PORT: 22
+  });
+  const [sidebarSaving, setSidebarSaving] = useState(false);
+
   // 장비 인라인 편집 상태
   const [editFormData, setEditFormData] = useState({});
+
   const [editSaving, setEditSaving] = useState(false);
 
   // 장비 테이블 정렬 상태 (기본: ID 오름차순)
@@ -62,9 +71,11 @@ export default function AssetManagement() {
   const [searchDeviceName, setSearchDeviceName] = useState('');
   const [searchDeviceIp, setSearchDeviceIp] = useState('');
 
-  // 차트 플래그 토글/초기화 mutation
-  const toggleChartFlag = useTogglePortChartFlag();
-  const resetChartFlags = useResetChartFlags();
+  // 차트 표시할 포트 Set (세션 기반 - IF_INDEX 저장)
+  const [chartPortsSet, setChartPortsSet] = useState(new Set());
+
+  // CPU/MEM 데이터 상태
+  const [cpuMemData, setCpuMemData] = useState(null);
 
   // 그룹 변경 시 페이지 및 검색 초기화
   useEffect(() => {
@@ -98,6 +109,52 @@ export default function AssetManagement() {
   // 장비별 활성 장애 등급 조회
   const { deviceErrorMap } = useDeviceErrorLevels();
 
+  // SSH 데이터 조회
+  useEffect(() => {
+    if (!detailDevice?.DEVICE_ID) {
+      setSshConfig({ CONNECT_AS: 'SSH', SSH_USER: '', SSH_PASS: '', SSH_PORT: 22 });
+      return;
+    }
+    const fetchSsh = async () => {
+      try {
+        const response = await devicesApi.getDeviceSsh(detailDevice.DEVICE_ID);
+        const data = response.data?.data;
+        if (data) {
+          setSshConfig({
+            CONNECT_AS: data.CONNECT_AS || 'SSH',
+            SSH_USER: data.SSH_USER || '',
+            SSH_PASS: data.SSH_PASS || '',
+            SSH_PORT: data.SSH_PORT || 22
+          });
+        }
+      } catch {
+        setSshConfig({ CONNECT_AS: 'SSH', SSH_USER: '', SSH_PASS: '', SSH_PORT: 22 });
+      }
+    };
+    fetchSsh();
+  }, [detailDevice?.DEVICE_ID]);
+
+  // CPU/MEM 데이터 조회
+  useEffect(() => {
+    if (!detailDevice?.DEVICE_ID) {
+      setCpuMemData(null);
+      return;
+    }
+    const fetchCpuMem = async () => {
+      try {
+        const response = await devicesApi.getDeviceCpuMem(detailDevice.DEVICE_ID);
+        setCpuMemData(response.data?.data || null);
+      } catch (error) {
+        console.error('CPU/MEM 데이터 조회 실패:', error);
+        setCpuMemData(null);
+      }
+    };
+    fetchCpuMem();
+    // 30초마다 갱신
+    const interval = setInterval(fetchCpuMem, 30000);
+    return () => clearInterval(interval);
+  }, [detailDevice?.DEVICE_ID]);
+
   // 가상 인터페이스 필터링 (docker, veth, br-, lo 등 제외)
   const portsData = useMemo(() => {
     if (!portsDataRaw) return [];
@@ -108,35 +165,57 @@ export default function AssetManagement() {
     });
   }, [portsDataRaw]);
 
-  // 차트 표시할 포트 Set (IF_CHART_FLAG=true인 포트들)
-  const chartEnabledPorts = useMemo(() => {
-    if (!portsData) return new Set();
-    return new Set(
-      portsData
-        .filter(p => p.IF_CHART_FLAG === true || p.IF_CHART_FLAG === 1)
-        .map(p => p.IF_INDEX)
-    );
-  }, [portsData]);
+  // 포트 데이터 로드 시 sessionStorage에서 복원 또는 OPER 활성 포트로 초기화
+  useEffect(() => {
+    if (portsData && portsData.length > 0 && detailDevice?.DEVICE_ID) {
+      const storageKey = `chartPorts_${detailDevice.DEVICE_ID}`;
+      const saved = sessionStorage.getItem(storageKey);
 
-  // 트래픽 차트 데이터 (IF_CHART_FLAG 기반 필터링만 - 플래그 없으면 빈 차트)
+      if (saved) {
+        // sessionStorage에 저장된 값 복원
+        try {
+          const savedPorts = JSON.parse(saved);
+          setChartPortsSet(new Set(savedPorts));
+        } catch {
+          // 파싱 실패 시 기본값
+          const operActivePorts = new Set(
+            portsData
+              .filter(p => p.IF_OPER_STATUS === 1 || p.IF_OPER_STATUS === 'up')
+              .map(p => p.IF_INDEX)
+          );
+          setChartPortsSet(operActivePorts);
+        }
+      } else {
+        // 저장된 값 없으면 OPER 활성 포트로 초기화
+        const operActivePorts = new Set(
+          portsData
+            .filter(p => p.IF_OPER_STATUS === 1 || p.IF_OPER_STATUS === 'up')
+            .map(p => p.IF_INDEX)
+        );
+        setChartPortsSet(operActivePorts);
+      }
+    }
+  }, [portsData, detailDevice?.DEVICE_ID]);
+
+  // 트래픽 차트 데이터 (세션 기반 chartPortsSet 필터링)
   const trafficChartData = useMemo(() => {
     if (!trafficData || !trafficData.series || trafficData.series.length === 0) {
       return { timeLabels: [], series: [] };
     }
 
-    // IF_CHART_FLAG=true인 포트가 없으면 빈 차트 (서버에서 자동 설정될 때까지 대기)
-    if (chartEnabledPorts.size === 0) {
+    // 선택된 포트가 없으면 빈 차트
+    if (chartPortsSet.size === 0) {
       return { timeLabels: [], series: [] };
     }
 
-    // IF_CHART_FLAG=true인 포트만 표시
+    // 선택된 포트만 표시
     const filteredSeries = trafficData.series.filter(item => {
       // series에 ifIndex가 있다고 가정
       if (item.ifIndex !== undefined) {
-        return chartEnabledPorts.has(item.ifIndex);
+        return chartPortsSet.has(item.ifIndex);
       }
       // name 기반 매칭 (포트 이름이 series name에 포함되어 있는지)
-      return Array.from(chartEnabledPorts).some(ifIndex => {
+      return Array.from(chartPortsSet).some(ifIndex => {
         const port = portsData?.find(p => p.IF_INDEX === ifIndex);
         if (port) {
           const portName = port.IF_NAME || port.IF_DESCR || '';
@@ -146,22 +225,38 @@ export default function AssetManagement() {
       });
     });
     return { timeLabels: trafficData.timeLabels, series: filteredSeries };
-  }, [trafficData, chartEnabledPorts, portsData]);
+  }, [trafficData, chartPortsSet, portsData]);
 
-  // 포트 차트 플래그 토글 핸들러 (DB 저장)
+  // 포트 차트 토글 핸들러 (세션 기반)
   const handleToggleChartPort = (port) => {
-    if (detailDevice?.DEVICE_ID) {
-      toggleChartFlag.mutate({
-        deviceId: detailDevice.DEVICE_ID,
-        ifIndex: port.IF_INDEX
-      });
-    }
+    setChartPortsSet(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(port.IF_INDEX)) {
+        newSet.delete(port.IF_INDEX);
+      } else {
+        newSet.add(port.IF_INDEX);
+      }
+      // sessionStorage에 저장
+      if (detailDevice?.DEVICE_ID) {
+        sessionStorage.setItem(`chartPorts_${detailDevice.DEVICE_ID}`, JSON.stringify([...newSet]));
+      }
+      return newSet;
+    });
   };
 
-  // 차트 플래그 초기화 (TOP 5 재설정)
+  // 차트 포트 초기화 (sessionStorage에서 삭제)
   const handleResetChartFlags = () => {
-    if (detailDevice?.DEVICE_ID) {
-      resetChartFlags.mutate(detailDevice.DEVICE_ID);
+    if (portsData) {
+      const operActivePorts = new Set(
+        portsData
+          .filter(p => p.IF_OPER_STATUS === 1 || p.IF_OPER_STATUS === 'up')
+          .map(p => p.IF_INDEX)
+      );
+      setChartPortsSet(operActivePorts);
+      // sessionStorage에서 삭제 (기본값으로 복귀)
+      if (detailDevice?.DEVICE_ID) {
+        sessionStorage.removeItem(`chartPorts_${detailDevice.DEVICE_ID}`);
+      }
     }
   };
 
@@ -378,6 +473,56 @@ export default function AssetManagement() {
       window.location.reload();
     }
     setSnmpResultModal(null);
+  };
+
+  // 장비 설정 사이드바 열기
+  const handleOpenSettingsSidebar = () => {
+    if (detailDevice) {
+      setSnmpConfig({
+        SNMP_VERSION: detailDevice.SNMP_VERSION || 2,
+        SNMP_PORT: detailDevice.SNMP_PORT || 161,
+        SNMP_COMMUNITY: detailDevice.SNMP_COMMUNITY || 'public',
+        SNMP_USER: detailDevice.SNMP_USER || '',
+        SNMP_AUTH_PROTOCOL: detailDevice.SNMP_AUTH_PROTOCOL || 'MD5',
+        SNMP_AUTH_PASSWORD: detailDevice.SNMP_AUTH_PASSWORD || '',
+        SNMP_PRIV_PROTOCOL: detailDevice.SNMP_PRIV_PROTOCOL || 'DES',
+        SNMP_PRIV_PASSWORD: detailDevice.SNMP_PRIV_PASSWORD || ''
+      });
+    }
+    setShowSettingsSidebar(true);
+  };
+
+  // 장비 설정 사이드바 저장
+  const handleSaveSettings = async () => {
+    if (!detailDevice) return;
+    setSidebarSaving(true);
+    try {
+      // SNMP 설정 저장 (장비 정보 업데이트)
+      await updateDeviceMutation.mutateAsync({
+        deviceId: detailDevice.DEVICE_ID,
+        data: {
+          ...editFormData,
+          SNMP_VERSION: snmpConfig.SNMP_VERSION,
+          SNMP_PORT: snmpConfig.SNMP_PORT,
+          SNMP_COMMUNITY: snmpConfig.SNMP_COMMUNITY,
+          SNMP_USER: snmpConfig.SNMP_USER,
+          SNMP_AUTH_PROTOCOL: snmpConfig.SNMP_AUTH_PROTOCOL,
+          SNMP_AUTH_PASSWORD: snmpConfig.SNMP_AUTH_PASSWORD,
+          SNMP_PRIV_PROTOCOL: snmpConfig.SNMP_PRIV_PROTOCOL,
+          SNMP_PRIV_PASSWORD: snmpConfig.SNMP_PRIV_PASSWORD
+        }
+      });
+      // SSH 설정 저장
+      if (sshConfig.SSH_USER) {
+        await devicesApi.saveDeviceSsh(detailDevice.DEVICE_ID, sshConfig);
+      }
+      setShowSettingsSidebar(false);
+    } catch (error) {
+      console.error('설정 저장 실패:', error);
+      alert('설정 저장에 실패했습니다: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setSidebarSaving(false);
+    }
   };
 
   // 장비 수정 저장 및 모달 닫기
@@ -639,10 +784,130 @@ export default function AssetManagement() {
     return '-';
   };
 
-  // 긴 텍스트에 툴팁 필요 여부 확인
-  const needsTooltip = (value, maxLength = 20) => {
-    return value && value.length > maxLength;
-  };
+  // 포트 테이블 컬럼 정의
+  const portColumns = useMemo(() => [
+    {
+      key: 'IF_INDEX',
+      label: 'Index',
+      width: '70px',
+      sortable: true,
+      align: 'center',
+    },
+    {
+      key: 'IF_NAME',
+      label: '이름',
+      width: '120px',
+      sortable: true,
+      render: (value) => value || '-',
+    },
+    {
+      key: 'IF_DESCR',
+      label: '설명',
+      width: '130px',
+      sortable: true,
+      className: 'cell-truncate',
+      render: (value) => value || '-',
+    },
+    {
+      key: 'IF_DESCRIPTION',
+      label: 'Description',
+      width: '130px',
+      sortable: true,
+      className: 'cell-truncate',
+      render: (value) => value || '-',
+    },
+    {
+      key: 'IF_TYPE',
+      label: '타입',
+      width: '100px',
+      sortable: true,
+      render: (value, row) => (
+        <span className={`port-type-badge ${getPortTypeBadgeClass(value)}`}>
+          {row.ifTypeText || getPortTypeText(value)}
+        </span>
+      ),
+    },
+    {
+      key: 'IF_MTU',
+      label: 'MTU',
+      width: '70px',
+      sortable: true,
+      align: 'center',
+      render: (value) => value || '-',
+    },
+    {
+      key: 'IF_HIGH_SPEED',
+      label: '속도',
+      width: '100px',
+      sortable: true,
+      className: 'port-speed',
+      render: (value, row) => formatSpeed(row),
+    },
+    {
+      key: 'IF_MAC_ADDRESS',
+      label: 'MAC',
+      width: '140px',
+      sortable: true,
+      className: 'port-mac',
+      render: (value) => value || '-',
+    },
+    {
+      key: 'IF_ADMIN_STATUS',
+      label: 'Admin',
+      width: '70px',
+      sortable: true,
+      align: 'center',
+      render: (value) => (
+        <span className={`status-badge ${value === 1 ? 'up' : 'down'}`}>
+          {value === 1 ? 'Up' : 'Down'}
+        </span>
+      ),
+    },
+    {
+      key: 'IF_OPER_STATUS',
+      label: 'Oper',
+      width: '70px',
+      sortable: true,
+      align: 'center',
+      render: (value) => (
+        <span className={`status-badge ${value === 1 ? 'up' : 'down'}`}>
+          {value === 1 ? 'Up' : 'Down'}
+        </span>
+      ),
+    },
+    {
+      key: 'IF_OPER_FLAG',
+      label: 'Oper 감시',
+      width: '90px',
+      sortable: true,
+      align: 'center',
+      render: (value, row) => (
+        <span
+          className={`flag-badge clickable ${value === 1 || value === true ? 'active' : 'inactive'}`}
+          onClick={(e) => { e.stopPropagation(); handleTogglePortFlag(row, 'IF_OPER_FLAG'); }}
+          title="클릭하여 토글"
+        >
+          {value === 1 || value === true ? 'ON' : 'OFF'}
+        </span>
+      ),
+    },
+    {
+      key: 'IF_PERF_FLAG',
+      label: '성능 감시',
+      width: '90px',
+      sortable: true,
+      align: 'center',
+      render: (value, row) => (
+        <span
+          className={`flag-badge clickable ${value === 1 || value === true ? 'active' : 'inactive'}`}
+          onClick={(e) => { e.stopPropagation(); handleTogglePortFlag(row, 'IF_PERF_FLAG'); }}
+          title="클릭하여 토글"
+        >
+          {value === 1 || value === true ? 'ON' : 'OFF'}
+        </span>
+      ),
+    },
+  ], []);
 
   // 장비 테이블 컬럼 정의
   const deviceColumns = useMemo(() => [
@@ -652,21 +917,6 @@ export default function AssetManagement() {
       width: '180px',
       sortable: true,
       className: 'cell-truncate',
-      render: (value, row) => (
-        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {deviceErrorMap?.get(row.DEVICE_ID) && (
-            <span
-              className={`fault-led fault-led-${deviceErrorMap.get(row.DEVICE_ID)}`}
-              title={`장애 발생 (${
-                deviceErrorMap.get(row.DEVICE_ID) === 'C' ? 'Critical' :
-                deviceErrorMap.get(row.DEVICE_ID) === 'M' ? 'Major' :
-                deviceErrorMap.get(row.DEVICE_ID) === 'N' ? 'Minor' : 'Warning'
-              })`}
-            />
-          )}
-          {value}
-        </span>
-      ),
     },
     {
       key: 'GROUP_NAME',
@@ -722,30 +972,53 @@ export default function AssetManagement() {
       className: 'cell-date',
       render: (value) => formatDate(value),
     },
+    {
+      key: 'STATUS',
+      label: '상태',
+      width: '60px',
+      align: 'center',
+      render: (_, row) => {
+        const errorLevel = deviceErrorMap?.get(row.DEVICE_ID);
+        if (!errorLevel) {
+          return <span className="status-led status-led-normal" title="정상" />;
+        }
+        const levelName = errorLevel === 'C' ? 'Critical' :
+                          errorLevel === 'M' ? 'Major' :
+                          errorLevel === 'N' ? 'Minor' : 'Warning';
+        return (
+          <span
+            className={`status-led status-led-${errorLevel}`}
+            title={`장애: ${levelName}`}
+          />
+        );
+      },
+    },
   ], [deviceErrorMap]);
 
   return (
-    <div className="page-container">
-      <GroupTree />
-      <main className="page-main-content">
-        {/* 페이지 헤더 */}
-        <div className="page-header">
-          <div className="page-header-left">
-            <h1 className="page-title">
-              <i className="bi bi-hdd-rack"></i>
-              자산 관리
-            </h1>
-            <span className="page-subtitle">등록된 장비를 조회하고 관리합니다</span>
-            {selectedGroup && (
-              <span className="selected-group-badge">
-                <i className="bi bi-folder2"></i>
-                {selectedGroup.GROUP_NAME}
-              </span>
-            )}
-          </div>
+    <div className="asset-management-container">
+      {/* 페이지 헤더 */}
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">
+            <i className="bi bi-hdd-rack"></i>
+            자산 관리
+          </h1>
+          <span className="page-subtitle">등록된 장비를 조회하고 관리합니다</span>
+          {selectedGroup && (
+            <span className="selected-group-badge">
+              <i className="bi bi-folder2"></i>
+              {selectedGroup.GROUP_NAME}
+            </span>
+          )}
         </div>
+      </div>
 
-        {!selectedGroup ? (
+      {/* 패널 래퍼 - 사이드바와 메인 컨텐츠를 하나로 묶음 */}
+      <div className="page-panels-wrapper">
+        <GroupTree />
+        <main className="page-main-content">
+          {!selectedGroup ? (
           <p id="welcome-message">그룹을 선택하여 해당 그룹의 장비 목록을 확인하세요.</p>
         ) : isLoading ? (
           <p style={{ color: '#94a3b8' }}>로딩 중...</p>
@@ -825,17 +1098,189 @@ export default function AssetManagement() {
                   setPage(1);
                 },
               }}
-              maxHeight="calc(100vh - 340px)"
+              maxHeight="calc(100vh - 420px)"
             />
           </div>
         )}
-      </main>
+        </main>
+      </div>
 
       {/* 장비 상세 보기 모달 */}
       {detailDevice && (
         <div id="device-detail-modal" className="modal" style={{ display: 'flex' }}>
-          <div className="modal-content device-detail-modal">
+          <div className="modal-content device-detail-modal" style={{ position: 'relative', overflow: 'hidden' }}>
             <span className="close-btn" onClick={() => setDetailDevice(null)}>&times;</span>
+
+            {/* 장비 설정 사이드바 (모달 내부 오버레이) */}
+            {showSettingsSidebar && (
+              <div className="settings-sidebar-overlay" onClick={() => setShowSettingsSidebar(false)}>
+                <div className="settings-sidebar" onClick={(e) => e.stopPropagation()}>
+                  <div className="settings-sidebar-header">
+                    <div className="settings-sidebar-title">
+                      <i className="bi bi-gear"></i> 장비 설정
+                    </div>
+                    <span className="settings-sidebar-close" onClick={() => setShowSettingsSidebar(false)}>&times;</span>
+                  </div>
+
+                  <div className="settings-sidebar-body">
+                    {/* 관제 범위 설정 */}
+                    <div className="settings-section">
+                      <div className="settings-section-title">
+                        <i className="bi bi-broadcast"></i> 관제 범위 설정
+                      </div>
+                      {scopeLoading ? (
+                        <div className="scope-loading">
+                          <i className="bi bi-arrow-repeat spinning"></i> 로딩 중...
+                        </div>
+                      ) : (
+                        <div className="settings-scope-list">
+                          <div className="settings-scope-item">
+                            <div className="scope-item-info">
+                              <i className="bi bi-wifi scope-icon ping"></i>
+                              <div>
+                                <span className="scope-item-title">PING</span>
+                                <span className="scope-item-desc">ICMP 상태 모니터링</span>
+                              </div>
+                            </div>
+                            <label className="toggle-switch">
+                              <input type="checkbox" checked={deviceScope?.COLLECT_PING || false} onChange={() => handleToggleScope('COLLECT_PING')} disabled={updateDeviceScopeMutation.isPending} />
+                              <span className="toggle-slider"></span>
+                            </label>
+                          </div>
+                          <div className="settings-scope-item">
+                            <div className="scope-item-info">
+                              <i className="bi bi-diagram-3 scope-icon snmp"></i>
+                              <div>
+                                <span className="scope-item-title">SNMP</span>
+                                <span className="scope-item-desc">SNMP 상세 정보 수집</span>
+                              </div>
+                            </div>
+                            <label className="toggle-switch">
+                              <input type="checkbox" checked={deviceScope?.COLLECT_SNMP || false} onChange={() => handleToggleScope('COLLECT_SNMP')} disabled={updateDeviceScopeMutation.isPending} />
+                              <span className="toggle-slider"></span>
+                            </label>
+                          </div>
+                          <div className="settings-scope-item">
+                            <div className="scope-item-info">
+                              <i className="bi bi-cpu scope-icon agent"></i>
+                              <div>
+                                <span className="scope-item-title">AGENT</span>
+                                <span className="scope-item-desc">에이전트 시스템 수집</span>
+                              </div>
+                            </div>
+                            <label className="toggle-switch">
+                              <input type="checkbox" checked={deviceScope?.COLLECT_AGENT || false} onChange={() => handleToggleScope('COLLECT_AGENT')} disabled={updateDeviceScopeMutation.isPending} />
+                              <span className="toggle-slider"></span>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* SNMP 설정 */}
+                    <div className="settings-section">
+                      <div className="settings-section-title">
+                        <i className="bi bi-diagram-3"></i> SNMP 설정
+                      </div>
+                      <div className="settings-form">
+                        <div className="settings-form-row dual">
+                          <div className="settings-form-group">
+                            <label>버전</label>
+                            <select value={snmpConfig.SNMP_VERSION} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_VERSION: parseInt(e.target.value)})}>
+                              <option value={1}>v1</option>
+                              <option value={2}>v2c</option>
+                              <option value={3}>v3</option>
+                            </select>
+                          </div>
+                          <div className="settings-form-group">
+                            <label>포트</label>
+                            <input type="number" value={snmpConfig.SNMP_PORT} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_PORT: parseInt(e.target.value)})} />
+                          </div>
+                        </div>
+                        {String(snmpConfig.SNMP_VERSION) !== '3' ? (
+                          <div className="settings-form-group">
+                            <label>커뮤니티</label>
+                            <input type="text" value={snmpConfig.SNMP_COMMUNITY} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_COMMUNITY: e.target.value})} placeholder="public" />
+                          </div>
+                        ) : (
+                          <>
+                            <div className="settings-form-group">
+                              <label>사용자</label>
+                              <input type="text" value={snmpConfig.SNMP_USER} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_USER: e.target.value})} />
+                            </div>
+                            <div className="settings-form-row dual">
+                              <div className="settings-form-group">
+                                <label>인증</label>
+                                <select value={snmpConfig.SNMP_AUTH_PROTOCOL} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_AUTH_PROTOCOL: e.target.value})}>
+                                  <option value="MD5">MD5</option>
+                                  <option value="SHA">SHA</option>
+                                  <option value="SHA256">SHA256</option>
+                                </select>
+                              </div>
+                              <div className="settings-form-group">
+                                <label>인증 PW</label>
+                                <input type="text" value={snmpConfig.SNMP_AUTH_PASSWORD} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_AUTH_PASSWORD: e.target.value})} />
+                              </div>
+                            </div>
+                            <div className="settings-form-row dual">
+                              <div className="settings-form-group">
+                                <label>암호화</label>
+                                <select value={snmpConfig.SNMP_PRIV_PROTOCOL} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_PRIV_PROTOCOL: e.target.value})}>
+                                  <option value="DES">DES</option>
+                                  <option value="AES">AES128</option>
+                                  <option value="AES256">AES256</option>
+                                </select>
+                              </div>
+                              <div className="settings-form-group">
+                                <label>암호화 PW</label>
+                                <input type="text" value={snmpConfig.SNMP_PRIV_PASSWORD} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_PRIV_PASSWORD: e.target.value})} />
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* SSH/TELNET 접속 정보 */}
+                    <div className="settings-section">
+                      <div className="settings-section-title">
+                        <i className="bi bi-terminal"></i> 접속 정보
+                      </div>
+                      <div className="settings-form">
+                        <div className="settings-form-row dual">
+                          <div className="settings-form-group">
+                            <label>접속 방식</label>
+                            <select value={sshConfig.CONNECT_AS} onChange={(e) => setSshConfig({...sshConfig, CONNECT_AS: e.target.value})}>
+                              <option value="SSH">SSH</option>
+                              <option value="TELNET">TELNET</option>
+                            </select>
+                          </div>
+                          <div className="settings-form-group">
+                            <label>포트</label>
+                            <input type="number" value={sshConfig.SSH_PORT} onChange={(e) => setSshConfig({...sshConfig, SSH_PORT: parseInt(e.target.value)})} />
+                          </div>
+                        </div>
+                        <div className="settings-form-group">
+                          <label>사용자</label>
+                          <input type="text" value={sshConfig.SSH_USER} onChange={(e) => setSshConfig({...sshConfig, SSH_USER: e.target.value})} placeholder="root" />
+                        </div>
+                        <div className="settings-form-group">
+                          <label>비밀번호</label>
+                          <input type="text" value={sshConfig.SSH_PASS} onChange={(e) => setSshConfig({...sshConfig, SSH_PASS: e.target.value})} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="settings-sidebar-footer">
+                    <button className="btn btn-secondary" onClick={() => setShowSettingsSidebar(false)} disabled={sidebarSaving}>취소</button>
+                    <button className="btn btn-primary" onClick={handleSaveSettings} disabled={sidebarSaving}>
+                      {sidebarSaving ? <><i className="bi bi-arrow-repeat spinning"></i> 저장 중...</> : <><i className="bi bi-check-lg"></i> 저장</>}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* 탭 헤더 */}
             <div className="detail-tabs-row">
@@ -843,12 +1288,9 @@ export default function AssetManagement() {
                 <button className={`detail-tab ${activeTab === 'device-info' ? 'active' : ''}`} onClick={() => setActiveTab('device-info')}>
                   <i className="bi bi-info-circle"></i> 장비 정보
                 </button>
-                <button className={`detail-tab ${activeTab === 'scope-settings' ? 'active' : ''}`} onClick={() => setActiveTab('scope-settings')}>
-                  <i className="bi bi-sliders"></i> 수집 설정
-                </button>
                 <button className={`detail-tab ${activeTab === 'port-info' ? 'active' : ''}`} onClick={() => setActiveTab('port-info')}>
                   <i className="bi bi-ethernet"></i> 포트 정보
-                  {portsData?.length > 0 && <span className="tab-badge">{portsData.length}</span>}
+                  {portsDataRaw?.length > 0 && <span className="tab-badge">{portsDataRaw.length}</span>}
                 </button>
               </div>
             </div>
@@ -857,11 +1299,16 @@ export default function AssetManagement() {
             {activeTab === 'device-info' && (
               <div id="device-info-tab" className="detail-tab-content active">
                 <div className="two-column-layout">
-                  {/* 좌측: 장비정보, SNMP정보, CPU/MEM */}
+                  {/* 좌측: 장비정보, CPU/MEM */}
                   <div className="left-column">
                     {/* 장비 정보 */}
                     <div className="info-box">
-                      <div className="info-box-header"><i className="bi bi-hdd-network"></i> 장비 정보</div>
+                      <div className="info-box-header">
+                        <span><i className="bi bi-hdd-network"></i> 장비 정보</span>
+                        <button className="settings-gear-btn" onClick={handleOpenSettingsSidebar} title="장비 설정">
+                          <i className="bi bi-gear"></i>
+                        </button>
+                      </div>
                       <div className="info-box-body">
                         <div className="info-row">
                           <span className="label">장비명</span>
@@ -872,18 +1319,12 @@ export default function AssetManagement() {
                           <input type="text" className="edit-input ip" value={editFormData.DEVICE_IP || ''} onChange={(e) => setEditFormData({...editFormData, DEVICE_IP: e.target.value})} />
                         </div>
                         <div className="info-row">
-                          <span className="label">
-                            시스템명
-                            {(detailDevice.DEVICE_DESC || detailDevice.sysDescr) && (
-                              <span
-                                className="sys-descr-tooltip"
-                                title={detailDevice.DEVICE_DESC || detailDevice.sysDescr}
-                              >
-                                <i className="bi bi-question-circle"></i>
-                              </span>
-                            )}
-                          </span>
+                          <span className="label">시스템명</span>
                           <span className="value">{detailDevice.DEVICE_SYSTEM_NAME || '-'}</span>
+                        </div>
+                        <div className="info-row">
+                          <span className="label">시스템 설명</span>
+                          <span className="value sys-descr-value">{detailDevice.DEVICE_DESC || detailDevice.sysDescr || '-'}</span>
                         </div>
                         <div className="info-row">
                           <span className="label">벤더</span>
@@ -894,73 +1335,61 @@ export default function AssetManagement() {
                       </div>
                     </div>
 
-                    {/* SNMP 정보 */}
-                    <div className="info-box">
-                      <div className="info-box-header"><i className="bi bi-diagram-3"></i> SNMP 정보</div>
-                      <div className="info-box-body">
-                        {/* 버전 | 포트 */}
-                        <div className="info-row dual">
-                          <span className="label">버전</span>
-                          <select className="edit-select compact" value={editFormData.SNMP_VERSION || 2} onChange={(e) => setEditFormData({...editFormData, SNMP_VERSION: parseInt(e.target.value)})}>
-                            <option value={1}>v1</option>
-                            <option value={2}>v2c</option>
-                            <option value={3}>v3</option>
-                          </select>
-                          <span className="label">포트</span>
-                          <input type="number" className="edit-input compact" value={editFormData.SNMP_PORT || 161} onChange={(e) => setEditFormData({...editFormData, SNMP_PORT: parseInt(e.target.value)})} />
-                        </div>
-                        {/* 커뮤니티 or 사용자 */}
-                        <div className="info-row">
-                          <span className="label">{String(editFormData.SNMP_VERSION) === '3' ? '사용자' : '커뮤니티'}</span>
-                          {String(editFormData.SNMP_VERSION) === '3' ? (
-                            <input type="text" className="edit-input" value={editFormData.SNMP_USER || ''} onChange={(e) => setEditFormData({...editFormData, SNMP_USER: e.target.value})} />
-                          ) : (
-                            <input type="text" className="edit-input" value={editFormData.SNMP_COMMUNITY || ''} onChange={(e) => setEditFormData({...editFormData, SNMP_COMMUNITY: e.target.value})} placeholder="public" />
-                          )}
-                        </div>
-                        {/* v3 전용: 인증 | 인증 PW */}
-                        {String(editFormData.SNMP_VERSION) === '3' && (
-                          <>
-                            <div className="info-row dual">
-                              <span className="label">인증</span>
-                              <select className="edit-select compact" value={editFormData.SNMP_AUTH_PROTOCOL || 'MD5'} onChange={(e) => setEditFormData({...editFormData, SNMP_AUTH_PROTOCOL: e.target.value})}>
-                                <option value="MD5">MD5</option>
-                                <option value="SHA">SHA</option>
-                                <option value="SHA256">SHA256</option>
-                              </select>
-                              <span className="label">인증 PW</span>
-                              <input type="password" className="edit-input compact" value={editFormData.SNMP_AUTH_PASSWORD || ''} onChange={(e) => setEditFormData({...editFormData, SNMP_AUTH_PASSWORD: e.target.value})} />
-                            </div>
-                            <div className="info-row dual">
-                              <span className="label">암호화</span>
-                              <select className="edit-select compact" value={editFormData.SNMP_PRIV_PROTOCOL || 'DES'} onChange={(e) => setEditFormData({...editFormData, SNMP_PRIV_PROTOCOL: e.target.value})}>
-                                <option value="DES">DES</option>
-                                <option value="AES">AES128</option>
-                                <option value="AES256">AES256</option>
-                              </select>
-                              <span className="label">암호화 PW</span>
-                              <input type="password" className="edit-input compact" value={editFormData.SNMP_PRIV_PASSWORD || ''} onChange={(e) => setEditFormData({...editFormData, SNMP_PRIV_PASSWORD: e.target.value})} />
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
                     {/* CPU / MEM */}
                     <div className="info-box cpu-mem-box">
                       <div className="info-box-header"><i className="bi bi-cpu"></i> CPU / MEM</div>
                       <div className="info-box-body pie-body">
                         <div className="pie-wrapper">
                           <ReactECharts
-                            option={{series:[{type:'pie',radius:['55%','80%'],center:['50%','50%'],data:[{value:45,itemStyle:{color:'#3b82f6'}},{value:55,itemStyle:{color:'rgba(255,255,255,0.1)'}}],label:{show:true,position:'center',formatter:'45%',fontSize:20,fontWeight:'bold',color:'#3b82f6'},labelLine:{show:false},silent:true}]}}
-                            style={{height:'120px',width:'120px'}}
+                            option={{
+                              series: [{
+                                type: 'pie',
+                                radius: ['55%', '80%'],
+                                center: ['50%', '50%'],
+                                data: [
+                                  { value: cpuMemData?.CPU_USAGE || 0, itemStyle: { color: '#3b82f6' } },
+                                  { value: 100 - (cpuMemData?.CPU_USAGE || 0), itemStyle: { color: 'rgba(255,255,255,0.1)' } }
+                                ],
+                                label: {
+                                  show: true,
+                                  position: 'center',
+                                  formatter: cpuMemData?.CPU_USAGE != null ? `${Number(cpuMemData.CPU_USAGE).toFixed(1)}%` : '-',
+                                  fontSize: 18,
+                                  fontWeight: 'bold',
+                                  color: '#3b82f6'
+                                },
+                                labelLine: { show: false },
+                                silent: true
+                              }]
+                            }}
+                            style={{ height: '120px', width: '120px' }}
                           />
                           <span className="pie-name">CPU</span>
                         </div>
                         <div className="pie-wrapper">
                           <ReactECharts
-                            option={{series:[{type:'pie',radius:['55%','80%'],center:['50%','50%'],data:[{value:72,itemStyle:{color:'#10b981'}},{value:28,itemStyle:{color:'rgba(255,255,255,0.1)'}}],label:{show:true,position:'center',formatter:'72%',fontSize:20,fontWeight:'bold',color:'#10b981'},labelLine:{show:false},silent:true}]}}
-                            style={{height:'120px',width:'120px'}}
+                            option={{
+                              series: [{
+                                type: 'pie',
+                                radius: ['55%', '80%'],
+                                center: ['50%', '50%'],
+                                data: [
+                                  { value: cpuMemData?.MEM_USAGE || 0, itemStyle: { color: '#10b981' } },
+                                  { value: 100 - (cpuMemData?.MEM_USAGE || 0), itemStyle: { color: 'rgba(255,255,255,0.1)' } }
+                                ],
+                                label: {
+                                  show: true,
+                                  position: 'center',
+                                  formatter: cpuMemData?.MEM_USAGE != null ? `${Number(cpuMemData.MEM_USAGE).toFixed(1)}%` : '-',
+                                  fontSize: 18,
+                                  fontWeight: 'bold',
+                                  color: '#10b981'
+                                },
+                                labelLine: { show: false },
+                                silent: true
+                              }]
+                            }}
+                            style={{ height: '120px', width: '120px' }}
                           />
                           <span className="pie-name">MEM</span>
                         </div>
@@ -998,7 +1427,7 @@ export default function AssetManagement() {
                                       {group.ports.filter(p => p.parsed.portNum % 2 === 1).map(port => (
                                         <div
                                           key={port.IF_INDEX}
-                                          className={`port-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartEnabledPorts.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
+                                          className={`port-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartPortsSet.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
                                           title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
                                           onClick={() => handleToggleChartPort(port)}
                                         >
@@ -1006,7 +1435,7 @@ export default function AssetManagement() {
                                           <div className="port-connector">
                                             <div className="port-led"></div>
                                           </div>
-                                          {chartEnabledPorts.has(port.IF_INDEX) && <span className="chart-icon"></span>}
+                                          {chartPortsSet.has(port.IF_INDEX) && <span className="chart-icon"></span>}
                                         </div>
                                       ))}
                                     </div>
@@ -1015,7 +1444,7 @@ export default function AssetManagement() {
                                       {group.ports.filter(p => p.parsed.portNum % 2 === 0).map(port => (
                                         <div
                                           key={port.IF_INDEX}
-                                          className={`port-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartEnabledPorts.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
+                                          className={`port-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartPortsSet.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
                                           title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
                                           onClick={() => handleToggleChartPort(port)}
                                         >
@@ -1023,7 +1452,7 @@ export default function AssetManagement() {
                                           <div className="port-connector">
                                             <div className="port-led"></div>
                                           </div>
-                                          {chartEnabledPorts.has(port.IF_INDEX) && <span className="chart-icon"></span>}
+                                          {chartPortsSet.has(port.IF_INDEX) && <span className="chart-icon"></span>}
                                         </div>
                                       ))}
                                     </div>
@@ -1047,7 +1476,7 @@ export default function AssetManagement() {
                                       {group.ports.map(port => (
                                         <div
                                           key={port.IF_INDEX}
-                                          className={`port-jack uplink-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartEnabledPorts.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
+                                          className={`port-jack uplink-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartPortsSet.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
                                           title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
                                           onClick={() => handleToggleChartPort(port)}
                                         >
@@ -1055,7 +1484,7 @@ export default function AssetManagement() {
                                           <div className="port-connector sfp">
                                             <div className="port-led"></div>
                                           </div>
-                                          {chartEnabledPorts.has(port.IF_INDEX) && <span className="chart-icon"></span>}
+                                          {chartPortsSet.has(port.IF_INDEX) && <span className="chart-icon"></span>}
                                         </div>
                                       ))}
                                     </div>
@@ -1075,11 +1504,11 @@ export default function AssetManagement() {
                       <div className="info-box-header">
                         <i className="bi bi-graph-up-arrow"></i> 포트별 트래픽
                         <span className="time-label">
-                          {chartEnabledPorts.size > 0
-                            ? `선택: ${chartEnabledPorts.size}개 포트`
+                          {chartPortsSet.size > 0
+                            ? `선택: ${chartPortsSet.size}개 포트`
                             : 'TOP 5 (포트 클릭으로 선택)'}
                         </span>
-                        {chartEnabledPorts.size > 0 && (
+                        {chartPortsSet.size > 0 && (
                           <button
                             className="chart-clear-btn"
                             onClick={handleResetChartFlags}
@@ -1092,7 +1521,7 @@ export default function AssetManagement() {
                       </div>
                       <div className="info-box-body">
                         <ReactECharts
-                          key={`traffic-${Array.from(chartEnabledPorts).join('-')}`}
+                          key={`traffic-${Array.from(chartPortsSet).join('-')}`}
                           notMerge={true}
                           option={{
                             tooltip:{trigger:'axis',backgroundColor:'rgba(15,23,42,0.95)',borderColor:'rgba(59,130,246,0.3)',textStyle:{color:'#e2e8f0',fontSize:11},formatter:(params)=>{
@@ -1105,8 +1534,8 @@ export default function AssetManagement() {
                               });
                               return result;
                             }},
-                            legend:{show:true,bottom:0,left:'center',textStyle:{color:'#94a3b8',fontSize:10},itemWidth:12,itemHeight:8,itemGap:12},
-                            grid:{left:'3%',right:'3%',bottom:'20%',top:'5%',containLabel:true},
+                            legend:{type:'scroll',show:true,bottom:0,left:'center',width:'90%',textStyle:{color:'#94a3b8',fontSize:10},itemWidth:12,itemHeight:8,itemGap:10,pageButtonItemGap:5,pageButtonGap:10,pageIconColor:'#94a3b8',pageIconInactiveColor:'#4a5568',pageTextStyle:{color:'#94a3b8',fontSize:10}},
+                            grid:{left:'3%',right:'3%',bottom:'15%',top:'5%',containLabel:true},
                             xAxis:{type:'category',boundaryGap:false,data:trafficChartData.timeLabels||[],axisLabel:{color:'#64748b',fontSize:9},axisLine:{lineStyle:{color:'rgba(255,255,255,0.1)'}},splitLine:{show:false}},
                             yAxis:{type:'value',axisLabel:{color:'#64748b',fontSize:9,formatter:v=>v>=1000000?(v/1000000).toFixed(0)+'M':v>=1000?(v/1000).toFixed(0)+'K':v},axisLine:{show:false},splitLine:{lineStyle:{color:'rgba(255,255,255,0.05)'}}},
                             series:trafficChartData.series&&trafficChartData.series.length>0?trafficChartData.series.map(item=>({name:item.name,type:'line',smooth:true,symbol:'circle',symbolSize:4,showSymbol:false,lineStyle:{width:2},areaStyle:{opacity:0.05},data:item.data})):[{name:'데이터 없음',type:'line',data:[]}]
@@ -1120,198 +1549,22 @@ export default function AssetManagement() {
               </div>
             )}
 
-            {/* 수집 설정 탭 */}
-            {activeTab === 'scope-settings' && (
-              <div id="scope-settings-tab" className="detail-tab-content active">
-                <div className="detail-section-wrapper">
-                  <div className="detail-section">
-                    <div className="detail-section-header">
-                      <i className="bi bi-broadcast"></i>
-                      <span>데이터 수집 설정</span>
-                    </div>
-                    {scopeLoading ? (
-                      <div className="scope-loading">
-                        <i className="bi bi-arrow-repeat spinning"></i> 설정 정보를 불러오는 중...
-                      </div>
-                    ) : (
-                      <div className="scope-settings-grid">
-                        <div className="scope-item">
-                          <div className="scope-info">
-                            <i className="bi bi-wifi scope-icon ping"></i>
-                            <div className="scope-text">
-                              <span className="scope-title">PING 수집</span>
-                              <span className="scope-desc">ICMP 프로토콜로 장비 상태 모니터링</span>
-                            </div>
-                          </div>
-                          <label className="toggle-switch">
-                            <input
-                              type="checkbox"
-                              checked={deviceScope?.COLLECT_PING || false}
-                              onChange={() => handleToggleScope('COLLECT_PING')}
-                              disabled={updateDeviceScopeMutation.isPending}
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                        </div>
-
-                        <div className="scope-item">
-                          <div className="scope-info">
-                            <i className="bi bi-diagram-3 scope-icon snmp"></i>
-                            <div className="scope-text">
-                              <span className="scope-title">SNMP 수집</span>
-                              <span className="scope-desc">SNMP 프로토콜로 상세 정보 수집</span>
-                            </div>
-                          </div>
-                          <label className="toggle-switch">
-                            <input
-                              type="checkbox"
-                              checked={deviceScope?.COLLECT_SNMP || false}
-                              onChange={() => handleToggleScope('COLLECT_SNMP')}
-                              disabled={updateDeviceScopeMutation.isPending}
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                        </div>
-
-                        <div className="scope-item">
-                          <div className="scope-info">
-                            <i className="bi bi-cpu scope-icon agent"></i>
-                            <div className="scope-text">
-                              <span className="scope-title">AGENT 수집</span>
-                              <span className="scope-desc">에이전트를 통한 시스템 정보 수집</span>
-                            </div>
-                          </div>
-                          <label className="toggle-switch">
-                            <input
-                              type="checkbox"
-                              checked={deviceScope?.COLLECT_AGENT || false}
-                              onChange={() => handleToggleScope('COLLECT_AGENT')}
-                              disabled={updateDeviceScopeMutation.isPending}
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* 포트 정보 탭 */}
             {activeTab === 'port-info' && (
               <div id="port-info-tab" className="detail-tab-content active">
-                {portsLoading ? (
-                  <div id="port-loading" className="port-loading">
-                    <i className="bi bi-arrow-repeat spinning"></i> 포트 정보를 불러오는 중...
-                  </div>
-                ) : portsData?.length > 0 ? (
-                  <div id="port-table-wrapper" className="port-table-wrapper">
-                    <table className="port-table">
-                      <thead>
-                        <tr>
-                          <th className="sortable" onClick={() => handlePortSort('IF_INDEX')}>
-                            Index {renderSortIcon('IF_INDEX', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_NAME')}>
-                            이름 {renderSortIcon('IF_NAME', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_DESCR')}>
-                            설명 {renderSortIcon('IF_DESCR', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_DESCRIPTION')}>
-                            Description {renderSortIcon('IF_DESCRIPTION', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_TYPE')}>
-                            타입 {renderSortIcon('IF_TYPE', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_MTU')}>
-                            MTU {renderSortIcon('IF_MTU', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_HIGH_SPEED')}>
-                            속도 {renderSortIcon('IF_HIGH_SPEED', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_MAC_ADDRESS')}>
-                            MAC {renderSortIcon('IF_MAC_ADDRESS', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_ADMIN_STATUS')}>
-                            Admin {renderSortIcon('IF_ADMIN_STATUS', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_OPER_STATUS')}>
-                            Oper {renderSortIcon('IF_OPER_STATUS', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_OPER_FLAG')}>
-                            Oper 감시 {renderSortIcon('IF_OPER_FLAG', portSortField, portSortOrder)}
-                          </th>
-                          <th className="sortable" onClick={() => handlePortSort('IF_PERF_FLAG')}>
-                            성능 감시 {renderSortIcon('IF_PERF_FLAG', portSortField, portSortOrder)}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody id="port-table-tbody">
-                        {sortedPorts.map((port) => (
-                          <tr key={port.IF_INDEX}>
-                            <td>{port.IF_INDEX}</td>
-                            <td>{port.IF_NAME || '-'}</td>
-                            <td className={`${port.IF_DESCR && port.IF_DESCR.length > 15 ? 'tooltip-cell truncate-cell' : ''}`}>
-                              {port.IF_DESCR || '-'}
-                              {port.IF_DESCR && port.IF_DESCR.length > 15 && (
-                                <span className="tooltip-text">{port.IF_DESCR}</span>
-                              )}
-                            </td>
-                            <td className={`${port.IF_DESCRIPTION && port.IF_DESCRIPTION.length > 15 ? 'tooltip-cell truncate-cell' : ''}`}>
-                              {port.IF_DESCRIPTION || '-'}
-                              {port.IF_DESCRIPTION && port.IF_DESCRIPTION.length > 15 && (
-                                <span className="tooltip-text">{port.IF_DESCRIPTION}</span>
-                              )}
-                            </td>
-                            <td>
-                              <span className={`port-type-badge ${getPortTypeBadgeClass(port.IF_TYPE)}`}>
-                                {port.ifTypeText || getPortTypeText(port.IF_TYPE)}
-                              </span>
-                            </td>
-                            <td>{port.IF_MTU || '-'}</td>
-                            <td className="port-speed">{formatSpeed(port)}</td>
-                            <td className="port-mac">{port.IF_MAC_ADDRESS || '-'}</td>
-                            <td>
-                              <span className={`status-badge ${port.IF_ADMIN_STATUS === 1 ? 'up' : 'down'}`}>
-                                {port.IF_ADMIN_STATUS === 1 ? 'Up' : 'Down'}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={`status-badge ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}`}>
-                                {port.IF_OPER_STATUS === 1 ? 'Up' : 'Down'}
-                              </span>
-                            </td>
-                            <td>
-                              <span
-                                className={`flag-badge clickable ${port.IF_OPER_FLAG === 1 || port.IF_OPER_FLAG === true ? 'active' : 'inactive'}`}
-                                onClick={(e) => { e.stopPropagation(); handleTogglePortFlag(port, 'IF_OPER_FLAG'); }}
-                                title="클릭하여 토글"
-                              >
-                                {port.IF_OPER_FLAG === 1 || port.IF_OPER_FLAG === true ? 'ON' : 'OFF'}
-                              </span>
-                            </td>
-                            <td>
-                              <span
-                                className={`flag-badge clickable ${port.IF_PERF_FLAG === 1 || port.IF_PERF_FLAG === true ? 'active' : 'inactive'}`}
-                                onClick={(e) => { e.stopPropagation(); handleTogglePortFlag(port, 'IF_PERF_FLAG'); }}
-                                title="클릭하여 토글"
-                              >
-                                {port.IF_PERF_FLAG === 1 || port.IF_PERF_FLAG === true ? 'ON' : 'OFF'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div id="port-empty" className="port-empty">
-                    <i className="bi bi-ethernet"></i>
-                    <p>등록된 포트가 없습니다.</p>
-                  </div>
-                )}
+                <DataTable
+                  columns={portColumns}
+                  data={sortedPorts}
+                  rowKey="IF_INDEX"
+                  loading={portsLoading}
+                  loadingText="포트 정보를 불러오는 중..."
+                  emptyText="등록된 포트가 없습니다"
+                  emptyIcon="bi-ethernet"
+                  sort={{ field: portSortField, order: portSortOrder }}
+                  onSort={handlePortSort}
+                  maxHeight="calc(100vh - 380px)"
+                  className="port-data-table"
+                />
               </div>
             )}
 
@@ -1493,7 +1746,7 @@ export default function AssetManagement() {
                   <div className="form-group">
                     <label>인증 비밀번호</label>
                     <input
-                      type="password"
+                      type="text"
                       value={snmpConfig.SNMP_AUTH_PASSWORD}
                       onChange={(e) => setSnmpConfig({ ...snmpConfig, SNMP_AUTH_PASSWORD: e.target.value })}
                     />
@@ -1514,7 +1767,7 @@ export default function AssetManagement() {
                   <div className="form-group">
                     <label>암호화 비밀번호</label>
                     <input
-                      type="password"
+                      type="text"
                       value={snmpConfig.SNMP_PRIV_PASSWORD}
                       onChange={(e) => setSnmpConfig({ ...snmpConfig, SNMP_PRIV_PASSWORD: e.target.value })}
                     />
@@ -1604,6 +1857,7 @@ export default function AssetManagement() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

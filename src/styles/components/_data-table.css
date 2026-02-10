@@ -1,6 +1,6 @@
 /* ==================
    DataTable Component
-   NMS Modern Design System
+   NMS Modern Design System (Theme Support)
    ================== */
 
 /* 테이블 컨테이너 */
@@ -9,14 +9,11 @@
     flex-direction: column;
     flex: 1;
     min-height: 0;
-    background: linear-gradient(180deg, rgba(22, 27, 45, 0.95) 0%, rgba(15, 20, 35, 0.98) 100%);
-    border: 1px solid rgba(99, 102, 241, 0.18);
+    background: var(--theme-bg-panel);
+    border: 1px solid var(--theme-border-panel);
     border-radius: 12px;
     overflow: visible;
-    box-shadow:
-        0 4px 20px rgba(0, 0, 0, 0.25),
-        0 0 40px rgba(99, 102, 241, 0.03),
-        inset 0 1px 0 rgba(99, 102, 241, 0.08);
+    box-shadow: var(--theme-shadow-md);
 }
 
 /* 테이블 래퍼 - 스크롤 영역 */
@@ -32,9 +29,10 @@
 
 /* 테이블 기본 스타일 */
 .data-table {
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
-    table-layout: auto;
+    table-layout: fixed;
 }
 
 /* 테이블 헤더 */
@@ -43,7 +41,7 @@
 }
 
 .data-table thead tr {
-    background: linear-gradient(180deg, rgba(30, 35, 55, 0.98) 0%, rgba(22, 27, 45, 0.98) 100%);
+    background: var(--theme-bg-panel-header);
 }
 
 .data-table-wrapper.sticky-header thead {
@@ -57,13 +55,35 @@
     text-align: left;
     font-size: 11px;
     font-weight: 600;
-    color: #7c8ba3;
+    color: var(--theme-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.8px;
     border-bottom: none;
     white-space: nowrap;
-    background: transparent;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: var(--theme-bg-panel-header);
     position: relative;
+    cursor: grab;
+    user-select: none;
+    /* 드래그 시 부드러운 전환 */
+    transition: transform 150ms cubic-bezier(0.25, 1, 0.5, 1),
+                background 100ms ease,
+                color 100ms ease,
+                box-shadow 100ms ease;
+    will-change: transform;
+}
+
+/* 헤더 호버 */
+.data-table th:hover {
+    background: var(--theme-accent-bg);
+    color: var(--theme-text-secondary);
+}
+
+/* 헤더 클릭/드래그 중 */
+.data-table th:active {
+    cursor: grabbing;
+    background: rgba(99, 102, 241, 0.15);
 }
 
 /* 헤더 하단 그라디언트 라인 */
@@ -83,15 +103,19 @@
     );
 }
 
+/* sortable 헤더는 클릭 시 정렬 표시 */
 .data-table th.sortable {
-    cursor: pointer;
-    user-select: none;
-    transition: all 0.2s ease;
+    cursor: grab;
 }
 
-.data-table th.sortable:hover {
-    background: rgba(99, 102, 241, 0.08);
-    color: #a5b4d0;
+/* 선택 체크박스 헤더는 드래그 비활성 */
+.data-table th.select-cell {
+    cursor: default;
+}
+
+.data-table th.select-cell:hover {
+    background: var(--theme-bg-panel-header);
+    color: var(--theme-text-muted);
 }
 
 /* 정렬 아이콘 */
@@ -108,17 +132,17 @@
 
 .data-table .sort-icon.active {
     opacity: 1;
-    color: #818cf8;
+    color: var(--theme-accent-light);
 }
 
 /* 테이블 본문 */
 .data-table tbody tr {
-    border-bottom: 1px solid rgba(99, 102, 241, 0.06);
+    border-bottom: 1px solid var(--theme-border-default);
     transition: all 0.15s ease;
 }
 
 .data-table tbody tr:hover {
-    background: rgba(99, 102, 241, 0.08);
+    background: var(--theme-accent-bg);
 }
 
 .data-table tbody tr.clickable {
@@ -126,11 +150,11 @@
 }
 
 .data-table tbody tr.selected {
-    background: rgba(99, 102, 241, 0.12);
+    background: var(--theme-accent-bg);
 }
 
 .data-table tbody tr.selected:hover {
-    background: rgba(99, 102, 241, 0.16);
+    background: var(--theme-accent-bg-hover);
 }
 
 .data-table tbody tr:last-child {
@@ -140,8 +164,11 @@
 .data-table td {
     padding: 13px 18px;
     font-size: 13px;
-    color: #d1d9e8;
+    color: var(--theme-text-secondary);
     vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* 선택 체크박스 셀 */
@@ -156,7 +183,7 @@
     width: 16px;
     height: 16px;
     cursor: pointer;
-    accent-color: #6366f1;
+    accent-color: var(--theme-accent-primary);
 }
 
 /* 로딩 상태 */
@@ -173,14 +200,14 @@
     justify-content: center;
     padding: 70px 20px;
     gap: 18px;
-    color: #7c8ba3;
+    color: var(--theme-text-muted);
 }
 
 .table-loading .loading-spinner {
     width: 36px;
     height: 36px;
-    border: 3px solid rgba(99, 102, 241, 0.15);
-    border-top-color: #6366f1;
+    border: 3px solid var(--theme-accent-bg);
+    border-top-color: var(--theme-accent-primary);
     border-radius: 50%;
     animation: table-spin 0.8s linear infinite;
 }
@@ -202,7 +229,7 @@
     justify-content: center;
     padding: 70px 20px;
     gap: 14px;
-    color: #5a6780;
+    color: var(--theme-text-disabled);
 }
 
 .table-empty i {
@@ -222,16 +249,16 @@
 }
 
 .data-table-wrapper::-webkit-scrollbar-track {
-    background: rgba(20, 25, 40, 0.5);
+    background: var(--theme-scrollbar-track);
 }
 
 .data-table-wrapper::-webkit-scrollbar-thumb {
-    background: rgba(99, 102, 241, 0.25);
+    background: var(--theme-scrollbar-thumb);
     border-radius: 4px;
 }
 
 .data-table-wrapper::-webkit-scrollbar-thumb:hover {
-    background: rgba(99, 102, 241, 0.4);
+    background: var(--theme-scrollbar-thumb-hover);
 }
 
 /* 페이지네이션 영역 */
@@ -246,7 +273,7 @@
 
 /* IP 주소 스타일 */
 .data-table td.cell-ip {
-    color: #818cf8;
+    color: var(--theme-accent-light);
     font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
     font-size: 12px;
     font-weight: 500;
@@ -260,7 +287,7 @@
 
 /* 날짜 스타일 */
 .data-table td.cell-date {
-    color: #7c8ba3;
+    color: var(--theme-text-muted);
     font-size: 12px;
     white-space: nowrap;
 }
@@ -291,31 +318,31 @@
 
 .data-table .cell-badge.success {
     background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.15) 100%);
-    color: #34d399;
+    color: #10b981;
     border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
 .data-table .cell-badge.warning {
     background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.15) 100%);
-    color: #fbbf24;
+    color: #f59e0b;
     border: 1px solid rgba(245, 158, 11, 0.25);
 }
 
 .data-table .cell-badge.danger {
     background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.15) 100%);
-    color: #f87171;
+    color: #ef4444;
     border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
 .data-table .cell-badge.info {
     background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.15) 100%);
-    color: #a5b4fc;
+    color: var(--theme-accent-light);
     border: 1px solid rgba(99, 102, 241, 0.25);
 }
 
 .data-table .cell-badge.muted {
-    background: rgba(71, 85, 105, 0.25);
-    color: #94a3b8;
+    background: rgba(100, 116, 139, 0.15);
+    color: var(--theme-text-tertiary);
     border: 1px solid rgba(100, 116, 139, 0.2);
 }
 
@@ -334,30 +361,26 @@
 
 .data-table .severity-badge.critical {
     background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.2) 100%);
-    color: #fca5a5;
+    color: #ef4444;
     border: 1px solid rgba(239, 68, 68, 0.35);
-    text-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
 }
 
 .data-table .severity-badge.major {
     background: linear-gradient(135deg, rgba(249, 115, 22, 0.25) 0%, rgba(234, 88, 12, 0.2) 100%);
-    color: #fdba74;
+    color: #f97316;
     border: 1px solid rgba(249, 115, 22, 0.35);
-    text-shadow: 0 0 8px rgba(249, 115, 22, 0.4);
 }
 
 .data-table .severity-badge.minor {
     background: linear-gradient(135deg, rgba(234, 179, 8, 0.25) 0%, rgba(202, 138, 4, 0.2) 100%);
-    color: #fde047;
+    color: #eab308;
     border: 1px solid rgba(234, 179, 8, 0.35);
-    text-shadow: 0 0 8px rgba(234, 179, 8, 0.4);
 }
 
 .data-table .severity-badge.warning {
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.2) 100%);
-    color: #93c5fd;
+    color: #3b82f6;
     border: 1px solid rgba(59, 130, 246, 0.35);
-    text-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
 }
 
 /* 포트 수 뱃지 */
@@ -368,8 +391,8 @@
     justify-content: center;
     min-width: 30px;
     padding: 3px 10px;
-    background: rgba(99, 102, 241, 0.12);
-    color: #a5b4fc;
+    background: var(--theme-accent-bg);
+    color: var(--theme-accent-light);
     border: 1px solid rgba(99, 102, 241, 0.25);
     border-radius: 12px;
     font-size: 11px;
@@ -425,18 +448,18 @@
     height: 30px;
     padding: 0;
     margin: 0 2px;
-    background: rgba(99, 102, 241, 0.08);
-    border: 1px solid rgba(99, 102, 241, 0.15);
+    background: var(--theme-accent-bg);
+    border: 1px solid var(--theme-border-input);
     border-radius: 8px;
-    color: #818cf8;
+    color: var(--theme-accent-light);
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .data-table .action-btn:hover:not(:disabled) {
-    background: rgba(99, 102, 241, 0.2);
-    border-color: rgba(99, 102, 241, 0.4);
-    color: #a5b4fc;
+    background: var(--theme-accent-bg-hover);
+    border-color: var(--theme-accent-primary);
+    color: var(--theme-accent-lighter);
     transform: translateY(-1px);
 }
 
@@ -453,6 +476,62 @@
 
 .data-table .action-btn i {
     font-size: 13px;
+}
+
+/* ==================
+   컬럼 드래그 리오더링
+   ================== */
+
+/* 헤더 라벨 */
+.data-table th .th-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 드래그 중인 헤더 */
+.data-table th.dragging {
+    background: linear-gradient(135deg, var(--theme-accent-primary), var(--theme-accent-secondary, #8b5cf6)) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+    cursor: grabbing !important;
+}
+
+.data-table th.dragging .th-label,
+.data-table th.dragging .sort-icon {
+    color: rgba(255, 255, 255, 0.8);
+    opacity: 1;
+}
+
+/* 컬럼 순서 초기화 버튼 (옵션) */
+.column-order-controls {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--theme-border-default);
+}
+
+.btn-reset-columns {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid var(--theme-border-default);
+    border-radius: 6px;
+    color: var(--theme-text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-reset-columns:hover {
+    background: var(--theme-accent-bg);
+    border-color: var(--theme-accent-border);
+    color: var(--theme-accent-light);
+}
+
+.btn-reset-columns i {
+    font-size: 14px;
 }
 
 /* ==================

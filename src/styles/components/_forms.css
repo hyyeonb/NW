@@ -1,6 +1,6 @@
 /* ==================
    Form Components
-   NMS Glassmorphism Design System
+   NMS Glassmorphism Design System (Theme Support)
    ================== */
 
 /* Form Container */
@@ -21,9 +21,9 @@ textarea {
     width: 100%;
     padding: var(--spacing-input-y) var(--spacing-input-x);
     font-size: var(--font-size-input);
-    color: var(--color-text-primary);
-    background: linear-gradient(135deg, var(--color-bg-input) 0%, rgba(20, 20, 35, 0.6) 100%);
-    border: 1px solid var(--color-border-default);
+    color: var(--theme-text-primary);
+    background: var(--theme-bg-input);
+    border: 1px solid var(--theme-border-default);
     border-radius: var(--radius-lg);
     transition: all var(--transition-normal);
     outline: none;
@@ -31,24 +31,22 @@ textarea {
 
 .form-input::placeholder,
 input::placeholder {
-    color: var(--color-text-muted);
+    color: var(--theme-text-muted);
 }
 
 .form-input:focus,
 input:focus,
 textarea:focus {
-    border-color: var(--color-border-focus);
-    background: linear-gradient(135deg, rgba(15, 15, 25, 0.9) 0%, rgba(20, 20, 35, 0.8) 100%);
-    box-shadow:
-        0 0 0 3px rgba(59, 130, 246, 0.15),
-        0 4px 12px rgba(0, 0, 0, 0.2);
+    border-color: var(--theme-accent-primary);
+    background: var(--theme-bg-elevated);
+    box-shadow: 0 0 0 3px var(--theme-accent-bg);
 }
 
 .form-input:disabled,
 input:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-    background: rgba(15, 15, 25, 0.4);
+    background: var(--theme-bg-tertiary);
 }
 
 /* Small Input */
@@ -64,9 +62,9 @@ select {
     width: 100%;
     padding: var(--spacing-input-y) var(--spacing-input-x);
     font-size: var(--font-size-input);
-    color: var(--color-text-primary);
-    background: linear-gradient(135deg, var(--color-bg-input) 0%, rgba(20, 20, 35, 0.6) 100%);
-    border: 1px solid var(--color-border-default);
+    color: var(--theme-text-primary);
+    background: var(--theme-bg-input);
+    border: 1px solid var(--theme-border-default);
     border-radius: var(--radius-lg);
     cursor: pointer;
     transition: all var(--transition-normal);
@@ -79,10 +77,8 @@ select {
 }
 
 select:focus {
-    border-color: var(--color-border-focus);
-    box-shadow:
-        0 0 0 3px rgba(59, 130, 246, 0.15),
-        0 4px 12px rgba(0, 0, 0, 0.2);
+    border-color: var(--theme-accent-primary);
+    box-shadow: 0 0 0 3px var(--theme-accent-bg);
 }
 
 select:disabled {
@@ -91,14 +87,14 @@ select:disabled {
 }
 
 select option {
-    background: #1e293b;
-    color: #e2e8f0;
+    background: var(--theme-bg-elevated);
+    color: var(--theme-text-secondary);
     padding: 10px 12px;
 }
 
 select option:hover,
 select option:checked {
-    background: var(--color-primary-500);
+    background: var(--theme-accent-primary);
     color: #ffffff;
 }
 
@@ -109,7 +105,7 @@ input[type="radio"] {
     height: 18px;
     margin: 0;
     cursor: pointer;
-    accent-color: var(--color-primary-500);
+    accent-color: var(--theme-accent-primary);
 }
 
 /* Form Layout */
@@ -156,7 +152,7 @@ input[type="radio"] {
 
 .form-field label {
     font-size: var(--font-size-label-xs);
-    color: var(--color-text-secondary);
+    color: var(--theme-text-tertiary);
     margin-bottom: var(--spacing-1);
     font-weight: var(--font-weight-medium);
     text-transform: uppercase;

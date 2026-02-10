@@ -99,3 +99,537 @@
     0%, 100% { opacity: 1; }
     50% { opacity: 0.8; }
 }
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+@keyframes glow {
+    0%, 100% { box-shadow: 0 0 5px var(--theme-accent-glow); }
+    50% { box-shadow: 0 0 20px var(--theme-accent-glow); }
+}
+
+/* ==================
+   Glassmorphism Utility Classes
+   Apple Liquid Glass 2025 Inspired
+   ================== */
+
+/* 기본 글래스 패널 */
+.glass-panel {
+    background: var(--theme-bg-panel);
+    backdrop-filter: var(--theme-glass-blur) var(--theme-glass-saturate);
+    -webkit-backdrop-filter: var(--theme-glass-blur) var(--theme-glass-saturate);
+    border: 1px solid var(--theme-glass-border);
+    border-radius: 16px;
+    box-shadow: var(--theme-shadow-lg);
+    position: relative;
+    overflow: hidden;
+}
+
+.glass-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--theme-glass-highlight);
+    pointer-events: none;
+}
+
+.glass-panel:hover {
+    border-color: var(--theme-glass-border-hover);
+}
+
+/* 강조된 글래스 패널 (액센트 테두리) */
+.glass-panel-accent {
+    background: var(--theme-bg-panel);
+    backdrop-filter: var(--theme-glass-blur) var(--theme-glass-saturate);
+    -webkit-backdrop-filter: var(--theme-glass-blur) var(--theme-glass-saturate);
+    border: 1px solid var(--theme-accent-border);
+    border-radius: 16px;
+    box-shadow: var(--theme-shadow-lg), var(--theme-shadow-glow);
+    position: relative;
+    overflow: hidden;
+}
+
+.glass-panel-accent::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--theme-accent-lighter), transparent);
+    pointer-events: none;
+}
+
+/* 글래스 카드 */
+.glass-card {
+    background: var(--theme-card-bg);
+    backdrop-filter: var(--theme-glass-blur);
+    -webkit-backdrop-filter: var(--theme-glass-blur);
+    border: 1px solid var(--theme-card-border);
+    border-radius: 12px;
+    box-shadow: var(--theme-card-shadow);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: var(--theme-glass-shine);
+    border-radius: 12px 12px 0 0;
+    pointer-events: none;
+    opacity: 0.5;
+}
+
+.glass-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--theme-border-hover);
+    box-shadow: var(--theme-shadow-xl);
+}
+
+/* 글래스 입력 필드 */
+.glass-input {
+    background: var(--theme-input-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--theme-input-border);
+    border-radius: 10px;
+    color: var(--theme-text-primary);
+    transition: all 0.2s ease;
+}
+
+.glass-input:focus {
+    border-color: var(--theme-input-focus-border);
+    box-shadow: var(--theme-input-focus-glow);
+    background: var(--theme-bg-elevated);
+}
+
+/* 글래스 버튼 */
+.glass-button {
+    background: var(--theme-glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--theme-glass-border);
+    border-radius: 10px;
+    color: var(--theme-text-secondary);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.glass-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent);
+    pointer-events: none;
+}
+
+.glass-button:hover {
+    background: var(--theme-glass-bg-hover);
+    border-color: var(--theme-glass-border-hover);
+    color: var(--theme-text-primary);
+    transform: translateY(-1px);
+}
+
+.glass-button:active {
+    transform: translateY(0);
+    background: var(--theme-glass-bg-active);
+}
+
+/* 글래스 테이블 컨테이너 */
+.glass-table-container {
+    background: var(--theme-bg-panel);
+    backdrop-filter: var(--theme-glass-blur);
+    -webkit-backdrop-filter: var(--theme-glass-blur);
+    border: 1px solid var(--theme-border-panel);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--theme-shadow-md);
+}
+
+/* 글래스 헤더 */
+.glass-header {
+    background: var(--theme-bg-panel-header);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-bottom: 1px solid var(--theme-border-subtle);
+}
+
+/* 글래스 사이드바 */
+.glass-sidebar {
+    background: var(--theme-nav-bg);
+    backdrop-filter: var(--theme-glass-blur-heavy);
+    -webkit-backdrop-filter: var(--theme-glass-blur-heavy);
+    border-right: 1px solid var(--theme-nav-border);
+    box-shadow: var(--theme-shadow-xl);
+}
+
+/* 글래스 위젯 */
+.glass-widget {
+    background: var(--theme-widget-bg);
+    backdrop-filter: var(--theme-glass-blur);
+    -webkit-backdrop-filter: var(--theme-glass-blur);
+    border: 1px solid var(--theme-widget-border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--theme-shadow-md);
+    transition: all 0.3s ease;
+}
+
+.glass-widget:hover {
+    border-color: var(--theme-border-hover);
+    box-shadow: var(--theme-shadow-lg);
+}
+
+/* 글래스 모달 */
+.glass-modal {
+    background: var(--theme-bg-elevated);
+    backdrop-filter: var(--theme-glass-blur-heavy);
+    -webkit-backdrop-filter: var(--theme-glass-blur-heavy);
+    border: 1px solid var(--theme-glass-border);
+    border-radius: 20px;
+    box-shadow: var(--theme-shadow-2xl);
+}
+
+/* 글래스 뱃지 */
+.glass-badge {
+    background: var(--theme-glass-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--theme-glass-border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* 상태별 글래스 뱃지 */
+.glass-badge-success {
+    background: var(--theme-success-bg);
+    border-color: var(--theme-success-border);
+    color: var(--theme-success-text);
+}
+
+.glass-badge-warning {
+    background: var(--theme-warning-bg);
+    border-color: var(--theme-warning-border);
+    color: var(--theme-warning-text);
+}
+
+.glass-badge-danger {
+    background: var(--theme-danger-bg);
+    border-color: var(--theme-danger-border);
+    color: var(--theme-danger-text);
+}
+
+.glass-badge-info {
+    background: var(--theme-info-bg);
+    border-color: var(--theme-info-border);
+    color: var(--theme-info-text);
+}
+
+/* 글로우 효과 */
+.glow-accent {
+    box-shadow: var(--theme-shadow-glow);
+}
+
+.glow-success {
+    box-shadow: var(--theme-success-glow);
+}
+
+.glow-warning {
+    box-shadow: var(--theme-warning-glow);
+}
+
+.glow-danger {
+    box-shadow: var(--theme-danger-glow);
+}
+
+/* 호버 리프트 효과 */
+.hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--theme-shadow-xl);
+}
+
+/* 샤인 효과 (상단 하이라이트) */
+.shine-effect {
+    position: relative;
+}
+
+.shine-effect::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 40%;
+    background: var(--theme-glass-shine);
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+/* ==================
+   Animated Border Glow Effect
+   테두리를 따라 도는 은은한 조명 효과
+   ================== */
+
+/* 기본 글로우 보더 */
+.glow-border {
+    position: relative;
+    background: var(--theme-bg-panel);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.glow-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(
+        135deg,
+        rgba(99, 102, 241, 0.3),
+        rgba(139, 92, 246, 0.1),
+        rgba(59, 130, 246, 0.3),
+        rgba(99, 102, 241, 0.1)
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+/* 애니메이션 글로우 보더 - 천천히 회전 */
+.glow-border-animated {
+    position: relative;
+    background: var(--theme-bg-panel);
+    border-radius: 16px;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.glow-border-animated::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: conic-gradient(
+        from var(--glow-angle, 0deg),
+        transparent 0%,
+        rgba(99, 102, 241, 0.4) 10%,
+        rgba(139, 92, 246, 0.3) 20%,
+        transparent 30%,
+        transparent 50%,
+        rgba(59, 130, 246, 0.4) 60%,
+        rgba(6, 182, 212, 0.3) 70%,
+        transparent 80%,
+        transparent 100%
+    );
+    border-radius: inherit;
+    animation: glowRotate 8s linear infinite;
+    z-index: -1;
+}
+
+.glow-border-animated::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: var(--theme-bg-panel);
+    border-radius: calc(16px - 1px);
+    z-index: -1;
+}
+
+@property --glow-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+
+@keyframes glowRotate {
+    0% { --glow-angle: 0deg; }
+    100% { --glow-angle: 360deg; }
+}
+
+/* 호버 시에만 애니메이션 활성화 */
+.glow-border-hover {
+    position: relative;
+    background: var(--theme-bg-panel);
+    border-radius: 16px;
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid var(--theme-border-panel);
+    transition: border-color 0.3s ease;
+}
+
+.glow-border-hover::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: conic-gradient(
+        from var(--glow-angle, 0deg),
+        transparent 0%,
+        rgba(99, 102, 241, 0.5) 10%,
+        rgba(139, 92, 246, 0.4) 20%,
+        transparent 30%,
+        transparent 50%,
+        rgba(59, 130, 246, 0.5) 60%,
+        rgba(6, 182, 212, 0.4) 70%,
+        transparent 80%,
+        transparent 100%
+    );
+    border-radius: inherit;
+    opacity: 0;
+    animation: glowRotate 6s linear infinite paused;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+}
+
+.glow-border-hover::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: var(--theme-bg-panel);
+    border-radius: calc(16px - 1px);
+    z-index: -1;
+}
+
+.glow-border-hover:hover {
+    border-color: transparent;
+}
+
+.glow-border-hover:hover::before {
+    opacity: 1;
+    animation-play-state: running;
+}
+
+/* 펄스 글로우 - 부드럽게 깜빡이는 효과 */
+.glow-border-pulse {
+    position: relative;
+    background: var(--theme-bg-panel);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.glow-border-pulse::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(
+        135deg,
+        rgba(99, 102, 241, 0.4),
+        rgba(139, 92, 246, 0.2),
+        rgba(59, 130, 246, 0.4)
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    animation: glowPulse 3s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.8; }
+}
+
+/* 그라데이션 스윕 효과 - 테두리를 따라 빛이 이동 */
+.glow-border-sweep {
+    position: relative;
+    background: var(--theme-bg-panel);
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--theme-border-panel);
+}
+
+.glow-border-sweep::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        transparent 40%,
+        rgba(99, 102, 241, 0.6) 50%,
+        transparent 60%,
+        transparent
+    );
+    border-radius: inherit;
+    animation: glowSweep 4s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.glow-border-sweep::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: var(--theme-bg-panel);
+    border-radius: calc(16px - 1px);
+}
+
+@keyframes glowSweep {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 코너 글로우 - 모서리에서 빛나는 효과 */
+.glow-corners {
+    position: relative;
+    background: var(--theme-bg-panel);
+    border-radius: 16px;
+    border: 1px solid var(--theme-border-panel);
+}
+
+.glow-corners::before,
+.glow-corners::after {
+    content: '';
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    filter: blur(30px);
+    opacity: 0.4;
+    pointer-events: none;
+    animation: cornerGlow 4s ease-in-out infinite alternate;
+}
+
+.glow-corners::before {
+    top: -20px;
+    left: -20px;
+    background: rgba(99, 102, 241, 0.5);
+}
+
+.glow-corners::after {
+    bottom: -20px;
+    right: -20px;
+    background: rgba(139, 92, 246, 0.5);
+    animation-delay: 2s;
+}
+
+@keyframes cornerGlow {
+    0% { opacity: 0.2; transform: scale(0.8); }
+    100% { opacity: 0.5; transform: scale(1.1); }
+}

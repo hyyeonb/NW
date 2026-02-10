@@ -1,5 +1,5 @@
 /* ==================
-   그룹 트리 스타일
+   그룹 트리 스타일 (Theme Support)
    ================== */
 
 /* 그룹 검색 박스 */
@@ -13,7 +13,7 @@
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    color: #64748b;
+    color: var(--theme-text-muted);
     font-size: 13px;
     pointer-events: none;
 }
@@ -21,29 +21,29 @@
 .group-search-input {
     width: 100%;
     padding: 10px 36px 10px 32px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--theme-bg-input);
+    border: 1px solid var(--theme-border-default);
     border-radius: 8px;
-    color: #f1f5f9;
+    color: var(--theme-text-primary);
     font-size: 14px;
     transition: all 0.2s ease;
     text-indent: 20px;
 }
 
 .group-search-input:hover {
-    border-color: rgba(255, 255, 255, 0.15);
-    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--theme-border-hover);
+    background: var(--theme-bg-hover);
 }
 
 .group-search-input:focus {
     outline: none;
-    border-color: rgba(99, 102, 241, 0.5);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--theme-input-focus-border);
+    box-shadow: 0 0 0 3px var(--theme-input-focus-ring);
+    background: var(--theme-bg-input);
 }
 
 .group-search-input::placeholder {
-    color: #64748b;
+    color: var(--theme-text-muted);
 }
 
 .search-clear-btn {
@@ -56,18 +56,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--theme-glass-bg);
     border: none;
     border-radius: 50%;
-    color: #94a3b8;
+    color: var(--theme-text-tertiary);
     cursor: pointer;
     font-size: 12px;
     transition: all 0.15s ease;
 }
 
 .search-clear-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    color: #f1f5f9;
+    background: var(--theme-accent-bg-hover);
+    color: var(--theme-text-primary);
 }
 
 .gm-tree {
@@ -75,9 +75,9 @@
     max-height: 600px;
     overflow-y: auto;
     padding: 15px;
-    background: rgba(15, 23, 42, 0.5);
+    background: var(--theme-bg-tertiary);
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--theme-border-subtle);
 }
 
 /* 스크롤바 */
@@ -86,18 +86,18 @@
 }
 
 .gm-tree::-webkit-scrollbar-track {
-    background: rgba(15, 23, 42, 0.5);
+    background: var(--theme-scrollbar-track);
     border-radius: 10px;
 }
 
 .gm-tree::-webkit-scrollbar-thumb {
-    background: rgba(59, 130, 246, 0.4);
+    background: var(--theme-scrollbar-thumb);
     border-radius: 10px;
     transition: background 0.3s ease;
 }
 
 .gm-tree::-webkit-scrollbar-thumb:hover {
-    background: rgba(59, 130, 246, 0.6);
+    background: var(--theme-scrollbar-thumb-hover);
 }
 
 .gm-tree ul {
@@ -138,7 +138,7 @@
     top: 50%;
     width: 10px;
     height: 1px;
-    background: rgba(100, 116, 139, 0.3);
+    background: var(--theme-border-default);
 }
 
 /* 세로선 - 각 li의 왼쪽에 그려서 아래 형제와 연결 */
@@ -149,7 +149,7 @@
     top: 0;
     bottom: -2px;
     width: 1px;
-    background: rgba(100, 116, 139, 0.3);
+    background: var(--theme-border-default);
 }
 
 /* 최상위 ul의 자식들은 세로선 없음 */
@@ -190,7 +190,7 @@
     cursor: pointer;
     transition: all 0.15s ease;
     font-size: 12px;
-    color: #cbd5e1;
+    color: var(--theme-text-secondary);
     position: relative;
     font-weight: 500;
     flex: 1;
@@ -201,18 +201,18 @@
 }
 
 .group-item:hover {
-    background: rgba(59, 130, 246, 0.08);
-    color: #f1f5f9;
+    background: var(--theme-accent-bg);
+    color: var(--theme-text-primary);
 }
 
 .group-item.selected {
-    background: rgba(59, 130, 246, 0.12);
-    color: #60a5fa;
+    background: var(--theme-accent-bg-hover);
+    color: var(--theme-accent-light);
     font-weight: 600;
 }
 
 .group-item.selected:hover {
-    background: rgba(59, 130, 246, 0.18);
+    background: var(--theme-accent-border);
 }
 
 /* 그룹명 텍스트 */
@@ -283,13 +283,13 @@
 }
 
 .group-item.drag-over {
-    background: rgba(59, 130, 246, 0.2);
-    box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.6);
+    background: var(--theme-info-bg);
+    box-shadow: inset 0 0 0 2px var(--theme-info-border);
 }
 
 .group-item.drag-invalid {
-    background: rgba(239, 68, 68, 0.2);
-    box-shadow: inset 0 0 0 2px rgba(239, 68, 68, 0.6);
+    background: var(--theme-danger-bg);
+    box-shadow: inset 0 0 0 2px var(--theme-danger-border);
 }
 
 /* 토글 아이콘 */
@@ -298,7 +298,7 @@
     height: 16px;
     cursor: pointer;
     transition: transform 0.2s ease;
-    color: #64748b;
+    color: var(--theme-text-muted);
     position: absolute;
     left: 0;
     flex-shrink: 0;
@@ -310,6 +310,7 @@
 .group-item-wrapper {
     position: relative;
     padding-left: 22px;
+    overflow: hidden;
 }
 
 .group-item-wrapper::before {
@@ -326,7 +327,7 @@
 }
 
 .toggle-icon:hover {
-    color: #94a3b8;
+    color: var(--theme-text-tertiary);
 }
 
 /* 폴더 아이콘 숨김 */
@@ -344,26 +345,26 @@
 }
 
 .group-icon.default-icon {
-    color: #64748b;
+    color: var(--theme-text-muted);
     opacity: 0.8;
 }
 
 .group-icon.custom-icon {
-    color: #60a5fa;
+    color: var(--theme-accent-light);
 }
 
 .group-item:hover .group-icon.default-icon {
-    color: #94a3b8;
+    color: var(--theme-text-tertiary);
     opacity: 1;
 }
 
 .group-item.selected .group-icon.default-icon {
-    color: #60a5fa;
+    color: var(--theme-accent-light);
     opacity: 1;
 }
 
 .group-item.selected .group-icon.custom-icon {
-    color: #93c5fd;
+    color: var(--theme-accent-lighter);
 }
 
 /* 아이콘 크기 - 모든 Depth 동일 */
@@ -379,21 +380,21 @@
     padding: 1px 4px;
     font-size: 10px;
     font-weight: 600;
-    color: #64748b;
-    background: rgba(100, 116, 139, 0.15);
+    color: var(--theme-text-muted);
+    background: var(--theme-bg-hover);
     border-radius: 8px;
     min-width: 16px;
     flex-shrink: 0;
 }
 
 .group-item:hover .child-count {
-    background: rgba(59, 130, 246, 0.2);
-    color: #94a3b8;
+    background: var(--theme-accent-bg);
+    color: var(--theme-text-tertiary);
 }
 
 .group-item.selected .child-count {
-    background: rgba(59, 130, 246, 0.25);
-    color: #60a5fa;
+    background: var(--theme-accent-bg-hover);
+    color: var(--theme-accent-light);
 }
 
 
@@ -402,11 +403,11 @@
    ================== */
 .context-menu {
     position: fixed;
-    background: rgba(26, 26, 46, 0.95);
+    background: var(--theme-bg-elevated);
     backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--theme-border-default);
     border-radius: 12px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--theme-shadow-xl);
     padding: 8px;
     min-width: 180px;
     z-index: 10000;
@@ -434,18 +435,18 @@
     cursor: pointer;
     transition: all 0.3s ease;
     font-size: 14px;
-    color: #e2e8f0;
+    color: var(--theme-text-secondary);
     border-radius: 8px;
 }
 
 .context-menu-item:hover {
-    background: rgba(59, 130, 246, 0.2);
-    color: #ffffff;
+    background: var(--theme-accent-bg);
+    color: var(--theme-text-primary);
 }
 
 .context-menu-item.danger:hover {
-    background: rgba(239, 68, 68, 0.2);
-    color: #fca5a5;
+    background: var(--theme-danger-bg);
+    color: var(--theme-danger-text);
 }
 
 .context-menu-item .icon {
@@ -454,7 +455,7 @@
 
 .context-menu-divider {
     height: 1px;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--theme-border-default);
     margin: 6px 0;
 }
 
@@ -490,7 +491,7 @@
     cursor: pointer;
     transition: all 0.15s ease;
     font-size: 12px;
-    color: #94a3b8;
+    color: var(--theme-text-tertiary);
     position: relative;
     font-weight: 400;
     flex: 1;
@@ -501,18 +502,18 @@
 }
 
 .device-item:hover {
-    background: rgba(59, 130, 246, 0.08);
-    color: #e2e8f0;
+    background: var(--theme-accent-bg);
+    color: var(--theme-text-secondary);
 }
 
 .device-item.selected {
-    background: rgba(59, 130, 246, 0.15);
-    color: #60a5fa;
+    background: var(--theme-accent-bg-hover);
+    color: var(--theme-accent-light);
     font-weight: 500;
 }
 
 .device-item.selected:hover {
-    background: rgba(59, 130, 246, 0.2);
+    background: var(--theme-accent-border);
 }
 
 /* 장비 IP 배지 */
@@ -522,21 +523,21 @@
     padding: 2px 6px;
     font-size: 10px;
     font-weight: 500;
-    color: #64748b;
-    background: rgba(100, 116, 139, 0.15);
+    color: var(--theme-text-muted);
+    background: var(--theme-bg-hover);
     border-radius: 4px;
     margin-left: auto;
     font-family: 'Consolas', 'Monaco', monospace;
 }
 
 .device-item:hover .device-ip-badge {
-    background: rgba(59, 130, 246, 0.15);
-    color: #94a3b8;
+    background: var(--theme-accent-bg);
+    color: var(--theme-text-tertiary);
 }
 
 .device-item.selected .device-ip-badge {
-    background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
+    background: var(--theme-accent-bg-hover);
+    color: var(--theme-accent-light);
 }
 
 /* 장비 포트 개수 배지 */
@@ -547,18 +548,18 @@
     padding: 2px 6px;
     font-size: 10px;
     font-weight: 600;
-    color: #4ade80;
-    background: rgba(34, 197, 94, 0.15);
+    color: var(--theme-success-text);
+    background: var(--theme-success-bg);
     border-radius: 10px;
     min-width: 20px;
 }
 
 .device-item:hover .device-port-badge {
-    background: rgba(34, 197, 94, 0.2);
+    background: var(--theme-success-bg);
 }
 
 .device-item.selected .device-port-badge {
-    background: rgba(34, 197, 94, 0.25);
+    background: var(--theme-success-bg);
 }
 
 /* 장비 로딩 표시 */

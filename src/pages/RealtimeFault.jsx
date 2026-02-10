@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { faultApi } from '../api';
+import { faultApi, devicesApi } from '../api';
 import { useAlertStore } from '../stores/alertStore';
 import { DataTable } from '../components';
 import '../styles/fault-monitoring.css';
@@ -26,9 +26,17 @@ export default function RealtimeFault() {
   const [searchErrorMessage, setSearchErrorMessage] = useState('');
   const [searchIp, setSearchIp] = useState('');
   const [searchGroupName, setSearchGroupName] = useState('');
+  const [searchDevCode, setSearchDevCode] = useState('');
+
+  // 장비 코드 목록 (최상위)
+  const [devCodes, setDevCodes] = useState([]);
 
   // 정렬
   const [sortConfig, setSortConfig] = useState({ key: 'OCCUR_AT', direction: 'desc' });
+
+  // 페이지네이션
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   // WebSocket 알림 구독 (새 알림 시 리렌더링)
   const alerts = useAlertStore((state) => state.alerts);
@@ -46,11 +54,25 @@ export default function RealtimeFault() {
     });
   };
 
+  // 장비 코드 목록 로드
+  useEffect(() => {
+    const loadDevCodes = async () => {
+      try {
+        const response = await devicesApi.getDevCodeTree();
+        setDevCodes(response.data?.data || []);
+      } catch (error) {
+        console.error('장비 코드 조회 실패:', error);
+      }
+    };
+    loadDevCodes();
+  }, []);
+
   // 장애 목록 조회
   const fetchErrors = useCallback(async () => {
     setIsLoading(true);
     try {
       const params = {};
+      if (searchDevCode) params.devCodeId = searchDevCode;
       if (searchDeviceName.trim()) params.deviceName = searchDeviceName.trim();
       if (searchErrorMessage.trim()) params.errorMessage = searchErrorMessage.trim();
       if (searchIp.trim()) params.deviceIp = searchIp.trim();
@@ -67,10 +89,11 @@ export default function RealtimeFault() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedLevels, searchDeviceName, searchErrorMessage, searchIp, searchGroupName]);
+  }, [selectedLevels, searchDevCode, searchDeviceName, searchErrorMessage, searchIp, searchGroupName]);
 
   // 초기화 버튼
   const handleReset = () => {
+    setSearchDevCode('');
     setSearchDeviceName('');
     setSearchErrorMessage('');
     setSearchIp('');
@@ -186,6 +209,29 @@ export default function RealtimeFault() {
       return 0;
     });
   }, [errors, sortConfig]);
+
+  // 페이지네이션 적용된 데이터
+  const paginatedErrors = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return sortedErrors.slice(startIndex, endIndex);
+  }, [sortedErrors, currentPage, pageSize]);
+
+  // 페이지 변경 핸들러
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // 페이지 사이즈 변경 핸들러
+  const handlePageSizeChange = (size) => {
+    setPageSize(size);
+    setCurrentPage(1); // 페이지 사이즈 변경 시 첫 페이지로 이동
+  };
+
+  // 데이터 변경 시 페이지 초기화 (필터 변경 등)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedLevels, searchDevCode, searchDeviceName, searchErrorMessage, searchIp, searchGroupName]);
 
   // 인지 버튼 클릭 핸들러
   const handleAckClick = (error, e) => {
@@ -310,6 +356,21 @@ export default function RealtimeFault() {
           </div>
         </div>
         <div className="filter-group">
+          <label>장비코드</label>
+          <select
+            className="filter-select"
+            value={searchDevCode}
+            onChange={(e) => setSearchDevCode(e.target.value)}
+          >
+            <option value="">전체</option>
+            {devCodes.map((code) => (
+              <option key={code.DEV_CODE_ID} value={code.DEV_CODE_ID}>
+                {code.CODE_NM}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-group">
           <label>장비명</label>
           <input
             type="text"
@@ -360,7 +421,7 @@ export default function RealtimeFault() {
       <div className="fault-content glass-card">
         <DataTable
           columns={columns}
-          data={sortedErrors}
+          data={paginatedErrors}
           rowKey="ERROR_ID"
           loading={isLoading}
           loadingText="장애 정보를 불러오는 중..."
@@ -375,7 +436,15 @@ export default function RealtimeFault() {
             if (selectedError?.ERROR_ID === row.ERROR_ID) classes.push('selected');
             return classes.join(' ');
           }}
-          maxHeight="calc(100vh - 300px)"
+          maxHeight="calc(100vh - 350px)"
+          pagination={{
+            currentPage: currentPage,
+            pageSize: pageSize,
+            totalItems: sortedErrors.length,
+            onPageChange: handlePageChange,
+            onPageSizeChange: handlePageSizeChange,
+            pageSizeOptions: [10, 20, 50, 100],
+          }}
         />
       </div>
 

@@ -289,32 +289,66 @@ export const useChartEnabledPorts = (deviceId) => {
   });
 };
 
-// 포트 차트 플래그 토글
-export const useTogglePortChartFlag = () => {
+// ==================== DevCode (장비군) Hooks ====================
+
+// 장비군 트리 조회
+export const useDevCodeTree = () => {
+  return useQuery({
+    queryKey: ['devCodeTree'],
+    queryFn: async () => {
+      const response = await devicesApi.getDevCodeTree();
+      return response.data?.data || response.data || [];
+    },
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+};
+
+// 장비군 목록 조회 (플랫 리스트)
+export const useDevCodes = () => {
+  return useQuery({
+    queryKey: ['devCodes'],
+    queryFn: async () => {
+      const response = await devicesApi.getDevCodes();
+      return response.data?.data || response.data || [];
+    },
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+};
+
+// 장비군 생성
+export const useCreateDevCode = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ deviceId, ifIndex }) => {
-      const response = await devicesApi.togglePortChartFlag(deviceId, ifIndex);
-      return response.data;
-    },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['chartEnabledPorts', variables.deviceId] });
-      queryClient.invalidateQueries({ queryKey: ['devicePorts', variables.deviceId] });
+    mutationFn: devicesApi.createDevCode,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devCodeTree'] });
+      queryClient.invalidateQueries({ queryKey: ['devCodes'] });
     },
   });
 };
 
-// 차트 플래그 초기화 (TOP 5 재설정)
-export const useResetChartFlags = () => {
+// 장비군 수정
+export const useUpdateDevCode = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (deviceId) => {
-      const response = await devicesApi.resetChartFlags(deviceId);
-      return response.data;
+    mutationFn: ({ devCodeId, data }) => devicesApi.updateDevCode(devCodeId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devCodeTree'] });
+      queryClient.invalidateQueries({ queryKey: ['devCodes'] });
     },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['chartEnabledPorts', variables] });
-      queryClient.invalidateQueries({ queryKey: ['devicePorts', variables] });
+  });
+};
+
+// 장비군 삭제
+export const useDeleteDevCode = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: devicesApi.deleteDevCode,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devCodeTree'] });
+      queryClient.invalidateQueries({ queryKey: ['devCodes'] });
     },
   });
 };

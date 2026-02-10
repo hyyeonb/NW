@@ -1,49 +1,93 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+} from '@tanstack/react-table';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import Pagination from './Pagination';
 
+// 드래그 가능한 헤더 셀 컴포넌트
+function DraggableHeader({ column, children, sortable, onSort, sort, enableReorder }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: column.id,
+    disabled: !enableReorder,
+    transition: {
+      duration: 150,
+      easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+    },
+  });
+
+  // X축만 이동 (수평 드래그)
+  const style = {
+    transform: transform ? `translateX(${transform.x}px)` : undefined,
+    transition,
+    width: column.columnDef.width,
+    textAlign: column.columnDef.align || 'left',
+    zIndex: isDragging ? 100 : undefined,
+  };
+
+  // 정렬 아이콘 렌더링
+  const renderSortIcon = () => {
+    if (!sortable || !sort) return null;
+    if (sort.field !== column.id) {
+      return <i className="bi bi-chevron-expand sort-icon inactive"></i>;
+    }
+    return sort.order === 'asc'
+      ? <i className="bi bi-chevron-up sort-icon active"></i>
+      : <i className="bi bi-chevron-down sort-icon active"></i>;
+  };
+
+  // 클릭 핸들러 (드래그가 아닐 때만 정렬)
+  const handleClick = (e) => {
+    if (sortable && onSort && !isDragging) {
+      onSort(column.id);
+    }
+  };
+
+  return (
+    <th
+      ref={setNodeRef}
+      style={style}
+      className={`${sortable ? 'sortable' : ''} ${isDragging ? 'dragging' : ''} ${column.columnDef.className || ''}`}
+      onClick={handleClick}
+      {...attributes}
+      {...listeners}
+    >
+      <span className="th-label">{children}</span>
+      {renderSortIcon()}
+    </th>
+  );
+}
+
+
 /**
- * 공통 DataTable 컴포넌트
- *
- * @param {Object} props
- * @param {Array} props.columns - 컬럼 정의 배열
- *   - key: 데이터 키 (필수)
- *   - label: 헤더 표시 텍스트 (필수)
- *   - width: 컬럼 너비 (예: '100px', '15%')
- *   - sortable: 정렬 가능 여부 (기본: false)
- *   - align: 텍스트 정렬 ('left', 'center', 'right')
- *   - render: 커스텀 렌더 함수 (value, row, index) => ReactNode
- *   - headerRender: 커스텀 헤더 렌더 함수 () => ReactNode
- *   - className: 셀에 적용할 추가 클래스
- * @param {Array} props.data - 테이블 데이터 배열
- * @param {string} props.rowKey - 행 고유 키로 사용할 데이터 필드명 (기본: 'id')
- * @param {boolean} props.loading - 로딩 상태
- * @param {string} props.loadingText - 로딩 텍스트 (기본: '데이터를 불러오는 중...')
- * @param {string} props.emptyText - 빈 상태 텍스트 (기본: '데이터가 없습니다')
- * @param {string} props.emptyIcon - 빈 상태 아이콘 클래스 (기본: 'bi-inbox')
- *
- * @param {Object} props.sort - 정렬 상태
- *   - field: 현재 정렬 필드
- *   - order: 정렬 방향 ('asc' | 'desc')
- * @param {function} props.onSort - 정렬 변경 콜백 (field) => void
- *
- * @param {boolean} props.selectable - 행 선택 가능 여부
- * @param {string} props.selectMode - 선택 모드 ('single' | 'multi') 기본: 'multi'
- * @param {Array} props.selectedRows - 선택된 행 키 배열
- * @param {function} props.onSelectChange - 선택 변경 콜백 (selectedKeys) => void
- * @param {function} props.onRowClick - 행 클릭 콜백 (row, index) => void
- *
- * @param {Object} props.pagination - 페이지네이션 설정 (null이면 비활성화)
- *   - currentPage: 현재 페이지
- *   - pageSize: 페이지당 항목 수
- *   - totalItems: 전체 항목 수
- *   - onPageChange: 페이지 변경 콜백
- *   - onPageSizeChange: 페이지 크기 변경 콜백
- *   - pageSizeOptions: 페이지 크기 옵션 배열
- *
- * @param {string} props.className - 추가 컨테이너 클래스
- * @param {string} props.maxHeight - 테이블 최대 높이 (예: 'calc(100vh - 300px)')
- * @param {boolean} props.stickyHeader - 헤더 고정 여부 (기본: true)
- * @param {function} props.rowClassName - 행별 클래스 반환 함수 (row, index) => string
+ * TanStack Table 기반 DataTable 컴포넌트
+ * - 컬럼 드래그 리오더링 지원
+ * - MUI Select 기반 페이지 크기 선택
+ * - localStorage 컬럼 순서 저장
  */
 export default function DataTable({
   columns = [],
@@ -65,7 +109,102 @@ export default function DataTable({
   maxHeight = 'calc(100vh - 350px)',
   stickyHeader = true,
   rowClassName,
+  // 새로운 props
+  tableId = 'default-table', // localStorage 키로 사용
+  enableColumnReorder = true, // 컬럼 리오더링 활성화
+  onColumnOrderChange, // 외부에서 컬럼 순서 변경 감지
 }) {
+  // localStorage에서 컬럼 순서 불러오기
+  const getStoredColumnOrder = useCallback(() => {
+    try {
+      const stored = localStorage.getItem(`table-column-order-${tableId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // 저장된 순서가 현재 컬럼과 일치하는지 확인
+        const currentKeys = columns.map(c => c.key);
+        const isValid = parsed.every(key => currentKeys.includes(key)) &&
+                       parsed.length === currentKeys.length;
+        if (isValid) return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to load column order:', e);
+    }
+    return columns.map(c => c.key);
+  }, [tableId, columns]);
+
+  // 컬럼 순서 상태
+  const [columnOrder, setColumnOrder] = useState(() => getStoredColumnOrder());
+
+  // columns가 변경되면 순서 재설정
+  useEffect(() => {
+    const currentKeys = columns.map(c => c.key);
+    const hasNewColumns = currentKeys.some(key => !columnOrder.includes(key));
+    const hasRemovedColumns = columnOrder.some(key => !currentKeys.includes(key));
+
+    if (hasNewColumns || hasRemovedColumns) {
+      setColumnOrder(getStoredColumnOrder());
+    }
+  }, [columns, columnOrder, getStoredColumnOrder]);
+
+  // 컬럼 순서 저장
+  const saveColumnOrder = useCallback((newOrder) => {
+    try {
+      localStorage.setItem(`table-column-order-${tableId}`, JSON.stringify(newOrder));
+    } catch (e) {
+      console.warn('Failed to save column order:', e);
+    }
+  }, [tableId]);
+
+  // 드래그 센서 설정
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px 이동 후 드래그 시작
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // TanStack Table 컬럼 정의 변환
+  const tableColumns = useMemo(() => {
+    // 선택 컬럼
+    const selectColumn = selectable ? [{
+      id: '_select',
+      header: selectMode === 'multi' ? 'checkbox' : '',
+      width: '40px',
+      enableSorting: false,
+    }] : [];
+
+    // 데이터 컬럼 (순서에 따라 정렬)
+    const orderedColumns = columnOrder
+      .map(key => columns.find(c => c.key === key))
+      .filter(Boolean)
+      .map(col => ({
+        id: col.key,
+        accessorKey: col.key,
+        header: col.headerRender ? col.headerRender() : col.label,
+        width: col.width,
+        align: col.align,
+        sortable: col.sortable,
+        className: col.className,
+        cell: col.render
+          ? ({ getValue, row }) => col.render(getValue(), row.original, row.index)
+          : ({ getValue }) => getValue() ?? '-',
+      }));
+
+    return [...selectColumn, ...orderedColumns];
+  }, [columns, columnOrder, selectable, selectMode]);
+
+  // TanStack Table 인스턴스
+  const table = useReactTable({
+    data,
+    columns: tableColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => String(row[rowKey]),
+  });
+
   // 전체 선택 상태 계산
   const allSelected = useMemo(() => {
     if (!selectable || selectMode !== 'multi' || data.length === 0) return false;
@@ -78,24 +217,6 @@ export default function DataTable({
     const selectedCount = data.filter((row) => selectedRows.includes(row[rowKey])).length;
     return selectedCount > 0 && selectedCount < data.length;
   }, [selectable, selectMode, data, selectedRows, rowKey]);
-
-  // 정렬 아이콘 렌더링
-  const renderSortIcon = (field) => {
-    if (!sort) return null;
-    if (sort.field !== field) {
-      return <i className="bi bi-chevron-expand sort-icon inactive"></i>;
-    }
-    return sort.order === 'asc'
-      ? <i className="bi bi-chevron-up sort-icon active"></i>
-      : <i className="bi bi-chevron-down sort-icon active"></i>;
-  };
-
-  // 정렬 핸들러
-  const handleSort = (field) => {
-    if (onSort) {
-      onSort(field);
-    }
-  };
 
   // 전체 선택 핸들러
   const handleSelectAll = () => {
@@ -124,136 +245,187 @@ export default function DataTable({
   };
 
   // 행 클릭 핸들러
-  const handleRowClick = (row, index) => {
+  const handleRowClick = (row) => {
     if (onRowClick) {
-      onRowClick(row, index);
+      onRowClick(row.original, row.index);
     }
   };
 
   // 행 클래스 계산
-  const getRowClassName = (row, index) => {
+  const getRowClassName = (row) => {
     const classes = [];
     if (onRowClick) classes.push('clickable');
-    if (selectable && selectedRows.includes(row[rowKey])) classes.push('selected');
+    if (selectable && selectedRows.includes(row.original[rowKey])) classes.push('selected');
     if (rowClassName) {
-      const customClass = rowClassName(row, index);
+      const customClass = rowClassName(row.original, row.index);
       if (customClass) classes.push(customClass);
     }
     return classes.join(' ');
   };
 
-  // 셀 값 렌더링
-  const renderCell = (column, row, index) => {
-    const value = row[column.key];
-    if (column.render) {
-      return column.render(value, row, index);
+  // 드래그 종료
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setColumnOrder((items) => {
+        const oldIndex = items.indexOf(active.id);
+        const newIndex = items.indexOf(over.id);
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+
+        // localStorage에 저장
+        saveColumnOrder(newOrder);
+
+        // 외부 콜백 호출
+        if (onColumnOrderChange) {
+          onColumnOrderChange(newOrder);
+        }
+
+        return newOrder;
+      });
     }
-    return value ?? '-';
   };
+
+  // 드래그 가능한 컬럼 ID 목록 (선택 컬럼 제외)
+  const draggableColumnIds = columnOrder;
 
   return (
     <div className={`data-table-container ${className}`}>
+      {/* 컬럼 순서 초기화 버튼 (개발/디버그용, 필요시 활성화) */}
+      {/*
+      {enableColumnReorder && (
+        <div className="column-order-controls">
+          <button onClick={resetColumnOrder} className="btn-reset-columns">
+            <i className="bi bi-arrow-counterclockwise"></i> 컬럼 순서 초기화
+          </button>
+        </div>
+      )}
+      */}
+
       {/* 테이블 영역 */}
       <div
         className={`data-table-wrapper ${stickyHeader ? 'sticky-header' : ''}`}
         style={{ maxHeight: maxHeight }}
       >
-        <table className="data-table">
-          <thead>
-            <tr>
-              {/* 선택 체크박스 컬럼 */}
-              {selectable && selectMode === 'multi' && (
-                <th className="select-cell" style={{ width: '40px' }}>
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    ref={(el) => {
-                      if (el) el.indeterminate = someSelected;
-                    }}
-                    onChange={handleSelectAll}
-                  />
-                </th>
-              )}
-              {selectable && selectMode === 'single' && (
-                <th className="select-cell" style={{ width: '40px' }}></th>
-              )}
-
-              {/* 데이터 컬럼 헤더 */}
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  className={`${column.sortable ? 'sortable' : ''} ${column.className || ''}`}
-                  style={{
-                    width: column.width,
-                    textAlign: column.align || 'left',
-                  }}
-                  onClick={column.sortable ? () => handleSort(column.key) : undefined}
-                >
-                  {column.headerRender ? column.headerRender() : column.label}
-                  {column.sortable && renderSortIcon(column.key)}
-                </th>
-              ))}
-            </tr>
-          </thead>
-
-          <tbody>
-            {/* 로딩 상태 */}
-            {loading && (
-              <tr className="loading-row">
-                <td colSpan={columns.length + (selectable ? 1 : 0)}>
-                  <div className="table-loading">
-                    <div className="loading-spinner"></div>
-                    <span>{loadingText}</span>
-                  </div>
-                </td>
-              </tr>
-            )}
-
-            {/* 빈 상태 */}
-            {!loading && data.length === 0 && (
-              <tr className="empty-row">
-                <td colSpan={columns.length + (selectable ? 1 : 0)}>
-                  <div className="table-empty">
-                    <i className={`bi ${emptyIcon}`}></i>
-                    <span>{emptyText}</span>
-                  </div>
-                </td>
-              </tr>
-            )}
-
-            {/* 데이터 행 */}
-            {!loading && data.map((row, index) => (
-              <tr
-                key={row[rowKey] ?? index}
-                className={getRowClassName(row, index)}
-                onClick={() => handleRowClick(row, index)}
-              >
-                {/* 선택 체크박스 */}
-                {selectable && (
-                  <td className="select-cell" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type={selectMode === 'multi' ? 'checkbox' : 'radio'}
-                      checked={selectedRows.includes(row[rowKey])}
-                      onChange={(e) => handleSelectRow(row[rowKey], e)}
-                    />
-                  </td>
-                )}
-
-                {/* 데이터 셀 */}
-                {columns.map((column) => (
-                  <td
-                    key={column.key}
-                    className={column.className || ''}
-                    style={{ textAlign: column.align || 'left' }}
-                    title={typeof row[column.key] === 'string' ? row[column.key] : undefined}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <table className="data-table">
+            <thead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  <SortableContext
+                    items={draggableColumnIds}
+                    strategy={horizontalListSortingStrategy}
                   >
-                    {renderCell(column, row, index)}
+                    {headerGroup.headers.map((header) => {
+                      // 선택 컬럼
+                      if (header.id === '_select') {
+                        return (
+                          <th key={header.id} className="select-cell" style={{ width: '40px' }}>
+                            {selectMode === 'multi' && (
+                              <input
+                                type="checkbox"
+                                checked={allSelected}
+                                ref={(el) => {
+                                  if (el) el.indeterminate = someSelected;
+                                }}
+                                onChange={handleSelectAll}
+                              />
+                            )}
+                          </th>
+                        );
+                      }
+
+                      // 데이터 컬럼 (드래그 가능)
+                      const colDef = columns.find(c => c.key === header.id);
+                      return (
+                        <DraggableHeader
+                          key={header.id}
+                          column={header.column}
+                          sortable={colDef?.sortable}
+                          onSort={onSort}
+                          sort={sort}
+                          enableReorder={enableColumnReorder}
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                        </DraggableHeader>
+                      );
+                    })}
+                  </SortableContext>
+                </tr>
+              ))}
+            </thead>
+
+            <tbody>
+              {/* 로딩 상태 */}
+              {loading && (
+                <tr className="loading-row">
+                  <td colSpan={tableColumns.length}>
+                    <div className="table-loading">
+                      <div className="loading-spinner"></div>
+                      <span>{loadingText}</span>
+                    </div>
                   </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </tr>
+              )}
+
+              {/* 빈 상태 */}
+              {!loading && data.length === 0 && (
+                <tr className="empty-row">
+                  <td colSpan={tableColumns.length}>
+                    <div className="table-empty">
+                      <i className={`bi ${emptyIcon}`}></i>
+                      <span>{emptyText}</span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+
+              {/* 데이터 행 */}
+              {!loading && table.getRowModel().rows.map((row) => (
+                <tr
+                  key={row.id}
+                  className={getRowClassName(row)}
+                  onClick={() => handleRowClick(row)}
+                >
+                  {row.getVisibleCells().map((cell) => {
+                    // 선택 셀
+                    if (cell.column.id === '_select') {
+                      return (
+                        <td
+                          key={cell.id}
+                          className="select-cell"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type={selectMode === 'multi' ? 'checkbox' : 'radio'}
+                            checked={selectedRows.includes(row.original[rowKey])}
+                            onChange={(e) => handleSelectRow(row.original[rowKey], e)}
+                          />
+                        </td>
+                      );
+                    }
+
+                    // 데이터 셀
+                    const colDef = columns.find(c => c.key === cell.column.id);
+                    return (
+                      <td
+                        key={cell.id}
+                        className={colDef?.className || ''}
+                        style={{ textAlign: colDef?.align || 'left' }}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </DndContext>
       </div>
 
       {/* 페이지네이션 */}
@@ -268,6 +440,7 @@ export default function DataTable({
           showPageSizeSelector={pagination.showPageSizeSelector !== false}
         />
       )}
+
     </div>
   );
 }

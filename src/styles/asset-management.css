@@ -890,7 +890,7 @@ select:focus {
 
 .scope-desc {
     font-size: 12px;
-    color: #64748b;
+    color: #8b9ab0;
 }
 
 .detail-modal-footer .btn {
@@ -1025,7 +1025,7 @@ select:focus {
     align-items: center;
     justify-content: center;
     padding: 60px;
-    color: #64748b;
+    color: #8b9ab0;
 }
 
 .port-empty i {
@@ -1214,7 +1214,7 @@ select:focus {
 
 .monitor-badge.off {
     background: linear-gradient(135deg, rgba(100, 116, 139, 0.3) 0%, rgba(100, 116, 139, 0.15) 100%);
-    color: #64748b;
+    color: #8b9ab0;
 }
 
 /* ==================
@@ -1693,7 +1693,7 @@ select:focus {
     grid-column: 1 / -1;
     text-align: center;
     padding: 20px;
-    color: #64748b;
+    color: #8b9ab0;
     font-size: 12px;
 }
 
@@ -1716,7 +1716,7 @@ select:focus {
 
 .traffic-info-label {
     font-size: 10px;
-    color: #64748b;
+    color: #8b9ab0;
     font-weight: 400;
     margin-left: 6px;
 }
@@ -1826,7 +1826,7 @@ select:focus {
 
 .section-title .info-label {
     font-size: 9px;
-    color: #64748b;
+    color: #8b9ab0;
     font-weight: 400;
     text-transform: none;
 }
@@ -1893,7 +1893,7 @@ select:focus {
     grid-column: 1 / -1;
     text-align: center;
     padding: 15px;
-    color: #64748b;
+    color: #8b9ab0;
     font-size: 11px;
 }
 
@@ -2139,7 +2139,7 @@ select:focus {
 }
 
 .port-summary-badge .separator {
-    color: #64748b;
+    color: #8b9ab0;
 }
 
 /* 스위치 패널 - 실제 장비 형태 */
@@ -2239,7 +2239,7 @@ select:focus {
 .no-ports-msg {
     text-align: center;
     padding: 20px;
-    color: #64748b;
+    color: #8b9ab0;
     font-size: 12px;
 }
 
@@ -2534,7 +2534,7 @@ select:focus {
 }
 
 .port-badge .up { color: #10b981; }
-.port-badge .sep { color: #64748b; margin: 0 3px; }
+.port-badge .sep { color: #8b9ab0; margin: 0 3px; }
 .port-badge .down { color: #ef4444; }
 
 /* 스위치 섀시 - 실제 네트워크 스위치 모양 */
@@ -2807,7 +2807,7 @@ select:focus {
 .no-port {
     text-align: center;
     padding: 20px;
-    color: #64748b;
+    color: #8b9ab0;
     font-size: 12px;
 }
 
@@ -2828,7 +2828,7 @@ select:focus {
 .time-label {
     margin-left: auto;
     font-size: 10px;
-    color: #64748b;
+    color: #8b9ab0;
     font-weight: 400;
 }
 
@@ -3033,7 +3033,7 @@ select:focus {
 }
 
 .port-count-badge .sep {
-    color: #64748b;
+    color: #8b9ab0;
 }
 
 .port-count-badge .down {
@@ -3128,7 +3128,7 @@ select:focus {
 .no-data-msg {
     text-align: center;
     padding: 30px;
-    color: #64748b;
+    color: #8b9ab0;
     font-size: 13px;
 }
 
@@ -3140,7 +3140,7 @@ select:focus {
 .chart-period-label {
     margin-left: auto;
     font-size: 10px;
-    color: #64748b;
+    color: #8b9ab0;
     font-weight: 400;
 }
 
@@ -3214,6 +3214,44 @@ select:focus {
     box-shadow: 0 0 8px 2px rgba(6, 182, 212, 0.6);
 }
 
+/* 테이블 상태 LED - 글래스모피즘 */
+.status-led {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.status-led-normal {
+    background: rgba(16, 185, 129, 0.6);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 4px rgba(16, 185, 129, 0.3);
+}
+
+.status-led-C {
+    background: rgba(239, 68, 68, 0.6);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+}
+
+.status-led-M {
+    background: rgba(249, 115, 22, 0.6);
+    border: 1px solid rgba(249, 115, 22, 0.3);
+    box-shadow: 0 0 6px rgba(249, 115, 22, 0.4);
+}
+
+.status-led-N {
+    background: rgba(234, 179, 8, 0.6);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    box-shadow: 0 0 5px rgba(234, 179, 8, 0.3);
+}
+
+.status-led-W {
+    background: rgba(59, 130, 246, 0.6);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
+}
+
 @keyframes led-pulse {
     0%, 100% {
         opacity: 1;
@@ -3239,7 +3277,7 @@ select:focus {
 
 .sys-descr-tooltip i {
     font-size: 12px;
-    color: #64748b;
+    color: #8b9ab0;
     transition: all 0.2s ease;
 }
 
@@ -3295,4 +3333,356 @@ select:focus {
     opacity: 1;
     visibility: visible;
     transition-delay: 0.3s;
+}
+
+/* 시스템 설명 아이콘 */
+.sys-descr-icon {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    cursor: help;
+}
+
+.sys-descr-icon i {
+    font-size: 12px;
+    color: #64748b;
+    transition: color 0.2s ease;
+}
+
+.sys-descr-icon:hover i {
+    color: #3b82f6;
+}
+
+/* 툴팁 스타일은 _global-tooltip.css로 통합됨 */
+
+/* ==========================================
+   장비 설정 사이드바 (모달 내부)
+   ========================================== */
+.settings-sidebar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    display: flex;
+    align-items: stretch;
+    border-radius: inherit;
+}
+
+.settings-sidebar {
+    width: 380px;
+    max-width: 50%;
+    height: 100%;
+    background: rgba(15, 15, 35, 0.98);
+    backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px 0 0 16px;
+    display: flex;
+    flex-direction: column;
+    animation: slideInLeft 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.settings-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settings-sidebar-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.settings-sidebar-title i {
+    color: #94a3b8;
+}
+
+.settings-sidebar-close {
+    font-size: 20px;
+    color: #64748b;
+    cursor: pointer;
+    transition: color 0.2s;
+    background: none;
+    border: none;
+    line-height: 1;
+}
+
+.settings-sidebar-close:hover {
+    color: #f8fafc;
+}
+
+.settings-sidebar-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.settings-sidebar-body::-webkit-scrollbar {
+    width: 4px;
+}
+
+.settings-sidebar-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.settings-sidebar-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+
+/* 설정 섹션 */
+.settings-section {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.settings-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.settings-section-title i {
+    font-size: 13px;
+}
+
+/* 관제 범위 설정 항목 */
+.settings-scope-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.settings-scope-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    transition: background 0.2s;
+}
+
+.settings-scope-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.scope-item-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.scope-item-info .scope-icon {
+    font-size: 18px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+}
+
+.scope-item-info .scope-icon.ping {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+}
+
+.scope-item-info .scope-icon.snmp {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+}
+
+.scope-item-info .scope-icon.agent {
+    background: rgba(139, 92, 246, 0.15);
+    color: #8b5cf6;
+}
+
+.scope-item-title {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #f8fafc;
+}
+
+.scope-item-desc {
+    display: block;
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 1px;
+}
+
+/* 설정 폼 */
+.settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.settings-form-row.dual {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.settings-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.settings-form-group label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #94a3b8;
+}
+
+.settings-form-group input,
+.settings-form-group select {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: #f8fafc;
+    font-size: 13px;
+    transition: border-color 0.2s;
+}
+
+.settings-form-group input:focus,
+.settings-form-group select:focus {
+    outline: none;
+    border-color: rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+.settings-form-group input::placeholder {
+    color: #4a5568;
+}
+
+.settings-form-group select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+}
+
+.settings-form-group select option {
+    background: #1a1a2e;
+    color: #f8fafc;
+}
+
+/* 사이드바 푸터 */
+.settings-sidebar-footer {
+    display: flex;
+    gap: 10px;
+    padding: 16px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settings-sidebar-footer .btn {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.settings-sidebar-footer .btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+}
+
+.settings-sidebar-footer .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.settings-sidebar-footer .btn-primary {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border: none;
+    color: white;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.settings-sidebar-footer .btn-primary:hover {
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+    transform: translateY(-1px);
+}
+
+/* 장비 정보 헤더 톱니바퀴 버튼 */
+.settings-gear-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: auto;
+}
+
+.settings-gear-btn:hover {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.3);
+    color: #a78bfa;
+}
+
+/* info-box-header에 flex 적용 (톱니바퀴 우측 정렬) */
+.info-box-header {
+    display: flex;
+    align-items: center;
+}
+
+/* 시스템 설명 텍스트 */
+.sys-descr-value {
+    font-size: 12px;
+    color: #94a3b8;
+    word-break: break-all;
+    line-height: 1.4;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    max-width: 70%;
+}
+
+/* 시스템 설명 행은 여러 줄일 수 있으므로 상단 정렬 */
+.info-row:has(.sys-descr-value) {
+    align-items: flex-start;
 }

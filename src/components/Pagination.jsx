@@ -1,20 +1,239 @@
 import { useMemo } from 'react';
+import Pagination from '@mui/material/Pagination';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { useThemeStore } from '../stores';
+
+// 다크 테마
+const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#6366f1',
+      light: '#818cf8',
+      dark: '#4f46e5',
+    },
+  },
+  components: {
+    MuiPagination: {
+      styleOverrides: {
+        root: {
+          '& .MuiPaginationItem-root': {
+            color: '#7c8ba3',
+            fontSize: '13px',
+            fontWeight: 500,
+            minWidth: '32px',
+            height: '32px',
+            borderRadius: '8px',
+            border: '1px solid rgba(99, 102, 241, 0.15)',
+            backgroundColor: 'rgba(22, 27, 45, 0.98)',
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              backgroundColor: 'rgba(99, 102, 241, 0.12)',
+              borderColor: 'rgba(99, 102, 241, 0.35)',
+              color: '#a5b4fc',
+            },
+          },
+          '& .MuiPaginationItem-page.Mui-selected': {
+            backgroundColor: 'rgba(99, 102, 241, 0.85)',
+            borderColor: 'rgba(99, 102, 241, 0.5)',
+            color: '#ffffff',
+            fontWeight: 600,
+            '&:hover': {
+              backgroundColor: 'rgba(129, 140, 248, 0.9)',
+            },
+          },
+          '& .MuiPaginationItem-ellipsis': {
+            border: 'none',
+            backgroundColor: 'transparent',
+            color: '#5a6780',
+          },
+          '& .MuiPaginationItem-previousNext, & .MuiPaginationItem-firstLast': {
+            '&.Mui-disabled': {
+              opacity: 0.3,
+            },
+          },
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'rgba(99, 102, 241, 0.2)',
+            borderRadius: '8px',
+          },
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'rgba(99, 102, 241, 0.4)',
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#6366f1',
+            borderWidth: '1px',
+          },
+        },
+        select: {
+          padding: '6px 32px 6px 12px',
+          fontSize: '13px',
+          color: '#d1d9e8',
+          backgroundColor: 'rgba(22, 27, 45, 0.98)',
+          borderRadius: '8px',
+          minWidth: '60px',
+        },
+        icon: {
+          color: '#7c8ba3',
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          fontSize: '13px',
+          color: '#d1d9e8',
+          '&:hover': {
+            backgroundColor: 'rgba(99, 102, 241, 0.12)',
+          },
+          '&.Mui-selected': {
+            backgroundColor: 'rgba(99, 102, 241, 0.2)',
+            '&:hover': {
+              backgroundColor: 'rgba(99, 102, 241, 0.25)',
+            },
+          },
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundColor: 'rgba(22, 27, 45, 0.98)',
+          backgroundImage: 'none',
+          border: '1px solid rgba(99, 102, 241, 0.15)',
+          borderRadius: '8px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+        },
+      },
+    },
+  },
+});
+
+// 라이트 테마
+const lightTheme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#4f46e5',
+      light: '#6366f1',
+      dark: '#3730a3',
+    },
+  },
+  components: {
+    MuiPagination: {
+      styleOverrides: {
+        root: {
+          '& .MuiPaginationItem-root': {
+            color: '#475569',
+            fontSize: '13px',
+            fontWeight: 500,
+            minWidth: '32px',
+            height: '32px',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0',
+            backgroundColor: '#ffffff',
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              backgroundColor: 'rgba(79, 70, 229, 0.08)',
+              borderColor: 'rgba(79, 70, 229, 0.3)',
+              color: '#4f46e5',
+            },
+          },
+          '& .MuiPaginationItem-page.Mui-selected': {
+            backgroundColor: '#4f46e5',
+            borderColor: '#4f46e5',
+            color: '#ffffff',
+            fontWeight: 600,
+            '&:hover': {
+              backgroundColor: '#4338ca',
+            },
+          },
+          '& .MuiPaginationItem-ellipsis': {
+            border: 'none',
+            backgroundColor: 'transparent',
+            color: '#94a3b8',
+          },
+          '& .MuiPaginationItem-previousNext, & .MuiPaginationItem-firstLast': {
+            '&.Mui-disabled': {
+              opacity: 0.4,
+            },
+          },
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#e2e8f0',
+            borderRadius: '8px',
+          },
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'rgba(79, 70, 229, 0.4)',
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#4f46e5',
+            borderWidth: '1px',
+          },
+        },
+        select: {
+          padding: '6px 32px 6px 12px',
+          fontSize: '13px',
+          color: '#1e293b',
+          backgroundColor: '#ffffff',
+          borderRadius: '8px',
+          minWidth: '60px',
+        },
+        icon: {
+          color: '#64748b',
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          fontSize: '13px',
+          color: '#1e293b',
+          '&:hover': {
+            backgroundColor: 'rgba(79, 70, 229, 0.08)',
+          },
+          '&.Mui-selected': {
+            backgroundColor: 'rgba(79, 70, 229, 0.12)',
+            '&:hover': {
+              backgroundColor: 'rgba(79, 70, 229, 0.16)',
+            },
+          },
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#ffffff',
+          backgroundImage: 'none',
+          border: '1px solid #e2e8f0',
+          borderRadius: '8px',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+        },
+      },
+    },
+  },
+});
 
 /**
- * 공통 페이지네이션 컴포넌트
- *
- * @param {Object} props
- * @param {number} props.pageSize - 페이지당 표시할 데이터 개수 (필수)
- * @param {number} props.currentPage - 현재 페이지 (1부터 시작)
- * @param {number} props.totalItems - 전체 데이터 개수
- * @param {function} props.onPageChange - 페이지 변경 콜백 (newPage) => void
- * @param {function} [props.onPageSizeChange] - 페이지 크기 변경 콜백 (newSize) => void
- * @param {number[]} [props.pageSizeOptions] - 페이지 크기 옵션 배열 (기본: [10, 20, 50, 100])
- * @param {boolean} [props.showPageSizeSelector] - 페이지 크기 선택기 표시 여부 (기본: true)
- * @param {boolean} [props.showPageNumbers] - 페이지 번호 버튼 표시 여부 (기본: false)
- * @param {number} [props.maxPageButtons] - 표시할 최대 페이지 버튼 수 (기본: 5)
+ * 공통 페이지네이션 컴포넌트 (MUI 기반)
+ * - MUI Pagination + MUI Select
+ * - 다크/라이트 테마 자동 전환
  */
-export default function Pagination({
+export default function PaginationComponent({
   pageSize,
   currentPage = 1,
   totalItems = 0,
@@ -22,44 +241,26 @@ export default function Pagination({
   onPageSizeChange,
   pageSizeOptions = [10, 20, 50, 100],
   showPageSizeSelector = true,
-  showPageNumbers = true,
-  maxPageButtons = 5,
 }) {
+  // 테마 상태
+  const { resolvedTheme } = useThemeStore();
+  const theme = resolvedTheme === 'light' ? lightTheme : darkTheme;
+
   // 전체 페이지 수 계산
   const totalPages = useMemo(() => {
     return Math.max(1, Math.ceil(totalItems / pageSize));
   }, [totalItems, pageSize]);
 
-  // 표시할 페이지 번호 배열 계산
-  const pageNumbers = useMemo(() => {
-    if (!showPageNumbers) return [];
-
-    const pages = [];
-    let startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
-    let endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
-
-    // 시작 페이지 조정
-    if (endPage - startPage + 1 < maxPageButtons) {
-      startPage = Math.max(1, endPage - maxPageButtons + 1);
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
-    }
-
-    return pages;
-  }, [currentPage, totalPages, maxPageButtons, showPageNumbers]);
-
   // 페이지 변경 핸들러
-  const handlePageChange = (newPage) => {
+  const handlePageChange = (event, newPage) => {
     if (newPage >= 1 && newPage <= totalPages && newPage !== currentPage) {
       onPageChange(newPage);
     }
   };
 
   // 페이지 크기 변경 핸들러
-  const handlePageSizeChange = (e) => {
-    const newSize = Number(e.target.value);
+  const handlePageSizeChange = (event) => {
+    const newSize = Number(event.target.value);
     if (onPageSizeChange) {
       onPageSizeChange(newSize);
     }
@@ -70,116 +271,53 @@ export default function Pagination({
   const endItem = Math.min(currentPage * pageSize, totalItems);
 
   return (
-    <div className="pagination-controls">
-      {/* 좌측: 페이지 크기 선택 및 표시 정보 */}
-      <div className="pagination-left">
-        {showPageSizeSelector && (
-          <div className="items-per-page">
-            <label htmlFor="pagination-page-size">개수:</label>
-            <select
-              id="pagination-page-size"
-              value={pageSize}
-              onChange={handlePageSizeChange}
-            >
-              {pageSizeOptions.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-        <span className="pagination-info">
-          {totalItems > 0 ? `${startItem}-${endItem} / ${totalItems}` : '0개'}
-        </span>
-      </div>
-
-      {/* 우측: 페이지 네비게이션 */}
-      <div className="pagination">
-        {/* 첫 페이지 버튼 */}
-        <button
-          className="pagination-btn pagination-first"
-          onClick={() => handlePageChange(1)}
-          disabled={currentPage === 1}
-          title="첫 페이지"
-        >
-          <i className="bi bi-chevron-double-left"></i>
-        </button>
-
-        {/* 이전 페이지 버튼 */}
-        <button
-          className="pagination-btn pagination-prev"
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          title="이전 페이지"
-        >
-          <i className="bi bi-chevron-left"></i>
-        </button>
-
-        {/* 페이지 번호 버튼 (옵션) */}
-        {showPageNumbers && pageNumbers.length > 0 && (
-          <div className="pagination-pages">
-            {pageNumbers[0] > 1 && (
-              <>
-                <button
-                  className="pagination-btn"
-                  onClick={() => handlePageChange(1)}
+    <ThemeProvider theme={theme}>
+      <div className="pagination-controls">
+        {/* 좌측: 페이지 크기 선택 및 표시 정보 */}
+        <div className="pagination-left">
+          {showPageSizeSelector && (
+            <div className="items-per-page">
+              <span className="page-size-label">개수:</span>
+              <FormControl size="small">
+                <Select
+                  value={pageSize}
+                  onChange={handlePageSizeChange}
+                  variant="outlined"
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        mt: 0.5,
+                      },
+                    },
+                  }}
                 >
-                  1
-                </button>
-                {pageNumbers[0] > 2 && <span className="pagination-ellipsis">...</span>}
-              </>
-            )}
-            {pageNumbers.map((pageNum) => (
-              <button
-                key={pageNum}
-                className={`pagination-btn ${pageNum === currentPage ? 'active' : ''}`}
-                onClick={() => handlePageChange(pageNum)}
-              >
-                {pageNum}
-              </button>
-            ))}
-            {pageNumbers[pageNumbers.length - 1] < totalPages && (
-              <>
-                {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && (
-                  <span className="pagination-ellipsis">...</span>
-                )}
-                <button
-                  className="pagination-btn"
-                  onClick={() => handlePageChange(totalPages)}
-                >
-                  {totalPages}
-                </button>
-              </>
-            )}
-          </div>
-        )}
+                  {pageSizeOptions.map((size) => (
+                    <MenuItem key={size} value={size}>
+                      {size}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </div>
+          )}
+          <span className="pagination-info">
+            {totalItems > 0 ? `${startItem}-${endItem} / ${totalItems}` : '0개'}
+          </span>
+        </div>
 
-        {/* 페이지 번호 텍스트 (페이지 버튼 미사용 시) */}
-        {!showPageNumbers && (
-          <span className="pagination-text">{currentPage} / {totalPages}</span>
-        )}
-
-        {/* 다음 페이지 버튼 */}
-        <button
-          className="pagination-btn pagination-next"
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          title="다음 페이지"
-        >
-          <i className="bi bi-chevron-right"></i>
-        </button>
-
-        {/* 마지막 페이지 버튼 */}
-        <button
-          className="pagination-btn pagination-last"
-          onClick={() => handlePageChange(totalPages)}
-          disabled={currentPage === totalPages}
-          title="마지막 페이지"
-        >
-          <i className="bi bi-chevron-double-right"></i>
-        </button>
+        {/* 우측: MUI 페이지네이션 */}
+        <Pagination
+          count={totalPages}
+          page={currentPage}
+          onChange={handlePageChange}
+          shape="rounded"
+          size="medium"
+          showFirstButton
+          showLastButton
+          siblingCount={1}
+          boundaryCount={1}
+        />
       </div>
-    </div>
+    </ThemeProvider>
   );
 }
