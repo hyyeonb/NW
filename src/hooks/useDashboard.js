@@ -17,8 +17,8 @@ export const useWidgets = () => {
 
 // ==================== 기본 대시보드 (R_DEFAULT_DASHBOARD_WIDGET_T) ====================
 
-// 기본 대시보드 조회
-export const useDefaultDashboard = () => {
+// 기본 대시보드 조회 (enabled 옵션으로 조건부 호출 가능)
+export const useDefaultDashboard = (enabled = true) => {
   return useQuery({
     queryKey: ['defaultDashboard'],
     queryFn: async () => {
@@ -26,6 +26,7 @@ export const useDefaultDashboard = () => {
       return response.data?.data || response.data || [];
     },
     staleTime: 5 * 60 * 1000, // 5분간 캐시 유지
+    enabled: enabled,
   });
 };
 
@@ -41,7 +42,9 @@ export const useUserDashboard = (userId) => {
         const response = await dashboardApi.getUserDashboard(userId);
         const data = response.data?.data || response.data;
         // undefined, null, 빈 배열 모두 빈 배열로 반환
-        return Array.isArray(data) ? data : [];
+        if (!Array.isArray(data)) return [];
+        // userDashboardWidgetId가 null인 항목 필터링 (DB에 데이터 없을 때 백엔드가 null 객체 반환)
+        return data.filter(item => item && item.userDashboardWidgetId != null);
       } catch (error) {
         console.error('사용자 대시보드 조회 실패:', error);
         return []; // 에러 시 빈 배열 반환
@@ -54,14 +57,9 @@ export const useUserDashboard = (userId) => {
 
 // 사용자 대시보드 저장
 export const useSaveUserDashboard = (userId) => {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (widgets) => dashboardApi.saveUserDashboard(userId, widgets),
-    onSuccess: () => {
-      // 저장 성공 시 캐시 무효화 (페이지 이동 후 복귀 시 최신 데이터 보장)
-      queryClient.invalidateQueries({ queryKey: ['userDashboard', userId] });
-    },
-    // 추가 onSuccess 처리는 호출하는 곳에서 (Dashboard.jsx)
+    // onSuccess 처리는 호출하는 곳에서 (Dashboard.jsx에서 refetch 호출)
   });
 };
 

@@ -7,8 +7,9 @@ export const useActiveErrors = () => {
     queryKey: ['activeErrors'],
     queryFn: async () => {
       const response = await faultApi.getErrors();
-      // 응답 형식: { data: { list: [...], totalCount, ... } }
-      return response.data?.data?.list || response.data?.data || [];
+      const data = response.data?.data || {};
+      // API 응답: { list: [...], ... } 형태
+      return data.list || data || [];
     },
     refetchInterval: 30000, // 30초마다 자동 갱신
     staleTime: 10000,
@@ -22,20 +23,30 @@ export const useDeviceErrorLevels = () => {
   // data가 배열인지 확인 (API 응답이 다양한 형태일 수 있음)
   const errors = Array.isArray(data) ? data : [];
 
-  // 장비별 최고 등급 매핑 (C > M > N > W)
+  // 장비별/그룹별 최고 등급 매핑 (C > M > N > W)
   const levelPriority = { 'C': 4, 'M': 3, 'N': 2, 'W': 1 };
   const deviceErrorMap = new Map();
+  const groupErrorMap = new Map();
 
   errors.forEach(error => {
-    if (!error?.DEVICE_ID) return;
-    const current = deviceErrorMap.get(error.DEVICE_ID);
-    const currentPriority = current ? levelPriority[current] || 0 : 0;
-    const newPriority = levelPriority[error.ERROR_LEVEL] || 0;
+    const priority = levelPriority[error.ERROR_LEVEL] || 0;
 
-    if (newPriority > currentPriority) {
-      deviceErrorMap.set(error.DEVICE_ID, error.ERROR_LEVEL);
+    // 장비별 최고 등급
+    if (error?.DEVICE_ID) {
+      const current = deviceErrorMap.get(error.DEVICE_ID);
+      if (priority > (levelPriority[current] || 0)) {
+        deviceErrorMap.set(error.DEVICE_ID, error.ERROR_LEVEL);
+      }
+    }
+
+    // 그룹별 최고 등급
+    if (error?.GROUP_NAME) {
+      const current = groupErrorMap.get(error.GROUP_NAME);
+      if (priority > (levelPriority[current] || 0)) {
+        groupErrorMap.set(error.GROUP_NAME, error.ERROR_LEVEL);
+      }
     }
   });
 
-  return { deviceErrorMap, ...rest };
+  return { deviceErrorMap, groupErrorMap, errors, ...rest };
 };

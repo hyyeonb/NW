@@ -210,11 +210,15 @@
 /* 편집 모드일 때 리사이즈 핸들 스타일 */
 .widget-grid-container.edit-mode .react-resizable-handle {
   background-image: none;
-  width: 20px;
-  height: 20px;
 }
 
-.widget-grid-container.edit-mode .react-resizable-handle::after {
+.widget-grid-container.edit-mode .react-resizable-handle-se {
+  width: 20px;
+  height: 20px;
+  cursor: se-resize;
+}
+
+.widget-grid-container.edit-mode .react-resizable-handle-se::after {
   content: '';
   position: absolute;
   right: 5px;
@@ -223,6 +227,22 @@
   height: 8px;
   border-right: 2px solid var(--theme-text-muted);
   border-bottom: 2px solid var(--theme-text-muted);
+}
+
+.widget-grid-container.edit-mode .react-resizable-handle-s {
+  width: 100%;
+  height: 8px;
+  bottom: 0;
+  left: 0;
+  cursor: s-resize;
+}
+
+.widget-grid-container.edit-mode .react-resizable-handle-e {
+  width: 8px;
+  height: 100%;
+  right: 0;
+  top: 0;
+  cursor: e-resize;
 }
 
 .widget-grid-container.edit-mode .widget-card {
@@ -283,7 +303,10 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  height: 100%;
   transition: all 0.2s ease;
+  container-type: inline-size;
+  container-name: widget;
 }
 
 .widget-card:hover {
@@ -368,24 +391,34 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 14px;
+  padding: 8px 10px;
   background: transparent;
   border-bottom: 1px solid rgba(51, 65, 85, 0.3);
   flex-shrink: 0;
+  min-width: 0;
 }
 
 .widget-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: var(--theme-text-primary);
-  font-size: 14px;
+  gap: 6px;
+  color: #f1f5f9;
+  font-size: 13px;
   font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.widget-title span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .widget-title i {
-  color: var(--theme-accent-primary);
-  font-size: 16px;
+  color: #3b82f6;
+  font-size: 14px;
+  flex-shrink: 0;
 }
 
 .widget-title .drag-handle {
@@ -491,9 +524,9 @@
 /* 위젯 컨텐츠 */
 .widget-content {
   flex: 1;
-  padding: 16px;
+  padding: 10px;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   min-height: 0;
   overflow: hidden;
@@ -511,6 +544,24 @@
 .widget-content-inner {
   width: 100%;
   height: 100%;
+  overflow: auto;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+
+.widget-content-inner::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.widget-content-inner::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.widget-content-inner::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 2px;
 }
 
 /* 토폴로지 그래프 컨테이너 */
@@ -1158,7 +1209,7 @@
 .echarts-container {
   width: 100%;
   height: 100%;
-  min-height: 200px;
+  min-height: 0;
 }
 
 .custom-widget-elements {
@@ -2399,18 +2450,18 @@
 .alert-summary-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: clamp(4px, 2cqi, 12px);
   height: 100%;
-  padding: 8px;
+  padding: clamp(2px, 1.5cqi, 8px);
 }
 
 .summary-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px;
-  background: var(--theme-bg-elevated);
-  border-radius: 12px;
+  gap: clamp(4px, 2.5cqi, 12px);
+  padding: clamp(4px, 3cqi, 16px);
+  background: #1e293b;
+  border-radius: clamp(6px, 2cqi, 12px);
   border: 1px solid transparent;
   transition: all 0.2s ease;
 }
@@ -2441,14 +2492,18 @@
 }
 
 .summary-card .summary-icon {
-  width: 44px;
-  height: 44px;
+  width: clamp(24px, 11cqi, 52px);
+  height: clamp(24px, 11cqi, 52px);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  font-size: 20px;
+  border-radius: clamp(4px, 2cqi, 10px);
+  font-size: clamp(11px, 5cqi, 24px);
   flex-shrink: 0;
+}
+
+.summary-card .summary-icon i {
+  font-size: clamp(11px, 5cqi, 24px);
 }
 
 .summary-card.critical .summary-icon {
@@ -2476,16 +2531,16 @@
 }
 
 .summary-card .summary-count {
-  font-size: 28px;
+  font-size: clamp(16px, 8cqi, 36px);
   font-weight: 700;
   color: var(--theme-text-primary);
   line-height: 1;
-  margin-bottom: 4px;
+  margin-bottom: clamp(1px, 0.5cqi, 4px);
 }
 
 .summary-card .summary-label {
-  font-size: 12px;
-  color: var(--theme-text-muted);
+  font-size: clamp(8px, 3cqi, 14px);
+  color: #94a3b8;
   font-weight: 500;
 }
 
@@ -2493,19 +2548,19 @@
 .device-summary-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: clamp(4px, 2cqi, 12px);
   height: 100%;
-  padding: 8px;
+  padding: clamp(2px, 1.5cqi, 8px);
 }
 
 .device-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px;
-  background: var(--theme-bg-elevated);
-  border-radius: 12px;
-  border: 1px solid var(--theme-border-subtle);
+  gap: clamp(4px, 2.5cqi, 12px);
+  padding: clamp(4px, 3cqi, 16px);
+  background: #1e293b;
+  border-radius: clamp(6px, 2cqi, 12px);
+  border: 1px solid #334155;
   transition: all 0.2s ease;
 }
 
@@ -2516,13 +2571,13 @@
 }
 
 .device-card .device-icon {
-  width: 44px;
-  height: 44px;
+  width: clamp(24px, 11cqi, 52px);
+  height: clamp(24px, 11cqi, 52px);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  font-size: 20px;
+  border-radius: clamp(4px, 2cqi, 10px);
+  font-size: clamp(11px, 5cqi, 24px);
   flex-shrink: 0;
 }
 
@@ -2551,16 +2606,16 @@
 }
 
 .device-card .device-count {
-  font-size: 28px;
+  font-size: clamp(16px, 8cqi, 36px);
   font-weight: 700;
   color: var(--theme-text-primary);
   line-height: 1;
-  margin-bottom: 4px;
+  margin-bottom: clamp(1px, 0.5cqi, 4px);
 }
 
 .device-card .device-label {
-  font-size: 12px;
-  color: var(--theme-text-muted);
+  font-size: clamp(8px, 3cqi, 14px);
+  color: #94a3b8;
   font-weight: 500;
 }
 
@@ -3432,4 +3487,226 @@
   50% {
     transform: scale(1.15);
   }
+}
+
+/* ========== 위젯 반응형 (Container Queries) ========== */
+
+/* --- 작은 위젯 (너비 < 250px) --- */
+@container widget (max-width: 250px) {
+  .widget-header {
+    padding: 6px 8px;
+  }
+  .widget-title {
+    font-size: 11px;
+    gap: 4px;
+  }
+  .widget-title i {
+    font-size: 12px;
+  }
+  .widget-content {
+    padding: 4px;
+  }
+
+  /* 알람 리스트 테이블 (ALERT_LIST) */
+  .alert-table th {
+    padding: 3px 4px;
+    font-size: 9px;
+  }
+  .alert-table td {
+    padding: 3px 4px;
+    font-size: 9px;
+  }
+  .alert-badge {
+    padding: 1px 3px;
+    font-size: 7px;
+  }
+
+  /* 실시간 장애 현황 위젯 (RealtimeAlertWidget) */
+  .realtime-alert-widget .widget-filter-bar {
+    padding: 4px 6px;
+    gap: 4px;
+  }
+  .realtime-alert-widget .widget-level-btn {
+    padding: 2px 4px;
+    font-size: 9px;
+    min-width: 20px;
+  }
+  .realtime-alert-widget .widget-search-box {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+  .realtime-alert-widget .widget-search-box input {
+    font-size: 10px;
+  }
+  .realtime-alert-widget .widget-search-box i {
+    font-size: 10px;
+  }
+  .realtime-alert-widget .widget-filter-toggle {
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+  }
+  .realtime-alert-widget .widget-advanced-search {
+    padding: 4px 6px;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .realtime-alert-widget .widget-advanced-search .search-field label {
+    font-size: 8px;
+  }
+  .realtime-alert-widget .widget-advanced-search .search-field input {
+    padding: 2px 4px;
+    font-size: 9px;
+  }
+  .widget-alert-table th {
+    padding: 3px 2px;
+    font-size: 9px;
+  }
+  .widget-alert-table td {
+    padding: 3px 2px;
+    font-size: 9px;
+  }
+  .widget-alert-table .level-badge {
+    padding: 1px 3px;
+    font-size: 8px;
+  }
+  .widget-alert-table .status-badge {
+    padding: 1px 3px;
+    font-size: 8px;
+  }
+  .widget-alert-table {
+    min-width: 350px;
+  }
+  .widget-alert-table .col-ip,
+  .widget-alert-table .col-group {
+    display: none;
+  }
+
+  /* ECharts 컨테이너 */
+  .echarts-container {
+    min-height: 0;
+  }
+
+  /* 새로고침 버튼 */
+  .widget-refresh-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
+}
+
+/* --- 중간 위젯 (250px ~ 400px) --- */
+@container widget (min-width: 250px) and (max-width: 400px) {
+  .widget-header {
+    padding: 8px 10px;
+  }
+  .widget-title {
+    font-size: 12px;
+    gap: 6px;
+  }
+  .widget-title i {
+    font-size: 13px;
+  }
+  .widget-content {
+    padding: 6px;
+  }
+
+  /* 알람 리스트 테이블 */
+  .alert-table th {
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+  .alert-table td {
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+  .alert-badge {
+    padding: 1px 4px;
+    font-size: 8px;
+  }
+
+  /* 실시간 장애 현황 위젯 */
+  .realtime-alert-widget .widget-filter-bar {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+  .realtime-alert-widget .widget-level-btn {
+    padding: 2px 5px;
+    font-size: 10px;
+  }
+  .realtime-alert-widget .widget-search-box {
+    font-size: 11px;
+  }
+  .realtime-alert-widget .widget-search-box input {
+    font-size: 11px;
+  }
+  .realtime-alert-widget .widget-advanced-search {
+    padding: 6px 8px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .realtime-alert-widget .widget-advanced-search .search-field input {
+    padding: 3px 6px;
+    font-size: 10px;
+  }
+  .widget-alert-table th {
+    padding: 4px 3px;
+    font-size: 10px;
+  }
+  .widget-alert-table td {
+    padding: 4px 3px;
+    font-size: 10px;
+  }
+  .widget-alert-table .level-badge {
+    padding: 1px 4px;
+    font-size: 9px;
+  }
+  .widget-alert-table .status-badge {
+    padding: 1px 4px;
+    font-size: 9px;
+  }
+}
+
+/* 그리드 요소 overflow 안전 처리 */
+.alert-summary-grid,
+.device-summary-grid {
+  min-height: 0;
+  overflow: auto;
+}
+
+/* 차트가 부모 크기에 맞게 축소 */
+.topn-chart {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.topn-list {
+  min-height: 0;
+  overflow: auto;
+}
+
+/* 바 차트 컨테이너 유연하게 */
+.bar-chart-container {
+  min-height: 0;
+}
+
+/* 장비/장애 카드가 좁을때 내용 잘림 방지 */
+.summary-card .summary-content,
+.device-card .device-content {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.summary-card .summary-count,
+.device-card .device-count {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.summary-card .summary-label,
+.device-card .device-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

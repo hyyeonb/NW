@@ -29,6 +29,12 @@ export default function AssetConfigDetail() {
   const leftDateRef = useRef(null);
   const rightDateRef = useRef(null);
 
+  // 스크롤 동기화 참조 및 상태
+  const leftPanelRef = useRef(null);
+  const rightPanelRef = useRef(null);
+  const [syncScroll, setSyncScroll] = useState(true);
+  const isScrolling = useRef(false);
+
   // 날짜 입력 클릭 시 달력 열기
   const handleDateClick = (ref) => {
     if (ref.current && ref.current.showPicker) {
@@ -39,6 +45,26 @@ export default function AssetConfigDetail() {
         ref.current.focus();
       }
     }
+  };
+
+  // 스크롤 동기화 핸들러
+  const handleScroll = (source) => {
+    if (!syncScroll || isScrolling.current) return;
+
+    isScrolling.current = true;
+
+    const sourcePanel = source === 'left' ? leftPanelRef.current : rightPanelRef.current;
+    const targetPanel = source === 'left' ? rightPanelRef.current : leftPanelRef.current;
+
+    if (sourcePanel && targetPanel) {
+      targetPanel.scrollTop = sourcePanel.scrollTop;
+      targetPanel.scrollLeft = sourcePanel.scrollLeft;
+    }
+
+    // 무한 루프 방지를 위한 딜레이
+    requestAnimationFrame(() => {
+      isScrolling.current = false;
+    });
   };
 
   // 설정 데이터 로드
@@ -69,8 +95,8 @@ export default function AssetConfigDetail() {
         }
       } catch (err) {
         if (!isCancelled && err.name !== 'CanceledError') {
-          console.error('설정 정보 조회 오류:', err);
-          setError('설정 정보를 불러오는 중 오류가 발생했습니다.');
+          console.error('Config 정보 조회 오류:', err);
+          setError('Config 정보를 불러오는 중 오류가 발생했습니다.');
         }
       } finally {
         if (!isCancelled) {
@@ -123,7 +149,7 @@ export default function AssetConfigDetail() {
       return (
         <div className="config-empty">
           <i className="bi bi-file-earmark-x"></i>
-          <span>해당 날짜의 설정 정보가 없습니다.</span>
+          <span>해당 날짜의 Config 정보가 없습니다.</span>
         </div>
       );
     }
@@ -261,7 +287,7 @@ export default function AssetConfigDetail() {
             color: '#94a3b8'
           }}>
             <i className="bi bi-arrow-repeat spinning" style={{ fontSize: '32px', marginBottom: '16px' }}></i>
-            <span>설정 정보를 불러오는 중...</span>
+            <span>Config 정보를 불러오는 중...</span>
           </div>
         </main>
       </div>
@@ -284,7 +310,7 @@ export default function AssetConfigDetail() {
             </button>
             <h1 className="page-title">
               <i className="bi bi-file-diff"></i>
-              설정 정보 비교
+              Config 정보 비교
             </h1>
             <span className="selected-group-badge">
               <i className="bi bi-hdd-network"></i>
@@ -292,6 +318,14 @@ export default function AssetConfigDetail() {
             </span>
           </div>
           <div className="page-header-right">
+            <button
+              className={`btn btn-sm sync-scroll-btn ${syncScroll ? 'active' : ''}`}
+              onClick={() => setSyncScroll(!syncScroll)}
+              title={syncScroll ? '스크롤 동기화 끄기' : '스크롤 동기화 켜기'}
+            >
+              <i className={`bi ${syncScroll ? 'bi-link-45deg' : 'bi-link'}`}></i>
+              <span>동기화 스크롤</span>
+            </button>
             {diffStats.total > 0 && (
               <div className="diff-stats">
                 <span className="diff-stat added">
@@ -332,7 +366,11 @@ export default function AssetConfigDetail() {
                     max={rightDate}
                   />
                 </div>
-                <div className="config-panel-content">
+                <div
+                  className="config-panel-content"
+                  ref={leftPanelRef}
+                  onScroll={() => handleScroll('left')}
+                >
                   <pre className="config-text">
                     {renderConfigWithLineNumbers(yesterdayConfig, 'old')}
                   </pre>
@@ -358,7 +396,11 @@ export default function AssetConfigDetail() {
                     max={new Date().toISOString().split('T')[0]}
                   />
                 </div>
-                <div className="config-panel-content">
+                <div
+                  className="config-panel-content"
+                  ref={rightPanelRef}
+                  onScroll={() => handleScroll('right')}
+                >
                   <pre className="config-text">
                     {renderConfigWithLineNumbers(todayConfig, 'new')}
                   </pre>
@@ -404,10 +446,10 @@ export default function AssetConfigDetail() {
                     <p>비교할 수 없습니다.</p>
                     <span className="no-diff-sub">
                       {!yesterdayConfig && !todayConfig
-                        ? '양쪽 모두 설정 정보가 없습니다.'
+                        ? '양쪽 모두 Config 정보가 없습니다.'
                         : !yesterdayConfig
-                          ? '이전 날짜의 설정 정보가 없습니다.'
-                          : '오늘 날짜의 설정 정보가 없습니다.'}
+                          ? '이전 날짜의 Config 정보가 없습니다.'
+                          : '오늘 날짜의 Config 정보가 없습니다.'}
                     </span>
                   </div>
                 ) : diffStats.total === 0 ? (
@@ -438,24 +480,35 @@ export default function AssetConfigDetail() {
         .asset-config-detail-page {
           display: flex;
           width: 100%;
-          height: 100%;
+          height: 100vh !important;
+          max-height: 100vh !important;
+          overflow: hidden !important;
         }
 
         .asset-config-detail-page .page-main-content.full-width {
           flex: 1;
           width: 100%;
+          height: 100vh !important;
+          max-height: 100vh !important;
           display: flex;
           flex-direction: column;
-          overflow: hidden;
+          overflow: hidden !important;
+          padding-bottom: 8px;
+        }
+
+        .asset-config-detail-page .page-header {
+          flex-shrink: 0;
         }
 
         .config-content-wrapper {
           flex: 1;
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 12px;
           min-height: 0;
           overflow: hidden;
+          height: calc(100vh - 140px);
+          max-height: calc(100vh - 140px);
         }
 
         .config-compare-container {
@@ -464,13 +517,14 @@ export default function AssetConfigDetail() {
           gap: 16px;
           flex: 1;
           min-height: 0;
+          overflow: hidden;
         }
 
         .config-panel {
           display: flex;
           flex-direction: column;
+          min-height: 0;
           overflow: hidden;
-          min-height: 200px;
         }
 
         .config-panel.glass-card:hover {
@@ -544,9 +598,28 @@ export default function AssetConfigDetail() {
 
         .config-panel-content {
           flex: 1;
-          overflow: auto;
+          overflow-y: auto !important;
+          overflow-x: auto;
           padding: 0;
           min-height: 0;
+        }
+
+        .config-panel-content::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+
+        .config-panel-content::-webkit-scrollbar-track {
+          background: rgba(15, 23, 42, 0.5);
+        }
+
+        .config-panel-content::-webkit-scrollbar-thumb {
+          background: rgba(100, 116, 139, 0.5);
+          border-radius: 4px;
+        }
+
+        .config-panel-content::-webkit-scrollbar-thumb:hover {
+          background: rgba(100, 116, 139, 0.8);
         }
 
         .config-text {
@@ -607,9 +680,9 @@ export default function AssetConfigDetail() {
           display: flex;
           flex-direction: column;
           flex: 0 0 auto;
-          height: calc(100vh - 520px);
-          min-height: 250px;
-          max-height: 400px;
+          height: 250px;
+          min-height: 180px;
+          max-height: 250px;
           overflow: hidden;
         }
 
@@ -905,13 +978,53 @@ export default function AssetConfigDetail() {
           gap: 12px;
         }
 
+        .sync-scroll-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          border-radius: 6px;
+          background: rgba(100, 116, 139, 0.2);
+          border: 1px solid rgba(100, 116, 139, 0.3);
+          color: #94a3b8;
+          font-size: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .sync-scroll-btn:hover {
+          background: rgba(100, 116, 139, 0.3);
+          color: #e2e8f0;
+        }
+
+        .sync-scroll-btn.active {
+          background: rgba(59, 130, 246, 0.2);
+          border-color: rgba(59, 130, 246, 0.4);
+          color: #60a5fa;
+        }
+
+        .sync-scroll-btn.active:hover {
+          background: rgba(59, 130, 246, 0.3);
+        }
+
+        .sync-scroll-btn i {
+          font-size: 14px;
+        }
+
         @media (max-width: 1200px) {
+          .config-content-wrapper {
+            height: calc(100vh - 120px);
+            max-height: calc(100vh - 120px);
+          }
+
           .config-compare-container {
             grid-template-columns: 1fr;
           }
 
           .config-diff-container {
-            height: 300px;
+            height: 200px;
+            min-height: 150px;
+            max-height: 200px;
           }
         }
       `}</style>
