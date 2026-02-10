@@ -1,10 +1,10 @@
 import { useState, useCallback, useRef, useEffect, memo, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import GridLayout from 'react-grid-layout';
+import GridLayout, { getCompactor } from 'react-grid-layout';
 import ForceGraph2D from 'react-force-graph-2d';
 import ReactECharts from 'echarts-for-react';
-import { useTopologyView, useGroupTree, useWidgets, useDefaultDashboard, useUserDashboard, useSaveUserDashboard, useResetUserDashboard } from '../hooks';
+import { useTopologyView, useGroupTree, useWidgets, useDefaultDashboard, useUserDashboard, useSaveUserDashboard, useResetUserDashboard, useDeviceErrorLevels } from '../hooks';
 import { useAuthStore } from '../stores/authStore';
 import { useAlertStore } from '../stores/alertStore';
 import { faultApi, dashboardApi } from '../api';
@@ -65,15 +65,19 @@ const getShortMetricName = (metric) => {
   return abbrevMap[metric] || metric;
 };
 
-// 기본 위젯 타입 (API 실패 시 폴백)
+// 서버 데이터는 12칸 기준, 클라이언트는 96칸 (8배 스케일)
+const GRID_COLS = 96;
+const GRID_SCALE = 4; // 12칸 → 96칸 변환 (위젯을 원래의 절반 크기로 표시)
+
+// 기본 위젯 타입 (API 실패 시 폴백) - 서버 12칸 기준 크기
 const DEFAULT_WIDGET_TYPES = {
   TOPOLOGY: {
     id: 'TOPOLOGY',
     name: '토폴로지 Map',
     icon: 'bi-diagram-3',
     category: 'network',
-    defaultW: 2,
-    defaultH: 2,
+    defaultW: 5,
+    defaultH: 3,
     defaultConfig: {},
   },
   CPU_MEM_TOPN: {
@@ -81,8 +85,8 @@ const DEFAULT_WIDGET_TYPES = {
     name: 'CPU/MEM TOPN',
     icon: 'bi-cpu',
     category: 'chart',
-    defaultW: 1,
-    defaultH: 1,
+    defaultW: 3,
+    defaultH: 2,
     defaultConfig: {
       group: 'CPU_MEM',
       elements: ['CPU', 'MEMORY'],
@@ -94,8 +98,8 @@ const DEFAULT_WIDGET_TYPES = {
     name: 'Traffic IN/OUT TOPN',
     icon: 'bi-bar-chart',
     category: 'chart',
-    defaultW: 1,
-    defaultH: 1,
+    defaultW: 3,
+    defaultH: 2,
     defaultConfig: {
       group: 'TRAFFIC',
       elements: ['TRAFFIC_IN_BPS', 'TRAFFIC_OUT_BPS'],
@@ -107,8 +111,8 @@ const DEFAULT_WIDGET_TYPES = {
     name: '알람 리스트',
     icon: 'bi-bell',
     category: 'monitoring',
-    defaultW: 2,
-    defaultH: 1,
+    defaultW: 5,
+    defaultH: 2,
     defaultConfig: {},
   },
   FILESYSTEM_TOPN: {
@@ -116,8 +120,8 @@ const DEFAULT_WIDGET_TYPES = {
     name: '파일시스템 TOPN',
     icon: 'bi-pie-chart',
     category: 'chart',
-    defaultW: 1,
-    defaultH: 1,
+    defaultW: 3,
+    defaultH: 2,
     defaultConfig: {
       group: 'FILE',
       elements: ['FILESYSTEM'],
@@ -129,8 +133,8 @@ const DEFAULT_WIDGET_TYPES = {
     name: 'Traffic IN/OUT 추이',
     icon: 'bi-graph-up',
     category: 'chart',
-    defaultW: 2,
-    defaultH: 1,
+    defaultW: 5,
+    defaultH: 2,
     defaultConfig: {
       group: 'TRAFFIC',
       elements: ['TRAFFIC_IN_BPS', 'TRAFFIC_OUT_BPS'],
@@ -142,8 +146,8 @@ const DEFAULT_WIDGET_TYPES = {
     name: '사용자 정의',
     icon: 'bi-sliders',
     category: 'custom',
-    defaultW: 2,
-    defaultH: 1,
+    defaultW: 5,
+    defaultH: 2,
     defaultConfig: {},
   },
   REALTIME_ALERT: {
@@ -151,8 +155,8 @@ const DEFAULT_WIDGET_TYPES = {
     name: '실시간 장애 현황',
     icon: 'bi-exclamation-triangle',
     category: 'monitoring',
-    defaultW: 2,
-    defaultH: 2,
+    defaultW: 5,
+    defaultH: 3,
     defaultConfig: {},
   },
   ALERT_SUMMARY: {
@@ -160,8 +164,8 @@ const DEFAULT_WIDGET_TYPES = {
     name: '장애 현황',
     icon: 'bi-bell-fill',
     category: 'monitoring',
-    defaultW: 1,
-    defaultH: 1,
+    defaultW: 3,
+    defaultH: 2,
     defaultConfig: {},
   },
   DEVICE_SUMMARY: {
@@ -169,8 +173,8 @@ const DEFAULT_WIDGET_TYPES = {
     name: '종합 현황',
     icon: 'bi-grid-3x3-gap-fill',
     category: 'monitoring',
-    defaultW: 1,
-    defaultH: 1,
+    defaultW: 3,
+    defaultH: 2,
     defaultConfig: {},
   },
 };
@@ -266,14 +270,14 @@ const initialWidgets = [
   { id: 'w5', type: 'TRAFFIC_TREND', title: 'Traffic IN/OUT 추이', config: DEFAULT_WIDGET_TYPES.TRAFFIC_TREND.defaultConfig },
 ];
 
-// 초기 레이아웃
+// 초기 레이아웃 (96칸 클라이언트 기준, GRID_SCALE=4 적용된 값)
 const initialLayout = [
-  { i: 'w0', x: 0, y: 0, w: 2, h: 2, minW: 1, minH: 1, maxH: 5 },  // 토폴로지 (좌측 상단)
-  { i: 'w1', x: 2, y: 0, w: 1, h: 1, minW: 1, minH: 1, maxH: 5 },  // CPU/MEM TOPN
-  { i: 'w2', x: 3, y: 0, w: 1, h: 1, minW: 1, minH: 1, maxH: 5 },  // Traffic TOPN
-  { i: 'w3', x: 0, y: 2, w: 2, h: 1, minW: 1, minH: 1, maxH: 5 },  // 알람 리스트
-  { i: 'w4', x: 2, y: 1, w: 1, h: 1, minW: 1, minH: 1, maxH: 5 },  // 파일시스템 TOPN
-  { i: 'w5', x: 0, y: 3, w: 2, h: 1, minW: 1, minH: 1, maxH: 5 },  // Traffic 추이
+  { i: 'w0', x: 0,  y: 0,  w: 20, h: 12, minW: 1, minH: 1, maxH: 80 },  // 토폴로지
+  { i: 'w1', x: 20, y: 0,  w: 12, h: 8,  minW: 1, minH: 1, maxH: 80 },  // CPU/MEM TOPN
+  { i: 'w2', x: 32, y: 0,  w: 12, h: 8,  minW: 1, minH: 1, maxH: 80 },  // Traffic TOPN
+  { i: 'w3', x: 0,  y: 12, w: 20, h: 8,  minW: 1, minH: 1, maxH: 80 },  // 알람 리스트
+  { i: 'w4', x: 20, y: 8,  w: 12, h: 8,  minW: 1, minH: 1, maxH: 80 },  // 파일시스템 TOPN
+  { i: 'w5', x: 32, y: 8,  w: 12, h: 8,  minW: 1, minH: 1, maxH: 80 },  // Traffic 추이
 ];
 
 // 토폴로지 위젯 컴포넌트
@@ -293,7 +297,48 @@ function TopologyWidget({ onExpand }) {
   const [backgroundImage, setBackgroundImage] = useState(null);
   const backgroundImageRef = useRef(null);
 
+  // 장애 데이터 (장비/그룹별 최고 등급)
+  const { deviceErrorMap, groupErrorMap, errors: activeErrors } = useDeviceErrorLevels();
+  const deviceErrorMapRef = useRef(deviceErrorMap);
+  const groupErrorMapRef = useRef(new Map());
+
   const { data: groupTree, isLoading: groupTreeLoading } = useGroupTree();
+
+  // 그룹트리 기반으로 하위 그룹 장애를 상위 그룹으로 전파
+  useEffect(() => {
+    deviceErrorMapRef.current = deviceErrorMap;
+
+    // groupTree가 없으면 기본 groupErrorMap 사용
+    if (!groupTree || groupTree.length === 0) {
+      groupErrorMapRef.current = groupErrorMap;
+      return;
+    }
+
+    const levelPriority = { 'C': 4, 'M': 3, 'N': 2, 'W': 1 };
+    const enhanced = new Map(groupErrorMap); // 기본 직접 매칭 복사
+
+    // GROUP_NAME → 모든 조상 GROUP_NAME 맵 생성
+    const buildAncestors = (nodes, ancestors) => {
+      for (const node of nodes) {
+        // 현재 그룹에 장애가 있으면 모든 조상에 전파
+        const myLevel = groupErrorMap.get(node.GROUP_NAME);
+        if (myLevel) {
+          for (const anc of ancestors) {
+            const existing = enhanced.get(anc);
+            if ((levelPriority[myLevel] || 0) > (levelPriority[existing] || 0)) {
+              enhanced.set(anc, myLevel);
+            }
+          }
+        }
+        if (node.children?.length > 0) {
+          buildAncestors(node.children, [...ancestors, node.GROUP_NAME]);
+        }
+      }
+    };
+
+    buildAncestors(groupTree, []);
+    groupErrorMapRef.current = enhanced;
+  }, [deviceErrorMap, groupErrorMap, groupTree]);
   const rootGroup = groupTree?.find(g => g.GROUP_NAME !== '미등록 장비');
   const defaultGroupId = rootGroup?.GROUP_ID || null;
 
@@ -439,6 +484,14 @@ function TopologyWidget({ onExpand }) {
 
   const NODE_SIZE = 36;
 
+  // 장애 등급별 색상
+  const FAULT_COLORS = {
+    'C': { r: 239, g: 68, b: 68 },   // Critical - 빨강
+    'M': { r: 249, g: 115, b: 22 },  // Major - 주황
+    'N': { r: 234, g: 179, b: 8 },   // Minor - 노랑
+    'W': { r: 59, g: 130, b: 246 },  // Warning - 파랑
+  };
+
   const drawNode = useCallback((node, ctx, globalScale) => {
     const isGroupNode = node.nodeType === 'group' || node.type === 'group';
     const size = isGroupNode ? NODE_SIZE * 1.2 : NODE_SIZE;
@@ -447,28 +500,64 @@ function TopologyWidget({ onExpand }) {
     const drawY = node.y;
     const label = node.name || node.label || node.id;
 
+    // 장애 등급 조회
+    let errorLevel = null;
+    if (isGroupNode) {
+      const gName = node.name || node.groupName;
+      errorLevel = gName ? groupErrorMapRef.current.get(gName) : null;
+    } else {
+      // 다양한 ID 필드 시도
+      const dId = node.deviceId ?? node.DEVICE_ID ?? node.originalId;
+      if (dId != null) {
+        errorLevel = deviceErrorMapRef.current.get(dId)
+          || deviceErrorMapRef.current.get(String(dId))
+          || deviceErrorMapRef.current.get(Number(dId))
+          || null;
+      }
+    }
+    const faultColor = errorLevel ? FAULT_COLORS[errorLevel] : null;
+
+    // 펄스 애니메이션 (장애 시)
+    const pulse = faultColor ? 0.6 + 0.4 * Math.sin(Date.now() / 500) : 0;
+
     if (isGroupNode) {
       const radius = 10;
       const hasIconData = node.iconData || node.ICON_DATA;
 
+      // 외곽 glow
       ctx.save();
-      ctx.shadowColor = 'rgba(139, 92, 246, 0.5)';
-      ctx.shadowBlur = 12;
+      if (faultColor) {
+        ctx.shadowColor = `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, ${0.7 * pulse})`;
+        ctx.shadowBlur = 18 + 6 * pulse;
+      } else {
+        ctx.shadowColor = 'rgba(139, 92, 246, 0.5)';
+        ctx.shadowBlur = 12;
+      }
       ctx.beginPath();
       ctx.roundRect(drawX - half, drawY - half, size, size, radius);
-      ctx.fillStyle = 'rgba(139, 92, 246, 0.1)';
+      ctx.fillStyle = faultColor
+        ? `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, 0.12)`
+        : 'rgba(139, 92, 246, 0.1)';
       ctx.fill();
       ctx.restore();
 
+      // 배경 그라데이션
       ctx.beginPath();
       ctx.roundRect(drawX - half, drawY - half, size, size, radius);
       const glassBg = ctx.createLinearGradient(drawX - half, drawY - half, drawX + half, drawY + half);
-      glassBg.addColorStop(0, 'rgba(139, 92, 246, 0.25)');
-      glassBg.addColorStop(0.5, 'rgba(167, 139, 250, 0.15)');
-      glassBg.addColorStop(1, 'rgba(196, 181, 253, 0.25)');
+      if (faultColor) {
+        glassBg.addColorStop(0, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, 0.3)`);
+        glassBg.addColorStop(0.5, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, 0.15)`);
+        glassBg.addColorStop(1, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, 0.3)`);
+      } else {
+        glassBg.addColorStop(0, 'rgba(139, 92, 246, 0.25)');
+        glassBg.addColorStop(0.5, 'rgba(167, 139, 250, 0.15)');
+        glassBg.addColorStop(1, 'rgba(196, 181, 253, 0.25)');
+      }
       ctx.fillStyle = glassBg;
       ctx.fill();
 
+      // 아이콘
       if (hasIconData) {
         const cacheKey = `group_${node.id}`;
         if (!groupIconCache.current[cacheKey]) {
@@ -497,32 +586,54 @@ function TopologyWidget({ onExpand }) {
         }
       }
 
+      // 테두리
       ctx.beginPath();
       ctx.roundRect(drawX - half, drawY - half, size, size, radius);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-      ctx.lineWidth = 1.5 / globalScale;
+      if (faultColor) {
+        ctx.strokeStyle = `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, ${0.5 + 0.5 * pulse})`;
+        ctx.lineWidth = 2.5 / globalScale;
+      } else {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 1.5 / globalScale;
+      }
       ctx.stroke();
     } else {
       const deviceIconData = node.iconData || node.ICON_DATA;
 
+      // 외곽 glow
       ctx.save();
-      ctx.shadowColor = 'rgba(59, 130, 246, 0.5)';
-      ctx.shadowBlur = 12;
+      if (faultColor) {
+        ctx.shadowColor = `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, ${0.7 * pulse})`;
+        ctx.shadowBlur = 18 + 6 * pulse;
+      } else {
+        ctx.shadowColor = 'rgba(59, 130, 246, 0.5)';
+        ctx.shadowBlur = 12;
+      }
       ctx.beginPath();
       ctx.arc(drawX, drawY, half, 0, 2 * Math.PI);
-      ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
+      ctx.fillStyle = faultColor
+        ? `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, 0.12)`
+        : 'rgba(59, 130, 246, 0.1)';
       ctx.fill();
       ctx.restore();
 
+      // 배경 그라데이션
       ctx.beginPath();
       ctx.arc(drawX, drawY, half, 0, 2 * Math.PI);
       const glassBg = ctx.createRadialGradient(drawX - half * 0.3, drawY - half * 0.3, 0, drawX, drawY, half);
-      glassBg.addColorStop(0, 'rgba(96, 165, 250, 0.35)');
-      glassBg.addColorStop(0.5, 'rgba(59, 130, 246, 0.2)');
-      glassBg.addColorStop(1, 'rgba(37, 99, 235, 0.3)');
+      if (faultColor) {
+        glassBg.addColorStop(0, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, 0.4)`);
+        glassBg.addColorStop(0.5, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, 0.2)`);
+        glassBg.addColorStop(1, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, 0.35)`);
+      } else {
+        glassBg.addColorStop(0, 'rgba(96, 165, 250, 0.35)');
+        glassBg.addColorStop(0.5, 'rgba(59, 130, 246, 0.2)');
+        glassBg.addColorStop(1, 'rgba(37, 99, 235, 0.3)');
+      }
       ctx.fillStyle = glassBg;
       ctx.fill();
 
+      // 아이콘
       if (deviceIconData) {
         const cacheKey = `device_${node.id}`;
         if (!groupIconCache.current[cacheKey]) {
@@ -550,24 +661,45 @@ function TopologyWidget({ onExpand }) {
         }
       }
 
+      // 테두리
       ctx.beginPath();
       ctx.arc(drawX, drawY, half, 0, 2 * Math.PI);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-      ctx.lineWidth = 1.5 / globalScale;
+      if (faultColor) {
+        ctx.strokeStyle = `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, ${0.5 + 0.5 * pulse})`;
+        ctx.lineWidth = 2.5 / globalScale;
+      } else {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 1.5 / globalScale;
+      }
       ctx.stroke();
     }
 
+    // 라벨
     const fontSize = 11 / globalScale;
     ctx.font = `${fontSize}px Sans-Serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillStyle = "white";
+    ctx.fillStyle = faultColor
+      ? `rgb(${faultColor.r}, ${faultColor.g}, ${faultColor.b})`
+      : "white";
     ctx.strokeStyle = "black";
     ctx.lineWidth = 2 / globalScale;
     const textY = drawY + half + 4;
     ctx.strokeText(label, drawX, textY);
     ctx.fillText(label, drawX, textY);
   }, []);
+
+  // 장애 존재 시 펄스 애니메이션을 위한 주기적 re-render (~20fps)
+  const hasFaults = deviceErrorMap.size > 0 || groupErrorMap.size > 0;
+  useEffect(() => {
+    if (!hasFaults) return;
+    const timer = setInterval(() => {
+      if (graphRef.current) {
+        graphRef.current.d3ReheatSimulation?.();
+      }
+    }, 50);
+    return () => clearInterval(timer);
+  }, [hasFaults]);
 
   const handleNodeClick = useCallback((node) => {
     if (node.nodeType === 'group' || node.type === 'group') {
@@ -3095,17 +3227,62 @@ export default function Dashboard() {
       return;
     }
 
+    // 사용자 대시보드인지 기본 대시보드인지 구분
+    const isUserData = userDashboard && userDashboard.length > 0;
+    console.log('=== 대시보드 데이터 로드 ===', {
+      isUserData,
+      dataCount: dashboardData.length,
+      firstItemKeys: dashboardData[0] ? Object.keys(dashboardData[0]) : [],
+      firstItem: dashboardData[0],
+    });
+
+    // API 응답 필드명 매핑 헬퍼 (백엔드에서 posX/pos_x/x 등 다양한 필드명 가능)
+    const getItemPosX = (item) => item.posX ?? item.pos_x ?? item.x;
+    const getItemPosY = (item) => item.posY ?? item.pos_y ?? item.y;
+    const getItemWidth = (item) => item.width ?? item.w;
+    const getItemHeight = (item) => item.height ?? item.h;
+
     // API 데이터를 widgets와 layout으로 변환
     const newWidgets = [];
     const newLayout = [];
-    const maxCols = 12; // 그리드 최대 칼럼 수
+
+    // 서버에 위치 정보가 없으면 자동 배치를 위한 커서
+    let autoX = 0;
+    let autoY = 0;
+    let rowMaxH = 0;
 
     dashboardData.forEach((item, index) => {
       const id = `w${item.defaultDashboardWidgetId || item.userDashboardWidgetId || index}`;
 
-      // 위젯 너비와 위치를 그리드 칼럼 수에 맞게 제한
-      const width = Math.min(item.width ?? 1, maxCols);
-      const posX = Math.min(item.posX ?? item.x ?? 0, maxCols - width);
+      // API 응답에서 위치/크기 추출 (다양한 필드명 대응)
+      const rawPosX = getItemPosX(item);
+      const rawPosY = getItemPosY(item);
+      const rawWidth = getItemWidth(item);
+      const rawHeight = getItemHeight(item);
+
+      let width, height, posX, posY;
+
+      if (isUserData && rawPosX != null && rawPosY != null) {
+        // 사용자 대시보드: 96칸 값 직접 사용 (이전에 저장된 데이터)
+        width = Math.min(rawWidth ?? 20, GRID_COLS);
+        height = rawHeight ?? 8;
+        posX = Math.min(rawPosX, GRID_COLS - width);
+        posY = rawPosY;
+      } else {
+        // 기본 대시보드 (12칸 기준) 또는 위치 정보 없음 → GRID_SCALE 변환 후 자동 배치
+        width = Math.min((rawWidth ?? 6) * GRID_SCALE, GRID_COLS);
+        height = (rawHeight ?? 4) * GRID_SCALE;
+        // 현재 행에 들어갈 수 없으면 다음 행으로
+        if (autoX + width > GRID_COLS) {
+          autoX = 0;
+          autoY += rowMaxH;
+          rowMaxH = 0;
+        }
+        posX = autoX;
+        posY = autoY;
+        autoX += width;
+        rowMaxH = Math.max(rowMaxH, height);
+      }
 
       // 기본 위젯인지 사용자 위젯인지 구분
       const isDefaultWidget = !!item.defaultDashboardWidgetId;
@@ -3151,16 +3328,42 @@ export default function Dashboard() {
 
       newLayout.push({
         i: id,
-        x: posX,                         // DB: POS_X (그리드 범위 내로 제한)
-        y: item.posY ?? item.y ?? 0,     // DB: POS_Y
-        w: width,                        // DB: WIDTH (최대 칼럼 수로 제한)
-        h: item.height ?? 1,             // DB: HEIGHT
+        x: posX,
+        y: posY,
+        w: width,
+        h: height,
         minW: 1,
         minH: 1,
-        maxW: maxCols,                   // 최대 너비 제한
-        maxH: 5,                         // 최대 높이 제한
+        maxW: GRID_COLS,
+        maxH: 80,
       });
     });
+
+    // 위치가 겹치는 위젯이 있으면 자동 재배치 (API 응답에서 위치가 모두 0인 경우 등)
+    if (newLayout.length > 1) {
+      const hasOverlap = newLayout.some((a, i) =>
+        newLayout.some((b, j) => i !== j && a.i !== b.i &&
+          a.x < b.x + b.w && a.x + a.w > b.x &&
+          a.y < b.y + b.h && a.y + a.h > b.y
+        )
+      );
+      if (hasOverlap) {
+        console.log('=== 위젯 겹침 감지 → 자동 재배치 ===');
+        let ax = 0, ay = 0, rmh = 0;
+        for (const l of newLayout) {
+          if (ax + l.w > GRID_COLS) { ax = 0; ay += rmh; rmh = 0; }
+          l.x = ax;
+          l.y = ay;
+          ax += l.w;
+          rmh = Math.max(rmh, l.h);
+        }
+      }
+    }
+
+    console.log('=== 최종 레이아웃 ===', newLayout.map(l => ({
+      i: l.i, x: l.x, y: l.y, w: l.w, h: l.h
+    })));
+    console.log('=== gridConfig ===', { cols: GRID_COLS, rowHeight: 20, GRID_SCALE });
 
     setWidgets(newWidgets);
     setLayout(newLayout);
@@ -3314,22 +3517,20 @@ export default function Dashboard() {
 
   // 레이아웃 변경 핸들러
   const handleLayoutChange = useCallback((newLayout) => {
-    const cols = 12;
-    const maxRows = 5;
+    console.log('=== onLayoutChange ===', newLayout.slice(0, 3).map(l => ({
+      i: l.i, x: l.x, y: l.y, w: l.w, h: l.h, static: l.static
+    })));
+    const cols = GRID_COLS;
+    const maxRows = 200;
 
-    // 5칸을 초과하는 위젯이 있는지 체크
     const exceedsMaxRows = newLayout.some(item => (item.y + item.h) > maxRows);
 
-    // 5칸 초과 시 레이아웃 변경 거부 (이전 레이아웃 유지)
     if (exceedsMaxRows) {
       return;
     }
 
-    // 화면 경계 체크 및 조정
     const boundedLayout = newLayout.map(item => {
-      // 너비를 최대 칼럼 수로 제한
       const adjustedW = Math.min(item.w, cols);
-      // x + w가 cols를 넘지 않도록
       const adjustedX = Math.min(item.x, cols - adjustedW);
 
       return {
@@ -3338,7 +3539,7 @@ export default function Dashboard() {
         x: Math.max(0, adjustedX),
         y: item.y,
         maxW: cols,
-        maxH: 5,
+        maxH: 80,
       };
     });
 
@@ -3353,7 +3554,7 @@ export default function Dashboard() {
   }, []);
 
   // 빈 공간 찾기 함수
-  const findEmptySpace = useCallback((widgetWidth, widgetHeight, currentLayout, cols = 12, maxRows = 5) => {
+  const findEmptySpace = useCallback((widgetWidth, widgetHeight, currentLayout, cols = GRID_COLS, maxRows = 20) => {
     // 그리드 맵 생성 (각 셀이 사용 중인지 체크)
     const grid = Array(maxRows).fill(null).map(() => Array(cols).fill(false));
 
@@ -3398,9 +3599,8 @@ export default function Dashboard() {
       return;
     }
 
-    const maxCols = 12; // 그리드 최대 칼럼 수
-    const widgetWidth = Math.min(type.defaultW || 1, maxCols);
-    const widgetHeight = type.defaultH || 1;
+    const widgetWidth = Math.min((type.defaultW || 6) * GRID_SCALE, GRID_COLS);
+    const widgetHeight = (type.defaultH || 4) * GRID_SCALE;
 
     // 빈 공간 찾기
     const emptySpace = findEmptySpace(widgetWidth, widgetHeight, layout);
@@ -3431,8 +3631,8 @@ export default function Dashboard() {
       h: widgetHeight,
       minW: 1,
       minH: 1,
-      maxW: maxCols,
-      maxH: 5,
+      maxW: GRID_COLS,
+      maxH: 80,
     };
 
     // 로컬 state 업데이트만 (API 호출 없음)
@@ -3471,12 +3671,12 @@ export default function Dashboard() {
       i: newId,
       x: 0,
       y: maxY,
-      w: type.defaultW || 2,
-      h: type.defaultH || 1,
+      w: (type.defaultW || 12) * GRID_SCALE,
+      h: (type.defaultH || 4) * GRID_SCALE,
       minW: 1,
       minH: 1,
-      maxW: 12,
-      maxH: 5,
+      maxW: GRID_COLS,
+      maxH: 80,
     };
 
     setWidgets(prev => {
@@ -3597,8 +3797,8 @@ export default function Dashboard() {
         title: widget.title,
         posX: layoutItem?.x ?? 0,
         posY: layoutItem?.y ?? 0,
-        width: layoutItem?.w ?? 1,
-        height: layoutItem?.h ?? 1,
+        width: layoutItem?.w ?? 12,
+        height: layoutItem?.h ?? 8,
         sortOrder: index,
         config: typeof cleanConfig === 'string' ? cleanConfig : JSON.stringify(cleanConfig || {}),
       };
@@ -3647,8 +3847,8 @@ export default function Dashboard() {
           title: widget.title,
           posX: layoutItem?.x ?? 0,
           posY: layoutItem?.y ?? 0,
-          width: layoutItem?.w ?? 1,
-          height: layoutItem?.h ?? 1,
+          width: layoutItem?.w ?? 12,
+          height: layoutItem?.h ?? 8,
           sortOrder: widget.sortOrder ?? index,
           config: typeof cleanConfig === 'string' ? cleanConfig : JSON.stringify(cleanConfig || {}),
         };
@@ -3706,15 +3906,32 @@ export default function Dashboard() {
         console.log('=== 초기화 API 응답 데이터 ===', freshData);
 
         if (freshData && freshData.length > 0) {
-          // 새 데이터로 위젯과 레이아웃 직접 업데이트
-          const maxCols = 12;
+          // 새 데이터로 위젯과 레이아웃 직접 업데이트 (서버 12칸 → 클라이언트 96칸)
           const newWidgets = [];
           const newLayout = [];
 
+          let rAutoX = 0;
+          let rAutoY = 0;
+          let rRowMaxH = 0;
+
           freshData.forEach((item, index) => {
             const id = `w${item.userDashboardWidgetId || index}`;
-            const width = Math.min(item.width ?? 1, maxCols);
-            const posX = Math.min(item.posX ?? item.x ?? 0, maxCols - width);
+
+            // 초기화 데이터는 기본 대시보드 (12칸 기준) → GRID_SCALE 변환 + 자동 배치
+            const rawW = item.width ?? item.w ?? 6;
+            const rawH = item.height ?? item.h ?? 4;
+            let width, height, posX, posY;
+            width = Math.min(rawW * GRID_SCALE, GRID_COLS);
+            height = rawH * GRID_SCALE;
+            if (rAutoX + width > GRID_COLS) {
+              rAutoX = 0;
+              rAutoY += rRowMaxH;
+              rRowMaxH = 0;
+            }
+            posX = rAutoX;
+            posY = rAutoY;
+            rAutoX += width;
+            rRowMaxH = Math.max(rRowMaxH, height);
 
             let parsedConfig = item.config ? (typeof item.config === 'string' ? JSON.parse(item.config) : item.config) : {};
             const widgetType = WIDGET_TYPES[item.widgetCode];
@@ -3737,13 +3954,13 @@ export default function Dashboard() {
             newLayout.push({
               i: id,
               x: posX,
-              y: item.posY ?? item.y ?? 0,
+              y: posY,
               w: width,
-              h: item.height ?? 1,
+              h: height,
               minW: 1,
               minH: 1,
-              maxW: maxCols,
-              maxH: 5,
+              maxW: GRID_COLS,
+              maxH: 80,
             });
           });
 
@@ -3787,22 +4004,18 @@ export default function Dashboard() {
     return isAllowed && matchesSearch && matchesCategory;
   });
 
-  const cols = 12;
-  const margin = 16;
-  const containerPaddingVal = 20;
+  const cols = GRID_COLS; // 96칸 세밀 그리드
+  const margin = 2; // 위젯 간 간격
+  const containerPaddingVal = 4;
+  const rowHeight = 20; // 고정 행 높이 (20px 단위 세밀 조절)
 
-  // 정사각형 위젯을 위해 rowHeight를 컨테이너 너비 기준으로 계산
-  // (containerWidth - 좌우패딩 - (cols-1)*margin) / cols = 1칸 너비
-  const cellWidth = (containerWidth - containerPaddingVal * 2 - (cols - 1) * margin) / cols;
-  const rowHeight = Math.max(cellWidth, 150); // 최소 150px
-
-  // 편집 모드에 따라 static 속성 추가
+  // static 속성은 사용하지 않음 (correctBounds가 static 위젯을 밀어내는 문제 방지)
+  // 대신 dragConfig.enabled, resizeConfig.enabled로 편집 모드 제어
   const layoutWithStatic = useMemo(() => {
     return layout.map(item => ({
       ...item,
-      static: !isEditMode  // 편집 모드가 아니면 고정
     }));
-  }, [layout, isEditMode]);
+  }, [layout]);
 
   // 로딩 중일 때
   const isLoading = widgetsLoading || defaultDashboardLoading || !isInitialized;
@@ -3872,22 +4085,25 @@ export default function Dashboard() {
         <GridLayout
           className="layout"
           layout={layoutWithStatic}
-          cols={cols}
-          rowHeight={rowHeight}
           width={containerWidth}
-          maxRows={5}
+          gridConfig={{
+            cols,
+            rowHeight,
+            maxRows: 200,
+            margin: [margin, margin],
+            containerPadding: [containerPaddingVal, containerPaddingVal],
+          }}
+          dragConfig={{
+            enabled: isEditMode,
+            bounded: true,
+            handle: isEditMode ? ".widget-header" : undefined,
+          }}
+          resizeConfig={{
+            enabled: isEditMode,
+            handles: isEditMode ? ['s', 'e', 'se'] : [],
+          }}
+          compactor={getCompactor(null, false, true)}
           onLayoutChange={handleLayoutChange}
-          isDraggable={isEditMode}
-          isResizable={isEditMode}
-          isDroppable={isEditMode}
-          isBounded={true}
-          compactType="vertical"
-          preventCollision={false}
-          draggableHandle={isEditMode ? ".widget-drag-handle" : ""}
-          resizeHandles={isEditMode ? ['se'] : []}
-          margin={[margin, margin]}
-          containerPadding={[containerPaddingVal, containerPaddingVal]}
-          useCSSTransforms={true}
         >
           {widgets.map(widget => {
             const type = WIDGET_TYPES[widget.type];

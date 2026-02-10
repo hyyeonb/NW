@@ -191,9 +191,9 @@ export default function AssetConfig() {
           <div className="page-header-left">
             <h1 className="page-title">
               <i className="bi bi-sliders"></i>
-              자산 설정정보 관리
+              자산 Config 관리
             </h1>
-            <span className="page-subtitle">장비의 설정 정보를 조회하고 비교합니다</span>
+            <span className="page-subtitle">장비의 Config 정보를 조회하고 비교합니다</span>
             {selectedGroup && (
               <span className="selected-group-badge">
                 <i className="bi bi-folder2"></i>

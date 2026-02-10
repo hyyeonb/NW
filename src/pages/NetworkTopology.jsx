@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import ForceGraph2D from "react-force-graph-2d";
 import TopologySidebar from "../components/TopologySidebar";
-import { useDevice, useDevicePorts, useTopologyView, useSaveTopology, useGroupTree, useDevicesByGroup } from "../hooks";
+import { useDevice, useDevicePorts, useTopologyView, useSaveTopology, useGroupTree, useDevicesByGroup, useDeviceErrorLevels } from "../hooks";
 import { topologyApi } from "../api";
 import { useGroupStore } from "../stores";
 import "../styles/topology-sidebar.css";
@@ -36,6 +36,51 @@ export default function NetworkTopology() {
 
   // 그룹 트리 조회 (최상위 그룹 찾기용)
   const { data: groupTree } = useGroupTree();
+
+  // 장애 데이터 (장비/그룹별 최고 등급)
+  const { deviceErrorMap, groupErrorMap } = useDeviceErrorLevels();
+  const deviceErrorMapRef = useRef(deviceErrorMap);
+  const groupErrorMapRef = useRef(new Map());
+
+  useEffect(() => {
+    deviceErrorMapRef.current = deviceErrorMap;
+    if (!groupTree || groupTree.length === 0) {
+      groupErrorMapRef.current = groupErrorMap;
+      return;
+    }
+    const levelPriority = { 'C': 4, 'M': 3, 'N': 2, 'W': 1 };
+    const enhanced = new Map(groupErrorMap);
+    const buildAncestors = (nodes, ancestors) => {
+      for (const node of nodes) {
+        const myLevel = groupErrorMap.get(node.GROUP_NAME);
+        if (myLevel) {
+          for (const anc of ancestors) {
+            const existing = enhanced.get(anc);
+            if ((levelPriority[myLevel] || 0) > (levelPriority[existing] || 0)) {
+              enhanced.set(anc, myLevel);
+            }
+          }
+        }
+        if (node.children?.length > 0) {
+          buildAncestors(node.children, [...ancestors, node.GROUP_NAME]);
+        }
+      }
+    };
+    buildAncestors(groupTree, []);
+    groupErrorMapRef.current = enhanced;
+  }, [deviceErrorMap, groupErrorMap, groupTree]);
+
+  // 장애 펄스 애니메이션 - 장애 노드가 있을 때만 주기적 re-render
+  useEffect(() => {
+    const hasFaults = deviceErrorMap.size > 0 || groupErrorMap.size > 0;
+    if (!hasFaults) return;
+    const timer = setInterval(() => {
+      if (graphRef.current) {
+        graphRef.current.d3ReheatSimulation();
+      }
+    }, 50);
+    return () => clearInterval(timer);
+  }, [deviceErrorMap, groupErrorMap]);
 
   const [data, setData] = useState({ nodes: [], links: [] });
 
@@ -1652,6 +1697,14 @@ export default function NetworkTopology() {
   };
 
   // 노드 그리기
+  // 장애 등급별 색상
+  const FAULT_COLORS = {
+    'C': { r: 239, g: 68, b: 68 },
+    'M': { r: 249, g: 115, b: 22 },
+    'N': { r: 234, g: 179, b: 8 },
+    'W': { r: 59, g: 130, b: 246 },
+  };
+
   const drawNode = (node, ctx, globalScale) => {
     const img = iconCache.current[node.type];
     const label = node.name || node.id;
@@ -1667,10 +1720,8 @@ export default function NetworkTopology() {
     // 다중 선택 드래그 중이고, 이 노드가 드래그 중인 노드가 아닌 선택된 노드인 경우
     const offset = dragOffsetsRef.current[nodeKey];
     if (isDraggingNodesRef.current && draggingNodeRef.current && offset) {
-      // 드래그 중인 노드 기준으로 위치 계산
       drawX = draggingNodeRef.current.x + offset.dx;
       drawY = draggingNodeRef.current.y + offset.dy;
-      // 실제 노드 위치도 업데이트 (링크가 따라오도록)
       node.x = drawX;
       node.y = drawY;
       node.fx = drawX;
@@ -1679,6 +1730,23 @@ export default function NetworkTopology() {
 
     const size = isGroupNode ? NODE_SIZE * 1.2 : NODE_SIZE;
     const half = size / 2;
+
+    // 장애 등급 조회
+    let errorLevel = null;
+    if (isGroupNode) {
+      const gName = node.name || node.groupName;
+      errorLevel = gName ? groupErrorMapRef.current.get(gName) : null;
+    } else {
+      const dId = node.deviceId ?? node.DEVICE_ID ?? node.originalId;
+      if (dId != null) {
+        errorLevel = deviceErrorMapRef.current.get(dId)
+          || deviceErrorMapRef.current.get(String(dId))
+          || deviceErrorMapRef.current.get(Number(dId))
+          || null;
+      }
+    }
+    const fc = errorLevel ? FAULT_COLORS[errorLevel] : null;
+    const pulse = fc ? 0.6 + 0.4 * Math.sin(Date.now() / 500) : 0;
 
     // 다중 선택된 노드 표시 (초록색 테두리)
     if (isMultiSelected && isEditMode) {
@@ -1731,11 +1799,16 @@ export default function NetworkTopology() {
 
       // 글래스모피즘 배경 (외부 글로우)
       ctx.save();
-      ctx.shadowColor = 'rgba(139, 92, 246, 0.5)';
-      ctx.shadowBlur = 15;
+      if (fc) {
+        ctx.shadowColor = `rgba(${fc.r}, ${fc.g}, ${fc.b}, ${0.7 * pulse})`;
+        ctx.shadowBlur = 18 + 6 * pulse;
+      } else {
+        ctx.shadowColor = 'rgba(139, 92, 246, 0.5)';
+        ctx.shadowBlur = 15;
+      }
       ctx.beginPath();
       ctx.roundRect(drawX - half, drawY - half, size, size, radius);
-      ctx.fillStyle = 'rgba(139, 92, 246, 0.1)';
+      ctx.fillStyle = fc ? `rgba(${fc.r}, ${fc.g}, ${fc.b}, 0.12)` : 'rgba(139, 92, 246, 0.1)';
       ctx.fill();
       ctx.restore();
 
@@ -1743,9 +1816,15 @@ export default function NetworkTopology() {
       ctx.beginPath();
       ctx.roundRect(drawX - half, drawY - half, size, size, radius);
       const glassBg = ctx.createLinearGradient(drawX - half, drawY - half, drawX + half, drawY + half);
-      glassBg.addColorStop(0, 'rgba(139, 92, 246, 0.25)');
-      glassBg.addColorStop(0.5, 'rgba(167, 139, 250, 0.15)');
-      glassBg.addColorStop(1, 'rgba(196, 181, 253, 0.25)');
+      if (fc) {
+        glassBg.addColorStop(0, `rgba(${fc.r}, ${fc.g}, ${fc.b}, 0.3)`);
+        glassBg.addColorStop(0.5, `rgba(${fc.r}, ${fc.g}, ${fc.b}, 0.15)`);
+        glassBg.addColorStop(1, `rgba(${fc.r}, ${fc.g}, ${fc.b}, 0.3)`);
+      } else {
+        glassBg.addColorStop(0, 'rgba(139, 92, 246, 0.25)');
+        glassBg.addColorStop(0.5, 'rgba(167, 139, 250, 0.15)');
+        glassBg.addColorStop(1, 'rgba(196, 181, 253, 0.25)');
+      }
       ctx.fillStyle = glassBg;
       ctx.fill();
 
@@ -1819,12 +1898,17 @@ export default function NetworkTopology() {
       // 글래스모피즘 테두리
       ctx.beginPath();
       ctx.roundRect(drawX - half, drawY - half, size, size, radius);
-      const borderGradient = ctx.createLinearGradient(drawX - half, drawY - half, drawX + half, drawY + half);
-      borderGradient.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
-      borderGradient.addColorStop(0.5, 'rgba(167, 139, 250, 0.3)');
-      borderGradient.addColorStop(1, 'rgba(255, 255, 255, 0.2)');
-      ctx.strokeStyle = borderGradient;
-      ctx.lineWidth = 1.5 / globalScale;
+      if (fc) {
+        ctx.strokeStyle = `rgba(${fc.r}, ${fc.g}, ${fc.b}, ${0.5 + 0.5 * pulse})`;
+        ctx.lineWidth = 2.5 / globalScale;
+      } else {
+        const borderGradient = ctx.createLinearGradient(drawX - half, drawY - half, drawX + half, drawY + half);
+        borderGradient.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
+        borderGradient.addColorStop(0.5, 'rgba(167, 139, 250, 0.3)');
+        borderGradient.addColorStop(1, 'rgba(255, 255, 255, 0.2)');
+        ctx.strokeStyle = borderGradient;
+        ctx.lineWidth = 1.5 / globalScale;
+      }
       ctx.stroke();
     } else {
       // 장비 노드 그리기 (글래스모피즘)
@@ -1832,11 +1916,16 @@ export default function NetworkTopology() {
 
       // 글래스모피즘 배경 (외부 글로우)
       ctx.save();
-      ctx.shadowColor = 'rgba(59, 130, 246, 0.5)';
-      ctx.shadowBlur = 15;
+      if (fc) {
+        ctx.shadowColor = `rgba(${fc.r}, ${fc.g}, ${fc.b}, ${0.7 * pulse})`;
+        ctx.shadowBlur = 18 + 6 * pulse;
+      } else {
+        ctx.shadowColor = 'rgba(59, 130, 246, 0.5)';
+        ctx.shadowBlur = 15;
+      }
       ctx.beginPath();
       ctx.arc(drawX, drawY, half, 0, 2 * Math.PI);
-      ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
+      ctx.fillStyle = fc ? `rgba(${fc.r}, ${fc.g}, ${fc.b}, 0.12)` : 'rgba(59, 130, 246, 0.1)';
       ctx.fill();
       ctx.restore();
 
@@ -1844,9 +1933,15 @@ export default function NetworkTopology() {
       ctx.beginPath();
       ctx.arc(drawX, drawY, half, 0, 2 * Math.PI);
       const glassBg = ctx.createRadialGradient(drawX - half * 0.3, drawY - half * 0.3, 0, drawX, drawY, half);
-      glassBg.addColorStop(0, 'rgba(96, 165, 250, 0.35)');
-      glassBg.addColorStop(0.5, 'rgba(59, 130, 246, 0.2)');
-      glassBg.addColorStop(1, 'rgba(37, 99, 235, 0.3)');
+      if (fc) {
+        glassBg.addColorStop(0, `rgba(${fc.r}, ${fc.g}, ${fc.b}, 0.35)`);
+        glassBg.addColorStop(0.5, `rgba(${fc.r}, ${fc.g}, ${fc.b}, 0.2)`);
+        glassBg.addColorStop(1, `rgba(${fc.r}, ${fc.g}, ${fc.b}, 0.3)`);
+      } else {
+        glassBg.addColorStop(0, 'rgba(96, 165, 250, 0.35)');
+        glassBg.addColorStop(0.5, 'rgba(59, 130, 246, 0.2)');
+        glassBg.addColorStop(1, 'rgba(37, 99, 235, 0.3)');
+      }
       ctx.fillStyle = glassBg;
       ctx.fill();
 
@@ -1917,12 +2012,17 @@ export default function NetworkTopology() {
       // 글래스모피즘 테두리
       ctx.beginPath();
       ctx.arc(drawX, drawY, half, 0, 2 * Math.PI);
-      const borderGradient = ctx.createLinearGradient(drawX - half, drawY - half, drawX + half, drawY + half);
-      borderGradient.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
-      borderGradient.addColorStop(0.5, 'rgba(96, 165, 250, 0.3)');
-      borderGradient.addColorStop(1, 'rgba(255, 255, 255, 0.2)');
-      ctx.strokeStyle = borderGradient;
-      ctx.lineWidth = 1.5 / globalScale;
+      if (fc) {
+        ctx.strokeStyle = `rgba(${fc.r}, ${fc.g}, ${fc.b}, ${0.5 + 0.5 * pulse})`;
+        ctx.lineWidth = 2.5 / globalScale;
+      } else {
+        const borderGradient = ctx.createLinearGradient(drawX - half, drawY - half, drawX + half, drawY + half);
+        borderGradient.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
+        borderGradient.addColorStop(0.5, 'rgba(96, 165, 250, 0.3)');
+        borderGradient.addColorStop(1, 'rgba(255, 255, 255, 0.2)');
+        ctx.strokeStyle = borderGradient;
+        ctx.lineWidth = 1.5 / globalScale;
+      }
       ctx.stroke();
     }
 
@@ -1931,7 +2031,7 @@ export default function NetworkTopology() {
     ctx.font = `${fontSize}px Sans-Serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillStyle = "white";
+    ctx.fillStyle = fc ? `rgb(${fc.r}, ${fc.g}, ${fc.b})` : "white";
     ctx.strokeStyle = "black";
     ctx.lineWidth = 2 / globalScale;
 
