@@ -310,6 +310,7 @@
 .group-item-wrapper {
     position: relative;
     padding-left: 22px;
+    overflow: hidden;
 }
 
 .group-item-wrapper::before {

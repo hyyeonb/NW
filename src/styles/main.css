@@ -512,7 +512,7 @@ h2::after {
     display: flex;
     flex-direction: column;
     transition: all var(--transition-normal);
-    overflow: visible;
+    overflow: hidden;
 }
 
 .page-sidebar .sidebar-content {

@@ -16,3 +16,4 @@ export { default as NetworkTopology } from './NetworkTopology';
 export { default as FaultMonitoring } from './FaultMonitoring';
 export { default as RealtimeFault } from './RealtimeFault';
 export { default as FaultHistory } from './FaultHistory';
+export { default as RealtimePerformance } from './RealtimePerformance';

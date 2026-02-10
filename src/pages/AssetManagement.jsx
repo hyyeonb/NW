@@ -44,11 +44,19 @@ export default function AssetManagement() {
   // SNMP 수집 결과 모달 상태
   const [snmpResultModal, setSnmpResultModal] = useState(null);
 
+  // 장비 설정 사이드바 상태
+  const [showSettingsSidebar, setShowSettingsSidebar] = useState(false);
+  const [sshConfig, setSshConfig] = useState({
+    CONNECT_AS: 'SSH',
+    SSH_USER: '',
+    SSH_PASS: '',
+    SSH_PORT: 22
+  });
+  const [sidebarSaving, setSidebarSaving] = useState(false);
+
   // 장비 인라인 편집 상태
   const [editFormData, setEditFormData] = useState({});
 
-  // 커스텀 툴팁 상태
-  const [tooltip, setTooltip] = useState({ visible: false, content: '', x: 0, y: 0 });
   const [editSaving, setEditSaving] = useState(false);
 
   // 장비 테이블 정렬 상태 (기본: ID 오름차순)
@@ -83,18 +91,6 @@ export default function AssetManagement() {
     deviceIp: searchDeviceIp.trim()
   }), [searchDeviceName, searchDeviceIp]);
 
-  // 툴팁 핸들러
-  const showTooltip = (e, content) => {
-    const rect = e.target.getBoundingClientRect();
-    setTooltip({
-      visible: true,
-      content,
-      x: rect.left + rect.width / 2,
-      y: rect.top - 10
-    });
-  };
-  const hideTooltip = () => setTooltip({ ...tooltip, visible: false });
-
   // 검색 초기화 함수
   const handleSearchReset = () => {
     setSearchDeviceName('');
@@ -112,6 +108,31 @@ export default function AssetManagement() {
 
   // 장비별 활성 장애 등급 조회
   const { deviceErrorMap } = useDeviceErrorLevels();
+
+  // SSH 데이터 조회
+  useEffect(() => {
+    if (!detailDevice?.DEVICE_ID) {
+      setSshConfig({ CONNECT_AS: 'SSH', SSH_USER: '', SSH_PASS: '', SSH_PORT: 22 });
+      return;
+    }
+    const fetchSsh = async () => {
+      try {
+        const response = await devicesApi.getDeviceSsh(detailDevice.DEVICE_ID);
+        const data = response.data?.data;
+        if (data) {
+          setSshConfig({
+            CONNECT_AS: data.CONNECT_AS || 'SSH',
+            SSH_USER: data.SSH_USER || '',
+            SSH_PASS: data.SSH_PASS || '',
+            SSH_PORT: data.SSH_PORT || 22
+          });
+        }
+      } catch {
+        setSshConfig({ CONNECT_AS: 'SSH', SSH_USER: '', SSH_PASS: '', SSH_PORT: 22 });
+      }
+    };
+    fetchSsh();
+  }, [detailDevice?.DEVICE_ID]);
 
   // CPU/MEM 데이터 조회
   useEffect(() => {
@@ -452,6 +473,56 @@ export default function AssetManagement() {
       window.location.reload();
     }
     setSnmpResultModal(null);
+  };
+
+  // 장비 설정 사이드바 열기
+  const handleOpenSettingsSidebar = () => {
+    if (detailDevice) {
+      setSnmpConfig({
+        SNMP_VERSION: detailDevice.SNMP_VERSION || 2,
+        SNMP_PORT: detailDevice.SNMP_PORT || 161,
+        SNMP_COMMUNITY: detailDevice.SNMP_COMMUNITY || 'public',
+        SNMP_USER: detailDevice.SNMP_USER || '',
+        SNMP_AUTH_PROTOCOL: detailDevice.SNMP_AUTH_PROTOCOL || 'MD5',
+        SNMP_AUTH_PASSWORD: detailDevice.SNMP_AUTH_PASSWORD || '',
+        SNMP_PRIV_PROTOCOL: detailDevice.SNMP_PRIV_PROTOCOL || 'DES',
+        SNMP_PRIV_PASSWORD: detailDevice.SNMP_PRIV_PASSWORD || ''
+      });
+    }
+    setShowSettingsSidebar(true);
+  };
+
+  // 장비 설정 사이드바 저장
+  const handleSaveSettings = async () => {
+    if (!detailDevice) return;
+    setSidebarSaving(true);
+    try {
+      // SNMP 설정 저장 (장비 정보 업데이트)
+      await updateDeviceMutation.mutateAsync({
+        deviceId: detailDevice.DEVICE_ID,
+        data: {
+          ...editFormData,
+          SNMP_VERSION: snmpConfig.SNMP_VERSION,
+          SNMP_PORT: snmpConfig.SNMP_PORT,
+          SNMP_COMMUNITY: snmpConfig.SNMP_COMMUNITY,
+          SNMP_USER: snmpConfig.SNMP_USER,
+          SNMP_AUTH_PROTOCOL: snmpConfig.SNMP_AUTH_PROTOCOL,
+          SNMP_AUTH_PASSWORD: snmpConfig.SNMP_AUTH_PASSWORD,
+          SNMP_PRIV_PROTOCOL: snmpConfig.SNMP_PRIV_PROTOCOL,
+          SNMP_PRIV_PASSWORD: snmpConfig.SNMP_PRIV_PASSWORD
+        }
+      });
+      // SSH 설정 저장
+      if (sshConfig.SSH_USER) {
+        await devicesApi.saveDeviceSsh(detailDevice.DEVICE_ID, sshConfig);
+      }
+      setShowSettingsSidebar(false);
+    } catch (error) {
+      console.error('설정 저장 실패:', error);
+      alert('설정 저장에 실패했습니다: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setSidebarSaving(false);
+    }
   };
 
   // 장비 수정 저장 및 모달 닫기
@@ -1037,17 +1108,185 @@ export default function AssetManagement() {
       {/* 장비 상세 보기 모달 */}
       {detailDevice && (
         <div id="device-detail-modal" className="modal" style={{ display: 'flex' }}>
-          <div className="modal-content device-detail-modal">
+          <div className="modal-content device-detail-modal" style={{ position: 'relative', overflow: 'hidden' }}>
             <span className="close-btn" onClick={() => setDetailDevice(null)}>&times;</span>
+
+            {/* 장비 설정 사이드바 (모달 내부 오버레이) */}
+            {showSettingsSidebar && (
+              <div className="settings-sidebar-overlay" onClick={() => setShowSettingsSidebar(false)}>
+                <div className="settings-sidebar" onClick={(e) => e.stopPropagation()}>
+                  <div className="settings-sidebar-header">
+                    <div className="settings-sidebar-title">
+                      <i className="bi bi-gear"></i> 장비 설정
+                    </div>
+                    <span className="settings-sidebar-close" onClick={() => setShowSettingsSidebar(false)}>&times;</span>
+                  </div>
+
+                  <div className="settings-sidebar-body">
+                    {/* 관제 범위 설정 */}
+                    <div className="settings-section">
+                      <div className="settings-section-title">
+                        <i className="bi bi-broadcast"></i> 관제 범위 설정
+                      </div>
+                      {scopeLoading ? (
+                        <div className="scope-loading">
+                          <i className="bi bi-arrow-repeat spinning"></i> 로딩 중...
+                        </div>
+                      ) : (
+                        <div className="settings-scope-list">
+                          <div className="settings-scope-item">
+                            <div className="scope-item-info">
+                              <i className="bi bi-wifi scope-icon ping"></i>
+                              <div>
+                                <span className="scope-item-title">PING</span>
+                                <span className="scope-item-desc">ICMP 상태 모니터링</span>
+                              </div>
+                            </div>
+                            <label className="toggle-switch">
+                              <input type="checkbox" checked={deviceScope?.COLLECT_PING || false} onChange={() => handleToggleScope('COLLECT_PING')} disabled={updateDeviceScopeMutation.isPending} />
+                              <span className="toggle-slider"></span>
+                            </label>
+                          </div>
+                          <div className="settings-scope-item">
+                            <div className="scope-item-info">
+                              <i className="bi bi-diagram-3 scope-icon snmp"></i>
+                              <div>
+                                <span className="scope-item-title">SNMP</span>
+                                <span className="scope-item-desc">SNMP 상세 정보 수집</span>
+                              </div>
+                            </div>
+                            <label className="toggle-switch">
+                              <input type="checkbox" checked={deviceScope?.COLLECT_SNMP || false} onChange={() => handleToggleScope('COLLECT_SNMP')} disabled={updateDeviceScopeMutation.isPending} />
+                              <span className="toggle-slider"></span>
+                            </label>
+                          </div>
+                          <div className="settings-scope-item">
+                            <div className="scope-item-info">
+                              <i className="bi bi-cpu scope-icon agent"></i>
+                              <div>
+                                <span className="scope-item-title">AGENT</span>
+                                <span className="scope-item-desc">에이전트 시스템 수집</span>
+                              </div>
+                            </div>
+                            <label className="toggle-switch">
+                              <input type="checkbox" checked={deviceScope?.COLLECT_AGENT || false} onChange={() => handleToggleScope('COLLECT_AGENT')} disabled={updateDeviceScopeMutation.isPending} />
+                              <span className="toggle-slider"></span>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* SNMP 설정 */}
+                    <div className="settings-section">
+                      <div className="settings-section-title">
+                        <i className="bi bi-diagram-3"></i> SNMP 설정
+                      </div>
+                      <div className="settings-form">
+                        <div className="settings-form-row dual">
+                          <div className="settings-form-group">
+                            <label>버전</label>
+                            <select value={snmpConfig.SNMP_VERSION} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_VERSION: parseInt(e.target.value)})}>
+                              <option value={1}>v1</option>
+                              <option value={2}>v2c</option>
+                              <option value={3}>v3</option>
+                            </select>
+                          </div>
+                          <div className="settings-form-group">
+                            <label>포트</label>
+                            <input type="number" value={snmpConfig.SNMP_PORT} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_PORT: parseInt(e.target.value)})} />
+                          </div>
+                        </div>
+                        {String(snmpConfig.SNMP_VERSION) !== '3' ? (
+                          <div className="settings-form-group">
+                            <label>커뮤니티</label>
+                            <input type="text" value={snmpConfig.SNMP_COMMUNITY} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_COMMUNITY: e.target.value})} placeholder="public" />
+                          </div>
+                        ) : (
+                          <>
+                            <div className="settings-form-group">
+                              <label>사용자</label>
+                              <input type="text" value={snmpConfig.SNMP_USER} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_USER: e.target.value})} />
+                            </div>
+                            <div className="settings-form-row dual">
+                              <div className="settings-form-group">
+                                <label>인증</label>
+                                <select value={snmpConfig.SNMP_AUTH_PROTOCOL} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_AUTH_PROTOCOL: e.target.value})}>
+                                  <option value="MD5">MD5</option>
+                                  <option value="SHA">SHA</option>
+                                  <option value="SHA256">SHA256</option>
+                                </select>
+                              </div>
+                              <div className="settings-form-group">
+                                <label>인증 PW</label>
+                                <input type="text" value={snmpConfig.SNMP_AUTH_PASSWORD} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_AUTH_PASSWORD: e.target.value})} />
+                              </div>
+                            </div>
+                            <div className="settings-form-row dual">
+                              <div className="settings-form-group">
+                                <label>암호화</label>
+                                <select value={snmpConfig.SNMP_PRIV_PROTOCOL} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_PRIV_PROTOCOL: e.target.value})}>
+                                  <option value="DES">DES</option>
+                                  <option value="AES">AES128</option>
+                                  <option value="AES256">AES256</option>
+                                </select>
+                              </div>
+                              <div className="settings-form-group">
+                                <label>암호화 PW</label>
+                                <input type="text" value={snmpConfig.SNMP_PRIV_PASSWORD} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_PRIV_PASSWORD: e.target.value})} />
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* SSH/TELNET 접속 정보 */}
+                    <div className="settings-section">
+                      <div className="settings-section-title">
+                        <i className="bi bi-terminal"></i> 접속 정보
+                      </div>
+                      <div className="settings-form">
+                        <div className="settings-form-row dual">
+                          <div className="settings-form-group">
+                            <label>접속 방식</label>
+                            <select value={sshConfig.CONNECT_AS} onChange={(e) => setSshConfig({...sshConfig, CONNECT_AS: e.target.value})}>
+                              <option value="SSH">SSH</option>
+                              <option value="TELNET">TELNET</option>
+                            </select>
+                          </div>
+                          <div className="settings-form-group">
+                            <label>포트</label>
+                            <input type="number" value={sshConfig.SSH_PORT} onChange={(e) => setSshConfig({...sshConfig, SSH_PORT: parseInt(e.target.value)})} />
+                          </div>
+                        </div>
+                        <div className="settings-form-group">
+                          <label>사용자</label>
+                          <input type="text" value={sshConfig.SSH_USER} onChange={(e) => setSshConfig({...sshConfig, SSH_USER: e.target.value})} placeholder="root" />
+                        </div>
+                        <div className="settings-form-group">
+                          <label>비밀번호</label>
+                          <input type="text" value={sshConfig.SSH_PASS} onChange={(e) => setSshConfig({...sshConfig, SSH_PASS: e.target.value})} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="settings-sidebar-footer">
+                    <button className="btn btn-secondary" onClick={() => setShowSettingsSidebar(false)} disabled={sidebarSaving}>취소</button>
+                    <button className="btn btn-primary" onClick={handleSaveSettings} disabled={sidebarSaving}>
+                      {sidebarSaving ? <><i className="bi bi-arrow-repeat spinning"></i> 저장 중...</> : <><i className="bi bi-check-lg"></i> 저장</>}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* 탭 헤더 */}
             <div className="detail-tabs-row">
               <div className="detail-tabs">
                 <button className={`detail-tab ${activeTab === 'device-info' ? 'active' : ''}`} onClick={() => setActiveTab('device-info')}>
                   <i className="bi bi-info-circle"></i> 장비 정보
-                </button>
-                <button className={`detail-tab ${activeTab === 'scope-settings' ? 'active' : ''}`} onClick={() => setActiveTab('scope-settings')}>
-                  <i className="bi bi-sliders"></i> 수집 설정
                 </button>
                 <button className={`detail-tab ${activeTab === 'port-info' ? 'active' : ''}`} onClick={() => setActiveTab('port-info')}>
                   <i className="bi bi-ethernet"></i> 포트 정보
@@ -1060,11 +1299,16 @@ export default function AssetManagement() {
             {activeTab === 'device-info' && (
               <div id="device-info-tab" className="detail-tab-content active">
                 <div className="two-column-layout">
-                  {/* 좌측: 장비정보, SNMP정보, CPU/MEM */}
+                  {/* 좌측: 장비정보, CPU/MEM */}
                   <div className="left-column">
                     {/* 장비 정보 */}
                     <div className="info-box">
-                      <div className="info-box-header"><i className="bi bi-hdd-network"></i> 장비 정보</div>
+                      <div className="info-box-header">
+                        <span><i className="bi bi-hdd-network"></i> 장비 정보</span>
+                        <button className="settings-gear-btn" onClick={handleOpenSettingsSidebar} title="장비 설정">
+                          <i className="bi bi-gear"></i>
+                        </button>
+                      </div>
                       <div className="info-box-body">
                         <div className="info-row">
                           <span className="label">장비명</span>
@@ -1075,19 +1319,12 @@ export default function AssetManagement() {
                           <input type="text" className="edit-input ip" value={editFormData.DEVICE_IP || ''} onChange={(e) => setEditFormData({...editFormData, DEVICE_IP: e.target.value})} />
                         </div>
                         <div className="info-row">
-                          <span className="label">
-                            시스템명
-                            {(detailDevice.DEVICE_DESC || detailDevice.sysDescr) && (
-                              <span
-                                className="sys-descr-icon"
-                                onMouseEnter={(e) => showTooltip(e, detailDevice.DEVICE_DESC || detailDevice.sysDescr)}
-                                onMouseLeave={hideTooltip}
-                              >
-                                <i className="bi bi-question-circle"></i>
-                              </span>
-                            )}
-                          </span>
+                          <span className="label">시스템명</span>
                           <span className="value">{detailDevice.DEVICE_SYSTEM_NAME || '-'}</span>
+                        </div>
+                        <div className="info-row">
+                          <span className="label">시스템 설명</span>
+                          <span className="value sys-descr-value">{detailDevice.DEVICE_DESC || detailDevice.sysDescr || '-'}</span>
                         </div>
                         <div className="info-row">
                           <span className="label">벤더</span>
@@ -1095,58 +1332,6 @@ export default function AssetManagement() {
                           <span className="label" style={{flex: '0 0 auto', marginRight: '8px'}}>모델</span>
                           <span className="value">{detailDevice.MODEL_NAME || '-'}</span>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* SNMP 정보 */}
-                    <div className="info-box">
-                      <div className="info-box-header"><i className="bi bi-diagram-3"></i> SNMP 정보</div>
-                      <div className="info-box-body">
-                        {/* 버전 | 포트 */}
-                        <div className="info-row dual">
-                          <span className="label">버전</span>
-                          <select className="edit-select compact" value={editFormData.SNMP_VERSION || 2} onChange={(e) => setEditFormData({...editFormData, SNMP_VERSION: parseInt(e.target.value)})}>
-                            <option value={1}>v1</option>
-                            <option value={2}>v2c</option>
-                            <option value={3}>v3</option>
-                          </select>
-                          <span className="label">포트</span>
-                          <input type="number" className="edit-input compact" value={editFormData.SNMP_PORT || 161} onChange={(e) => setEditFormData({...editFormData, SNMP_PORT: parseInt(e.target.value)})} />
-                        </div>
-                        {/* 커뮤니티 or 사용자 */}
-                        <div className="info-row">
-                          <span className="label">{String(editFormData.SNMP_VERSION) === '3' ? '사용자' : '커뮤니티'}</span>
-                          {String(editFormData.SNMP_VERSION) === '3' ? (
-                            <input type="text" className="edit-input" value={editFormData.SNMP_USER || ''} onChange={(e) => setEditFormData({...editFormData, SNMP_USER: e.target.value})} />
-                          ) : (
-                            <input type="text" className="edit-input" value={editFormData.SNMP_COMMUNITY || ''} onChange={(e) => setEditFormData({...editFormData, SNMP_COMMUNITY: e.target.value})} placeholder="public" />
-                          )}
-                        </div>
-                        {/* v3 전용: 인증 | 인증 PW */}
-                        {String(editFormData.SNMP_VERSION) === '3' && (
-                          <>
-                            <div className="info-row dual">
-                              <span className="label">인증</span>
-                              <select className="edit-select compact" value={editFormData.SNMP_AUTH_PROTOCOL || 'MD5'} onChange={(e) => setEditFormData({...editFormData, SNMP_AUTH_PROTOCOL: e.target.value})}>
-                                <option value="MD5">MD5</option>
-                                <option value="SHA">SHA</option>
-                                <option value="SHA256">SHA256</option>
-                              </select>
-                              <span className="label">인증 PW</span>
-                              <input type="password" className="edit-input compact" value={editFormData.SNMP_AUTH_PASSWORD || ''} onChange={(e) => setEditFormData({...editFormData, SNMP_AUTH_PASSWORD: e.target.value})} />
-                            </div>
-                            <div className="info-row dual">
-                              <span className="label">암호화</span>
-                              <select className="edit-select compact" value={editFormData.SNMP_PRIV_PROTOCOL || 'DES'} onChange={(e) => setEditFormData({...editFormData, SNMP_PRIV_PROTOCOL: e.target.value})}>
-                                <option value="DES">DES</option>
-                                <option value="AES">AES128</option>
-                                <option value="AES256">AES256</option>
-                              </select>
-                              <span className="label">암호화 PW</span>
-                              <input type="password" className="edit-input compact" value={editFormData.SNMP_PRIV_PASSWORD || ''} onChange={(e) => setEditFormData({...editFormData, SNMP_PRIV_PASSWORD: e.target.value})} />
-                            </div>
-                          </>
-                        )}
                       </div>
                     </div>
 
@@ -1364,84 +1549,6 @@ export default function AssetManagement() {
               </div>
             )}
 
-            {/* 수집 설정 탭 */}
-            {activeTab === 'scope-settings' && (
-              <div id="scope-settings-tab" className="detail-tab-content active">
-                <div className="detail-section-wrapper">
-                  <div className="detail-section">
-                    <div className="detail-section-header">
-                      <i className="bi bi-broadcast"></i>
-                      <span>데이터 수집 설정</span>
-                    </div>
-                    {scopeLoading ? (
-                      <div className="scope-loading">
-                        <i className="bi bi-arrow-repeat spinning"></i> 설정 정보를 불러오는 중...
-                      </div>
-                    ) : (
-                      <div className="scope-settings-grid">
-                        <div className="scope-item">
-                          <div className="scope-info">
-                            <i className="bi bi-wifi scope-icon ping"></i>
-                            <div className="scope-text">
-                              <span className="scope-title">PING 수집</span>
-                              <span className="scope-desc">ICMP 프로토콜로 장비 상태 모니터링</span>
-                            </div>
-                          </div>
-                          <label className="toggle-switch">
-                            <input
-                              type="checkbox"
-                              checked={deviceScope?.COLLECT_PING || false}
-                              onChange={() => handleToggleScope('COLLECT_PING')}
-                              disabled={updateDeviceScopeMutation.isPending}
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                        </div>
-
-                        <div className="scope-item">
-                          <div className="scope-info">
-                            <i className="bi bi-diagram-3 scope-icon snmp"></i>
-                            <div className="scope-text">
-                              <span className="scope-title">SNMP 수집</span>
-                              <span className="scope-desc">SNMP 프로토콜로 상세 정보 수집</span>
-                            </div>
-                          </div>
-                          <label className="toggle-switch">
-                            <input
-                              type="checkbox"
-                              checked={deviceScope?.COLLECT_SNMP || false}
-                              onChange={() => handleToggleScope('COLLECT_SNMP')}
-                              disabled={updateDeviceScopeMutation.isPending}
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                        </div>
-
-                        <div className="scope-item">
-                          <div className="scope-info">
-                            <i className="bi bi-cpu scope-icon agent"></i>
-                            <div className="scope-text">
-                              <span className="scope-title">AGENT 수집</span>
-                              <span className="scope-desc">에이전트를 통한 시스템 정보 수집</span>
-                            </div>
-                          </div>
-                          <label className="toggle-switch">
-                            <input
-                              type="checkbox"
-                              checked={deviceScope?.COLLECT_AGENT || false}
-                              onChange={() => handleToggleScope('COLLECT_AGENT')}
-                              disabled={updateDeviceScopeMutation.isPending}
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* 포트 정보 탭 */}
             {activeTab === 'port-info' && (
               <div id="port-info-tab" className="detail-tab-content active">
@@ -1639,7 +1746,7 @@ export default function AssetManagement() {
                   <div className="form-group">
                     <label>인증 비밀번호</label>
                     <input
-                      type="password"
+                      type="text"
                       value={snmpConfig.SNMP_AUTH_PASSWORD}
                       onChange={(e) => setSnmpConfig({ ...snmpConfig, SNMP_AUTH_PASSWORD: e.target.value })}
                     />
@@ -1660,7 +1767,7 @@ export default function AssetManagement() {
                   <div className="form-group">
                     <label>암호화 비밀번호</label>
                     <input
-                      type="password"
+                      type="text"
                       value={snmpConfig.SNMP_PRIV_PASSWORD}
                       onChange={(e) => setSnmpConfig({ ...snmpConfig, SNMP_PRIV_PASSWORD: e.target.value })}
                     />
@@ -1751,21 +1858,6 @@ export default function AssetManagement() {
         </div>
       )}
 
-      {/* 커스텀 툴팁 */}
-      {tooltip.visible && (
-        <div
-          className="custom-tooltip"
-          style={{
-            position: 'fixed',
-            left: tooltip.x,
-            top: tooltip.y,
-            transform: 'translate(-50%, -100%)',
-            zIndex: 99999
-          }}
-        >
-          {tooltip.content}
-        </div>
-      )}
     </div>
   );
 }

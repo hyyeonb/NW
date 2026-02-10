@@ -416,7 +416,6 @@ export default function DataTable({
                         key={cell.id}
                         className={colDef?.className || ''}
                         style={{ textAlign: colDef?.align || 'left' }}
-                        title={typeof cell.getValue() === 'string' ? cell.getValue() : undefined}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
@@ -441,6 +440,7 @@ export default function DataTable({
           showPageSizeSelector={pagination.showPageSizeSelector !== false}
         />
       )}
+
     </div>
   );
 }

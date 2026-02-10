@@ -1,0 +1,36 @@
+/* ==================
+   글로벌 커스텀 툴팁
+   - 말줄임(...) 텍스트 호버 시 전체 텍스트 표시
+   - document 레벨 이벤트 위임
+   ================== */
+
+.global-tooltip {
+    max-width: 420px;
+    padding: 8px 14px;
+    background: rgba(15, 15, 35, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: 8px;
+    color: #f8fafc;
+    font-size: 13px;
+    line-height: 1.5;
+    word-break: break-all;
+    white-space: pre-wrap;
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.4),
+        0 0 8px rgba(99, 102, 241, 0.15);
+    pointer-events: none;
+    animation: globalTooltipFadeIn 0.15s ease forwards;
+}
+
+@keyframes globalTooltipFadeIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -100%) translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -100%);
+    }
+}

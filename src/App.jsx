@@ -3,8 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores';
 import MainLayout from './layouts/MainLayout';
-import { Login, Signup, Dashboard, SignupSuccess, FindAccount, SocialLoginLanding, Main, GroupManagement, AssetManagement, AssetConfig, AssetConfigDetail, NewAssetManagement, ModelManagement, NetworkTopology, RealtimeFault, FaultHistory } from './pages';
+import { Login, Signup, Dashboard, SignupSuccess, FindAccount, SocialLoginLanding, Main, GroupManagement, AssetManagement, AssetConfig, AssetConfigDetail, NewAssetManagement, ModelManagement, NetworkTopology, RealtimeFault, FaultHistory, RealtimePerformance } from './pages';
 import AlertToast from './components/AlertToast';
+import GlobalTooltip from './components/GlobalTooltip';
 import { useAlertWebSocket } from './hooks';
 
 const queryClient = new QueryClient({
@@ -124,6 +125,8 @@ export default function App() {
           <AlertWebSocketProvider>
             {/* 전역 Toast 알림 */}
             <AlertToast />
+            {/* 전역 말줄임 툴팁 */}
+            <GlobalTooltip />
             <Routes>
             {/* Public Routes - 로그인된 사용자는 메인으로 리다이렉트 */}
             <Route
@@ -187,6 +190,7 @@ export default function App() {
               <Route path="mgmt/models" element={<ModelManagement />} />
               <Route path="fault/realtime" element={<RealtimeFault />} />
               <Route path="fault/history" element={<FaultHistory />} />
+              <Route path="watch/realtime" element={<RealtimePerformance />} />
             </Route>
 
             {/* Fallback */}

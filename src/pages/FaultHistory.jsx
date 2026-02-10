@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { ko } from 'date-fns/locale';
 import { format } from 'date-fns';
-import { faultApi } from '../api';
+import { faultApi, devicesApi } from '../api';
 import { DataTable } from '../components';
 import 'react-datepicker/dist/react-datepicker.css';
 import '../styles/fault-monitoring.css';
@@ -39,9 +39,13 @@ export default function FaultHistory() {
   const [searchErrorMessage, setSearchErrorMessage] = useState('');
   const [searchIp, setSearchIp] = useState('');
   const [searchGroupName, setSearchGroupName] = useState('');
+  const [searchDevCode, setSearchDevCode] = useState('');
 
-  // 정렬
-  const [sortConfig, setSortConfig] = useState({ key: 'OCCUR_AT', direction: 'desc' });
+  // 장비 코드 목록 (최상위)
+  const [devCodes, setDevCodes] = useState([]);
+
+  // 정렬 (서버사이드)
+  const [sortConfig, setSortConfig] = useState({ key: 'CLEAR_AT', direction: 'desc' });
 
   // 등급 체크박스 토글
   const toggleLevel = (levelId) => {
@@ -55,13 +59,31 @@ export default function FaultHistory() {
     });
   };
 
+  // 장비 코드 목록 로드
+  useEffect(() => {
+    const loadDevCodes = async () => {
+      try {
+        const response = await devicesApi.getDevCodeTree();
+        setDevCodes(response.data?.data || []);
+      } catch (error) {
+        console.error('장비 코드 조회 실패:', error);
+      }
+    };
+    loadDevCodes();
+  }, []);
+
   // 장애 이력 조회
   const fetchHistory = useCallback(async () => {
     setIsLoading(true);
     try {
-      const params = { page, size: pageSize };
+      const params = {
+        page, size: pageSize,
+        sortKey: sortConfig.key,
+        sortDirection: sortConfig.direction,
+      };
       if (startDate) params.startDate = format(startDate, 'yyyy-MM-dd');
       if (endDate) params.endDate = format(endDate, 'yyyy-MM-dd');
+      if (searchDevCode) params.devCodeId = searchDevCode;
       if (searchDeviceName.trim()) params.deviceName = searchDeviceName.trim();
       if (searchErrorMessage.trim()) params.errorMessage = searchErrorMessage.trim();
       if (searchIp.trim()) params.deviceIp = searchIp.trim();
@@ -80,7 +102,7 @@ export default function FaultHistory() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedLevels, page, pageSize, startDate, endDate, searchDeviceName, searchErrorMessage, searchIp, searchGroupName]);
+  }, [selectedLevels, page, pageSize, startDate, endDate, searchDevCode, searchDeviceName, searchErrorMessage, searchIp, searchGroupName, sortConfig]);
 
   useEffect(() => {
     fetchHistory();
@@ -88,7 +110,7 @@ export default function FaultHistory() {
 
   useEffect(() => {
     setPage(1);
-  }, [selectedLevels, startDate, endDate, searchDeviceName, searchErrorMessage, searchIp, searchGroupName]);
+  }, [selectedLevels, startDate, endDate, searchDevCode, searchDeviceName, searchErrorMessage, searchIp, searchGroupName]);
 
   // 등급 라벨
   const getLevelLabel = (level) => {
@@ -153,39 +175,14 @@ export default function FaultHistory() {
     }
   };
 
-  // 정렬 처리
+  // 정렬 처리 (서버사이드)
   const handleSort = (key) => {
     setSortConfig(prev => ({
       key,
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
     }));
+    setPage(1);
   };
-
-  const levelPriority = { 'C': 1, 'M': 2, 'N': 3, 'W': 4 };
-
-  const sortedHistories = useMemo(() => {
-    if (!sortConfig.key) return histories;
-
-    return [...histories].sort((a, b) => {
-      let aVal = a[sortConfig.key];
-      let bVal = b[sortConfig.key];
-
-      if (sortConfig.key === 'ERROR_LEVEL') {
-        aVal = levelPriority[aVal] || 99;
-        bVal = levelPriority[bVal] || 99;
-      } else if (sortConfig.key === 'OCCUR_AT' || sortConfig.key === 'CLEAR_AT') {
-        aVal = aVal ? new Date(aVal).getTime() : 0;
-        bVal = bVal ? new Date(bVal).getTime() : 0;
-      } else {
-        aVal = (aVal || '').toString().toLowerCase();
-        bVal = (bVal || '').toString().toLowerCase();
-      }
-
-      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [histories, sortConfig]);
 
   // 테이블 컬럼 정의
   const columns = useMemo(() => [
@@ -256,6 +253,7 @@ export default function FaultHistory() {
   const handleReset = () => {
     setStartDate(null);
     setEndDate(null);
+    setSearchDevCode('');
     setSearchDeviceName('');
     setSearchErrorMessage('');
     setSearchIp('');
@@ -328,6 +326,21 @@ export default function FaultHistory() {
           />
         </div>
         <div className="filter-group">
+          <label>장비코드</label>
+          <select
+            className="filter-select"
+            value={searchDevCode}
+            onChange={(e) => setSearchDevCode(e.target.value)}
+          >
+            <option value="">전체</option>
+            {devCodes.map((code) => (
+              <option key={code.DEV_CODE_ID} value={code.DEV_CODE_ID}>
+                {code.CODE_NM}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-group">
           <label>장비명</label>
           <input
             type="text"
@@ -378,7 +391,7 @@ export default function FaultHistory() {
       <div className="fault-content glass-card">
         <DataTable
           columns={columns}
-          data={sortedHistories}
+          data={histories}
           rowKey="ERROR_HISTORY_ID"
           loading={isLoading}
           loadingText="장애 이력을 불러오는 중..."
