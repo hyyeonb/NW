@@ -102,6 +102,20 @@ export const devicesApi = {
   collectSnmp: (deviceId, snmpConfig) =>
     apiClient.post(`/mgmt/devices/${deviceId}/snmp-collect`, snmpConfig),
 
+  // ==================== Device SSH (접속 정보) 관련 ====================
+
+  // 장비 접속 정보 조회
+  getDeviceSsh: (deviceId) =>
+    apiClient.get(`/mgmt/devices/${deviceId}/ssh`),
+
+  // 장비 접속 정보 저장/수정
+  saveDeviceSsh: (deviceId, data) =>
+    apiClient.put(`/mgmt/devices/${deviceId}/ssh`, data),
+
+  // 장비 접속 정보 삭제
+  deleteDeviceSsh: (deviceId) =>
+    apiClient.delete(`/mgmt/devices/${deviceId}/ssh`),
+
   // ==================== Traffic 관련 ====================
 
   // 장비 트래픽 데이터 조회 (차트용)

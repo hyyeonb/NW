@@ -141,12 +141,13 @@
     -webkit-backdrop-filter: var(--glass-blur);
     padding: var(--spacing-6);
     border-radius: var(--radius-3xl);
+    min-height: 0;
     border: 1px solid var(--theme-border-subtle);
     box-shadow: var(--theme-shadow-sm);
     display: flex;
     flex-direction: column;
     transition: all var(--transition-normal);
-    overflow: visible;
+    overflow: hidden;
     position: relative;
     flex: 0 0 var(--page-sidebar-width);
 }

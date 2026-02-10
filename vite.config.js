@@ -8,6 +8,12 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
+      // Go Middleware SSE 스트림 (직접 연결)
+      '/api/watch/stream': {
+        target: 'http://localhost:18081',
+        changeOrigin: true,
+      },
+      // Spring Boot API (기존)
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,

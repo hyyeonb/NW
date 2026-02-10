@@ -413,9 +413,9 @@ export default function GroupTree({ onEditGroup, onAddGroup, onDeleteGroup, onSe
 
   return (
     <aside className="page-sidebar" id="group-tree-sidebar">
-      {/* 고정 영역: 헤더 + 검색박스 */}
+      <h1>그룹 목록</h1>
+      {/* 고정 영역: 검색박스 */}
       <div className="sidebar-header-fixed">
-        <h1>그룹 목록</h1>
         {/* 그룹 검색 */}
         <div className="group-search-box">
           <i className="bi bi-search search-icon"></i>

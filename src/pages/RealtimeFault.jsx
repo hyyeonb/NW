@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { faultApi } from '../api';
+import { faultApi, devicesApi } from '../api';
 import { useAlertStore } from '../stores/alertStore';
 import { DataTable } from '../components';
 import '../styles/fault-monitoring.css';
@@ -26,6 +26,10 @@ export default function RealtimeFault() {
   const [searchErrorMessage, setSearchErrorMessage] = useState('');
   const [searchIp, setSearchIp] = useState('');
   const [searchGroupName, setSearchGroupName] = useState('');
+  const [searchDevCode, setSearchDevCode] = useState('');
+
+  // 장비 코드 목록 (최상위)
+  const [devCodes, setDevCodes] = useState([]);
 
   // 정렬
   const [sortConfig, setSortConfig] = useState({ key: 'OCCUR_AT', direction: 'desc' });
@@ -50,11 +54,25 @@ export default function RealtimeFault() {
     });
   };
 
+  // 장비 코드 목록 로드
+  useEffect(() => {
+    const loadDevCodes = async () => {
+      try {
+        const response = await devicesApi.getDevCodeTree();
+        setDevCodes(response.data?.data || []);
+      } catch (error) {
+        console.error('장비 코드 조회 실패:', error);
+      }
+    };
+    loadDevCodes();
+  }, []);
+
   // 장애 목록 조회
   const fetchErrors = useCallback(async () => {
     setIsLoading(true);
     try {
       const params = {};
+      if (searchDevCode) params.devCodeId = searchDevCode;
       if (searchDeviceName.trim()) params.deviceName = searchDeviceName.trim();
       if (searchErrorMessage.trim()) params.errorMessage = searchErrorMessage.trim();
       if (searchIp.trim()) params.deviceIp = searchIp.trim();
@@ -71,10 +89,11 @@ export default function RealtimeFault() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedLevels, searchDeviceName, searchErrorMessage, searchIp, searchGroupName]);
+  }, [selectedLevels, searchDevCode, searchDeviceName, searchErrorMessage, searchIp, searchGroupName]);
 
   // 초기화 버튼
   const handleReset = () => {
+    setSearchDevCode('');
     setSearchDeviceName('');
     setSearchErrorMessage('');
     setSearchIp('');
@@ -212,7 +231,7 @@ export default function RealtimeFault() {
   // 데이터 변경 시 페이지 초기화 (필터 변경 등)
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedLevels, searchDeviceName, searchErrorMessage, searchIp, searchGroupName]);
+  }, [selectedLevels, searchDevCode, searchDeviceName, searchErrorMessage, searchIp, searchGroupName]);
 
   // 인지 버튼 클릭 핸들러
   const handleAckClick = (error, e) => {
@@ -335,6 +354,21 @@ export default function RealtimeFault() {
               </label>
             ))}
           </div>
+        </div>
+        <div className="filter-group">
+          <label>장비코드</label>
+          <select
+            className="filter-select"
+            value={searchDevCode}
+            onChange={(e) => setSearchDevCode(e.target.value)}
+          >
+            <option value="">전체</option>
+            {devCodes.map((code) => (
+              <option key={code.DEV_CODE_ID} value={code.DEV_CODE_ID}>
+                {code.CODE_NM}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="filter-group">
           <label>장비명</label>

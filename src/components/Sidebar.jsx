@@ -41,6 +41,13 @@ export default function Sidebar({ collapsed, onToggle }) {
       ],
     },
     {
+      icon: 'bi-activity',
+      label: '성능감시',
+      children: [
+        { label: '실시간 성능감시', path: '/watch/realtime', icon: 'bi-speedometer' },
+      ],
+    },
+    {
       icon: 'bi-exclamation-triangle',
       label: '장애감시',
       children: [

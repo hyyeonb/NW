@@ -5,3 +5,4 @@ export * from './useDashboard';
 export * from './useSnmp';
 export * from './useAlertWebSocket';
 export * from './useFaults';
+export * from './useWatch';
