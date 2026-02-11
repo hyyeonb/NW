@@ -67,6 +67,14 @@ export default function Sidebar({ collapsed, onToggle }) {
       ],
     },
     {
+      icon: 'bi-clipboard2-data',
+      label: '게시판',
+      children: [
+        { label: '자료실', path: '/board/files', icon: 'bi-folder2-open' },
+        { label: '공지사항', path: '/board/notices', icon: 'bi-megaphone' },
+      ],
+    },
+    {
       icon: 'bi-gear-fill',
       label: '설정',
       children: [

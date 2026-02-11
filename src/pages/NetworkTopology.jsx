@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import ForceGraph2D from "react-force-graph-2d";
 import TopologySidebar from "../components/TopologySidebar";
-import { useDevice, useDevicePorts, useTopologyView, useSaveTopology, useGroupTree, useDevicesByGroup, useDeviceErrorLevels } from "../hooks";
+import DeviceDetailModal from "../components/DeviceDetailModal";
+import { useDevicePorts, useTopologyView, useSaveTopology, useGroupTree, useDevicesByGroup, useDeviceErrorLevels } from "../hooks";
 import { topologyApi } from "../api";
 import { useGroupStore } from "../stores";
 import "../styles/topology-sidebar.css";
@@ -113,7 +114,6 @@ export default function NetworkTopology() {
   const [isGroupSwitching, setIsGroupSwitching] = useState(false); // 그룹 전환 중 상태
   const [deviceModalOpen, setDeviceModalOpen] = useState(false);
   const [deviceModalId, setDeviceModalId] = useState(null);
-  const [deviceModalTab, setDeviceModalTab] = useState('device-info'); // 장비 상세 모달 탭
 
   // 배경 이미지 관련 상태
   const [backgroundImage, setBackgroundImage] = useState(null);
@@ -231,11 +231,6 @@ export default function NetworkTopology() {
   const linkIdCounter = useRef(100);
   const iconCache = useRef({});
   const groupIconCache = useRef({}); // 그룹 아이콘 Base64 이미지 캐시
-
-  // 장비 상세정보 API 호출
-  const { data: deviceDetailData, isLoading: deviceLoading, error: deviceError } = useDevice(deviceModalId);
-  // 장비 상세 모달용 포트 정보 조회
-  const { data: deviceModalPorts, isLoading: devicePortsLoading } = useDevicePorts(deviceModalId);
 
   // 인터페이스 모달에서 사용할 포트 정보 조회
   const sourceDeviceId = interfaceModalOpen && pendingLinkSource?.node?.deviceId ? pendingLinkSource.node.deviceId : null;
@@ -2572,254 +2567,6 @@ export default function NetworkTopology() {
     );
   };
 
-  // 장비 상세정보 모달 렌더링 (자산관리와 동일한 스타일)
-  const renderDeviceModal = () => {
-    if (!deviceModalOpen) return null;
-
-    const device = deviceDetailData?.data || deviceDetailData;
-    const ports = deviceModalPorts || [];
-
-    // 모달 닫기 시 탭 초기화
-    const closeDeviceModal = () => {
-      setDeviceModalOpen(false);
-      setDeviceModalTab('device-info');
-    };
-
-    // SNMP 버전 라벨
-    const getSnmpVersionLabel = (version) => {
-      switch (version) {
-        case 1: return 'v1';
-        case 2: return 'v2c';
-        case 3: return 'v3';
-        default: return version ? `v${version}` : '-';
-      }
-    };
-
-    // 날짜 포맷
-    const formatDate = (dateStr) => {
-      if (!dateStr) return '-';
-      try {
-        const date = new Date(dateStr);
-        return date.toLocaleString('ko-KR', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-      } catch {
-        return dateStr;
-      }
-    };
-
-    // 포트 상태 스타일
-    const getPortStatusStyle = (status) => {
-      switch (status) {
-        case 1: return { color: '#22c55e', label: 'Up' };
-        case 2: return { color: '#ef4444', label: 'Down' };
-        default: return { color: '#94a3b8', label: 'Unknown' };
-      }
-    };
-
-    return (
-      <div className="topology-modal-overlay" onClick={closeDeviceModal}>
-        <div className="topology-device-detail-modal" onClick={(e) => e.stopPropagation()}>
-          <button className="topology-detail-close-btn" onClick={closeDeviceModal}>
-            <i className="bi bi-x-lg"></i>
-          </button>
-
-          <h3 className="topology-detail-title">
-            <i className="bi bi-hdd-network"></i>
-            <span>{device?.DEVICE_NAME || '장비 상세 정보'}</span>
-          </h3>
-
-          {/* 탭 헤더 */}
-          <div className="topology-detail-tabs">
-            <button
-              className={`topology-detail-tab ${deviceModalTab === 'device-info' ? 'active' : ''}`}
-              onClick={() => setDeviceModalTab('device-info')}
-            >
-              <i className="bi bi-info-circle"></i> 장비 정보
-            </button>
-            <button
-              className={`topology-detail-tab ${deviceModalTab === 'port-info' ? 'active' : ''}`}
-              onClick={() => setDeviceModalTab('port-info')}
-            >
-              <i className="bi bi-ethernet"></i> 포트 정보
-              {ports?.length > 0 && (
-                <span className="topology-tab-badge">{ports.length}</span>
-              )}
-            </button>
-          </div>
-
-          {/* 장비 정보 탭 */}
-          {deviceModalTab === 'device-info' && (
-            <div className="topology-detail-content">
-              {deviceLoading ? (
-                <div className="topology-detail-loading">
-                  <i className="bi bi-arrow-repeat spinning"></i>
-                  <span>로딩 중...</span>
-                </div>
-              ) : deviceError ? (
-                <div className="topology-detail-error">
-                  <i className="bi bi-exclamation-triangle"></i>
-                  <span>장비 정보를 불러올 수 없습니다.</span>
-                </div>
-              ) : device ? (
-                <div className="topology-detail-sections">
-                  {/* 기본 정보 */}
-                  <div className="topology-detail-section">
-                    <div className="topology-detail-section-header">
-                      <i className="bi bi-info-circle"></i>
-                      <span>기본 정보</span>
-                    </div>
-                    <div className="topology-detail-grid">
-                      <div className="topology-detail-item">
-                        <span className="topology-detail-label">장비명</span>
-                        <span className="topology-detail-value" title={device.DEVICE_NAME || '-'}>{device.DEVICE_NAME || '-'}</span>
-                      </div>
-                      <div className="topology-detail-item">
-                        <span className="topology-detail-label">시스템명</span>
-                        <span className="topology-detail-value" title={device.DEVICE_SYSTEM_NAME || '-'}>{device.DEVICE_SYSTEM_NAME || '-'}</span>
-                      </div>
-                      <div className="topology-detail-item">
-                        <span className="topology-detail-label">IP 주소</span>
-                        <span className="topology-detail-value highlight">{device.DEVICE_IP || '-'}</span>
-                      </div>
-                      <div className="topology-detail-item">
-                        <span className="topology-detail-label">벤더</span>
-                        <span className="topology-detail-value" title={device.VENDOR_NAME || '-'}>{device.VENDOR_NAME || '-'}</span>
-                      </div>
-                      <div className="topology-detail-item">
-                        <span className="topology-detail-label">모델명</span>
-                        <span className="topology-detail-value" title={device.MODEL_NAME || '-'}>{device.MODEL_NAME || '-'}</span>
-                      </div>
-                      <div className="topology-detail-item">
-                        <span className="topology-detail-label">장비 설명</span>
-                        <span className="topology-detail-value" title={device.DEVICE_DESC || '-'}>{device.DEVICE_DESC || '-'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* SNMP 설정 */}
-                  <div className="topology-detail-section">
-                    <div className="topology-detail-section-header">
-                      <i className="bi bi-diagram-3"></i>
-                      <span>SNMP 설정</span>
-                    </div>
-                    <div className="topology-detail-grid">
-                      <div className="topology-detail-item">
-                        <span className="topology-detail-label">SNMP 버전</span>
-                        <span className="topology-detail-value">{getSnmpVersionLabel(device.SNMP_VERSION)}</span>
-                      </div>
-                      <div className="topology-detail-item">
-                        <span className="topology-detail-label">포트</span>
-                        <span className="topology-detail-value">{device.SNMP_PORT || 161}</span>
-                      </div>
-                      <div className="topology-detail-item">
-                        <span className="topology-detail-label">커뮤니티</span>
-                        <span className="topology-detail-value">{device.SNMP_COMMUNITY || '-'}</span>
-                      </div>
-                      {device.SNMP_VERSION === 3 && (
-                        <>
-                          <div className="topology-detail-item">
-                            <span className="topology-detail-label">사용자</span>
-                            <span className="topology-detail-value">{device.SNMP_USER || '-'}</span>
-                          </div>
-                          <div className="topology-detail-item">
-                            <span className="topology-detail-label">인증 프로토콜</span>
-                            <span className="topology-detail-value">{device.SNMP_AUTH_PROTOCOL || '-'}</span>
-                          </div>
-                          <div className="topology-detail-item">
-                            <span className="topology-detail-label">암호화 프로토콜</span>
-                            <span className="topology-detail-value">{device.SNMP_PRIV_PROTOCOL || '-'}</span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 등록 정보 */}
-                  <div className="topology-detail-section">
-                    <div className="topology-detail-section-header">
-                      <i className="bi bi-clock-history"></i>
-                      <span>등록 정보</span>
-                    </div>
-                    <div className="topology-detail-grid">
-                      <div className="topology-detail-item">
-                        <span className="topology-detail-label">등록일</span>
-                        <span className="topology-detail-value">{formatDate(device.CREATE_AT)}</span>
-                      </div>
-                      <div className="topology-detail-item">
-                        <span className="topology-detail-label">수정일</span>
-                        <span className="topology-detail-value">{formatDate(device.MODIFY_AT)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="topology-detail-error">
-                  <span>장비 정보가 없습니다.</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 포트 정보 탭 */}
-          {deviceModalTab === 'port-info' && (
-            <div className="topology-detail-content">
-              {devicePortsLoading ? (
-                <div className="topology-detail-loading">
-                  <i className="bi bi-arrow-repeat spinning"></i>
-                  <span>포트 정보 로딩 중...</span>
-                </div>
-              ) : ports.length > 0 ? (
-                <div className="topology-port-table-wrapper">
-                  <table className="topology-port-table">
-                    <thead>
-                      <tr>
-                        <th>인덱스</th>
-                        <th>포트명</th>
-                        <th>별칭</th>
-                        <th>상태</th>
-                        <th>속도</th>
-                        <th>타입</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ports.map((port, idx) => {
-                        const status = getPortStatusStyle(port.IF_OPER_STATUS);
-                        return (
-                          <tr key={port.IF_INDEX || idx}>
-                            <td>{port.IF_INDEX || '-'}</td>
-                            <td className="port-name">{port.IF_NAME || '-'}</td>
-                            <td>{port.IF_ALIAS || '-'}</td>
-                            <td>
-                              <span className="port-status" style={{ color: status.color }}>
-                                <i className={`bi ${status.label === 'Up' ? 'bi-circle-fill' : 'bi-circle'}`}></i>
-                                {status.label}
-                              </span>
-                            </td>
-                            <td>{port.IF_SPEED ? `${Math.round(port.IF_SPEED / 1000000)} Mbps` : '-'}</td>
-                            <td>{port.IF_TYPE || '-'}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="topology-detail-empty">
-                  <i className="bi bi-ethernet"></i>
-                  <span>포트 정보가 없습니다.</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   // 인터페이스 선택 모달 렌더링
   const renderInterfaceModal = () => {
@@ -3397,7 +3144,12 @@ export default function NetworkTopology() {
       </div>
 
       {/* 장비 상세정보 모달 */}
-      {renderDeviceModal()}
+      {deviceModalOpen && (
+        <DeviceDetailModal
+          deviceId={deviceModalId}
+          onClose={() => setDeviceModalOpen(false)}
+        />
+      )}
 
       {/* 인터페이스 선택 모달 */}
       {renderInterfaceModal()}

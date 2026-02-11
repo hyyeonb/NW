@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores';
 import MainLayout from './layouts/MainLayout';
-import { Login, Signup, Dashboard, SignupSuccess, FindAccount, SocialLoginLanding, Main, GroupManagement, AssetManagement, AssetConfig, AssetConfigDetail, NewAssetManagement, ModelManagement, NetworkTopology, RealtimeFault, FaultHistory, RealtimePerformance } from './pages';
+import { Login, Signup, Dashboard, SignupSuccess, FindAccount, SocialLoginLanding, Main, GroupManagement, AssetManagement, AssetConfig, AssetConfigDetail, NewAssetManagement, ModelManagement, NetworkTopology, RealtimeFault, FaultHistory, RealtimePerformance, FileBoard, NoticeBoard } from './pages';
 import AlertToast from './components/AlertToast';
 import GlobalTooltip from './components/GlobalTooltip';
 import { useAlertWebSocket } from './hooks';
@@ -191,6 +191,8 @@ export default function App() {
               <Route path="fault/realtime" element={<RealtimeFault />} />
               <Route path="fault/history" element={<FaultHistory />} />
               <Route path="watch/realtime" element={<RealtimePerformance />} />
+              <Route path="board/files" element={<FileBoard />} />
+              <Route path="board/notices" element={<NoticeBoard />} />
             </Route>
 
             {/* Fallback */}

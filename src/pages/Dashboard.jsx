@@ -8,6 +8,7 @@ import { useTopologyView, useGroupTree, useWidgets, useDefaultDashboard, useUser
 import { useAuthStore } from '../stores/authStore';
 import { useAlertStore } from '../stores/alertStore';
 import { faultApi, dashboardApi } from '../api';
+import DeviceDetailModal from '../components/DeviceDetailModal';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import '../styles/dashboard.css';
@@ -281,7 +282,7 @@ const initialLayout = [
 ];
 
 // 토폴로지 위젯 컴포넌트
-function TopologyWidget({ onExpand }) {
+function TopologyWidget({ onExpand, onDeviceClick }) {
   const graphRef = useRef(null);
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 100, height: 100 });
@@ -292,6 +293,7 @@ function TopologyWidget({ onExpand }) {
   // 위젯 내 그룹 네비게이션
   const [currentGroupId, setCurrentGroupId] = useState(null);
   const [groupHistory, setGroupHistory] = useState([]);
+
 
   // 배경 이미지 관련 상태
   const [backgroundImage, setBackgroundImage] = useState(null);
@@ -716,9 +718,14 @@ function TopologyWidget({ onExpand }) {
 
       // 새 그룹으로 이동
       setCurrentGroupId(groupId);
+    } else {
+      // 장비 클릭 시 상위에 알림
+      const dId = node.deviceId ?? node.DEVICE_ID ?? node.originalId;
+      if (dId && onDeviceClick) {
+        onDeviceClick(dId);
+      }
     }
-    // 장비 클릭 시에는 아무 동작 안 함 (위젯 내에서만 동작)
-  }, [displayGroupId]);
+  }, [displayGroupId, onDeviceClick]);
 
   const handleBackClick = useCallback(() => {
     if (groupHistory.length > 0) {
@@ -829,9 +836,6 @@ function TopologyWidget({ onExpand }) {
           <i className="bi bi-arrow-left"></i>
         </button>
       )}
-      <button className="topology-expand-btn" onClick={onExpand} title="전체 화면">
-        <i className="bi bi-arrows-fullscreen"></i>
-      </button>
     </div>
   );
 }
@@ -1909,32 +1913,18 @@ function CustomWidgetContent({ widget, isEditMode }) {
         },
         toolbox: {
           show: true,
-          right: 5,
-          top: 0,
-          itemSize: 12,
+          right: -1000,
           feature: {
-            dataZoom: {
-              yAxisIndex: 'none',
-              title: { zoom: '드래그 확대', back: '확대 복원' }
-            },
-            restore: {
-              title: '복원'
-            },
-            saveAsImage: {
-              title: '이미지 저장',
-              backgroundColor: '#0f172a'
-            }
-          },
-          iconStyle: { borderColor: '#94a3b8' },
-          emphasis: { iconStyle: { borderColor: '#3b82f6' } }
+            dataZoom: { yAxisIndex: 'none' }
+          }
         },
         dataZoom: [
           {
             type: 'inside',
             start: timeRange === 'all' ? 0 : 70,
             end: 100,
-            zoomOnMouseWheel: 'shift',
-            moveOnMouseMove: true
+            zoomOnMouseWheel: true,
+            moveOnMouseMove: false
           }
         ],
         xAxis: {
@@ -1987,15 +1977,56 @@ function CustomWidgetContent({ widget, isEditMode }) {
             });
           });
 
+          const isTraffic = selectedGroup === 'TRAFFIC';
+
+          // TRAFFIC: IN/OUT 각각의 최대값 시리즈 찾기
+          let trafficInMax = { value: -Infinity, seriesIndex: -1, dataIndex: -1 };
+          let trafficOutMax = { value: -Infinity, seriesIndex: -1, dataIndex: -1 };
+          if (isTraffic) {
+            chartData.forEach((item, seriesIdx) => {
+              const isOut = item.metric && item.metric.includes('OUT');
+              const values = item.value || item.values || [];
+              values.forEach((val, dataIdx) => {
+                const numVal = typeof val === 'number' ? val : parseFloat(val);
+                if (!isNaN(numVal)) {
+                  if (isOut && numVal > trafficOutMax.value) {
+                    trafficOutMax = { value: numVal, seriesIndex: seriesIdx, dataIndex: dataIdx };
+                  } else if (!isOut && numVal > trafficInMax.value) {
+                    trafficInMax = { value: numVal, seriesIndex: seriesIdx, dataIndex: dataIdx };
+                  }
+                }
+              });
+            });
+          }
+
           return chartData.map((item, seriesIdx) => {
             const rawValues = item.value || item.values || [];
             const isMaxSeries = seriesIdx === globalMax.seriesIndex;
 
             // TRAFFIC 미러 차트: OUT 데이터는 음수로 변환
-            const isOutMetric = selectedGroup === 'TRAFFIC' && item.metric && item.metric.includes('OUT');
+            const isOutMetric = isTraffic && item.metric && item.metric.includes('OUT');
             const dataValues = isOutMetric
               ? rawValues.map(v => (v != null ? -Math.abs(v) : v))
               : rawValues;
+
+            // markPoint 결정: TRAFFIC은 IN/OUT 각각 최대값 1개, 그 외는 전체 최대값
+            let showMark, markValue, markIndex;
+            if (isTraffic) {
+              if (isOutMetric) {
+                showMark = seriesIdx === trafficOutMax.seriesIndex && trafficOutMax.value > 0;
+                markValue = trafficOutMax.value;
+                markIndex = trafficOutMax.dataIndex;
+              } else {
+                showMark = seriesIdx === trafficInMax.seriesIndex && trafficInMax.value > 0;
+                markValue = trafficInMax.value;
+                markIndex = trafficInMax.dataIndex;
+              }
+            } else {
+              showMark = isMaxSeries && globalMax.value !== -Infinity;
+              markValue = globalMax.value;
+              markIndex = globalMax.dataIndex;
+            }
+            const markUnit = item.unit || globalMax.unit;
 
             return {
               name: item.displayName || item.deviceName,
@@ -2021,12 +2052,11 @@ function CustomWidgetContent({ widget, isEditMode }) {
                       ]
                 }
               },
-              // 최대값이 있는 시리즈에만 markPoint 표시 (TRAFFIC 미러 차트에서는 제외)
-              ...(!isOutMetric && isMaxSeries && globalMax.value !== -Infinity ? {
+              ...(showMark ? {
                 markPoint: {
                   data: [{
-                    coord: [globalMax.dataIndex, globalMax.value],
-                    value: globalMax.value,
+                    coord: [markIndex, isOutMetric ? -Math.abs(markValue) : markValue],
+                    value: markValue,
                     symbol: 'circle',
                     symbolSize: 12,
                     itemStyle: {
@@ -2038,9 +2068,9 @@ function CustomWidgetContent({ widget, isEditMode }) {
                     },
                     label: {
                       show: true,
-                      position: 'top',
+                      position: isOutMetric ? 'bottom' : 'top',
                       distance: 8,
-                      formatter: `{value|${formatLargeValue(globalMax.value, globalMax.unit)}${globalMax.unit}}`,
+                      formatter: `{value|${formatLargeValue(markValue, markUnit)}${markUnit}}`,
                       rich: {
                         value: {
                           fontSize: 12,
@@ -2072,6 +2102,14 @@ function CustomWidgetContent({ widget, isEditMode }) {
             option={getChartOption(tooltipOnLeft)}
             style={{ height: '100%', width: '100%' }}
             opts={{ renderer: 'canvas' }}
+            onChartReady={(chart) => {
+              if (chartType === 'line') {
+                chart.dispatchAction({ type: 'takeGlobalCursor', key: 'dataZoomSelect', dataZoomSelectActive: true });
+                chart.getZr().on('dblclick', () => {
+                  chart.dispatchAction({ type: 'dataZoom', start: timeRange === 'all' ? 0 : 70, end: 100 });
+                });
+              }
+            }}
           />
         ) : (
           <div className="widget-placeholder">
@@ -2661,6 +2699,7 @@ function WidgetContent({ widget, widgetTypes, isEditMode }) {
 
 // 장애 현황 위젯 컴포넌트
 function AlertSummaryWidget({ cntData, isEditMode }) {
+  const navigate = useNavigate();
   const [prevCounts, setPrevCounts] = useState(null);
   const [highlightedLevels, setHighlightedLevels] = useState(new Set());
 
@@ -2710,28 +2749,28 @@ function AlertSummaryWidget({ cntData, isEditMode }) {
   return (
     <div className="widget-content-inner">
       <div className="alert-summary-grid">
-        <div className={`summary-card critical${highlightedLevels.has('critical') ? ' card-highlight' : ''}`}>
+        <div className={`summary-card critical${highlightedLevels.has('critical') ? ' card-highlight' : ''}`} onClick={() => !isEditMode && navigate('/fault/realtime?level=C')} style={{ cursor: isEditMode ? 'default' : 'pointer' }}>
           <div className="summary-icon"><i className="bi bi-exclamation-circle-fill"></i></div>
           <div className="summary-content">
             <div className="summary-count">{alertCntData.criticalCnt ?? 0}</div>
             <div className="summary-label">Critical</div>
           </div>
         </div>
-        <div className={`summary-card major${highlightedLevels.has('major') ? ' card-highlight' : ''}`}>
+        <div className={`summary-card major${highlightedLevels.has('major') ? ' card-highlight' : ''}`} onClick={() => !isEditMode && navigate('/fault/realtime?level=M')} style={{ cursor: isEditMode ? 'default' : 'pointer' }}>
           <div className="summary-icon"><i className="bi bi-exclamation-triangle-fill"></i></div>
           <div className="summary-content">
             <div className="summary-count">{alertCntData.majorCnt ?? 0}</div>
             <div className="summary-label">Major</div>
           </div>
         </div>
-        <div className={`summary-card minor${highlightedLevels.has('minor') ? ' card-highlight' : ''}`}>
+        <div className={`summary-card minor${highlightedLevels.has('minor') ? ' card-highlight' : ''}`} onClick={() => !isEditMode && navigate('/fault/realtime?level=N')} style={{ cursor: isEditMode ? 'default' : 'pointer' }}>
           <div className="summary-icon"><i className="bi bi-info-circle-fill"></i></div>
           <div className="summary-content">
             <div className="summary-count">{alertCntData.minorCnt ?? 0}</div>
             <div className="summary-label">Minor</div>
           </div>
         </div>
-        <div className={`summary-card warning${highlightedLevels.has('warning') ? ' card-highlight' : ''}`}>
+        <div className={`summary-card warning${highlightedLevels.has('warning') ? ' card-highlight' : ''}`} onClick={() => !isEditMode && navigate('/fault/realtime?level=W')} style={{ cursor: isEditMode ? 'default' : 'pointer' }}>
           <div className="summary-icon"><i className="bi bi-exclamation-diamond-fill"></i></div>
           <div className="summary-content">
             <div className="summary-count">{alertCntData.warningCnt ?? 0}</div>
@@ -3151,6 +3190,14 @@ export default function Dashboard() {
   const [refreshingWidgets, setRefreshingWidgets] = useState(new Set()); // 새로고침 중인 위젯 ID
   const [isReloadingAfterSave, setIsReloadingAfterSave] = useState(false); // 저장 후 데이터 리로딩 중
 
+  // 토폴로지 장비 상세 모달
+  const [topoDeviceModalOpen, setTopoDeviceModalOpen] = useState(false);
+  const [topoDeviceModalId, setTopoDeviceModalId] = useState(null);
+  const handleTopoDeviceClick = useCallback((deviceId) => {
+    setTopoDeviceModalId(deviceId);
+    setTopoDeviceModalOpen(true);
+  }, []);
+
   // 사용자 정보 가져오기
   const { user } = useAuthStore();
   const userId = user?.userId || user?.id || user?.USER_ID;
@@ -3262,14 +3309,17 @@ export default function Dashboard() {
 
       let width, height, posX, posY;
 
-      if (isUserData && rawPosX != null && rawPosY != null) {
-        // 사용자 대시보드: 96칸 값 직접 사용 (이전에 저장된 데이터)
+      // 데이터가 이미 96칸 기준인지 판별 (width > 12이면 96칸 기준)
+      const isAlready96Col = rawWidth != null && rawWidth > 12;
+
+      if ((isUserData || isAlready96Col) && rawPosX != null && rawPosY != null) {
+        // 96칸 값 직접 사용 (사용자 대시보드 또는 96칸 기준 기본 대시보드)
         width = Math.min(rawWidth ?? 20, GRID_COLS);
         height = rawHeight ?? 8;
         posX = Math.min(rawPosX, GRID_COLS - width);
         posY = rawPosY;
       } else {
-        // 기본 대시보드 (12칸 기준) 또는 위치 정보 없음 → GRID_SCALE 변환 후 자동 배치
+        // 12칸 기준 기본 대시보드 또는 위치 정보 없음 → GRID_SCALE 변환 후 자동 배치
         width = Math.min((rawWidth ?? 6) * GRID_SCALE, GRID_COLS);
         height = (rawHeight ?? 4) * GRID_SCALE;
         // 현재 행에 들어갈 수 없으면 다음 행으로
@@ -4162,7 +4212,7 @@ export default function Dashboard() {
                         <span>네트워크 토폴로지</span>
                       </div>
                     ) : (
-                      <MemoizedTopologyWidget onExpand={handleExpandTopology} />
+                      <MemoizedTopologyWidget onExpand={handleExpandTopology} onDeviceClick={handleTopoDeviceClick} />
                     )
                   ) : widget.type === 'CUSTOM' ? (
                     <MemoizedCustomWidgetContent widget={widget} isEditMode={isEditMode} />
@@ -4360,6 +4410,14 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 토폴로지 장비 상세 모달 (최상위 레벨) */}
+      {topoDeviceModalOpen && (
+        <DeviceDetailModal
+          deviceId={topoDeviceModalId}
+          onClose={() => setTopoDeviceModalOpen(false)}
+        />
       )}
     </div>
   );
