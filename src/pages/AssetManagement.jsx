@@ -628,15 +628,10 @@ export default function AssetManagement() {
     }
   }, []);
 
-  // 장비 수정 저장 및 모달 닫기
-  const handleSaveAndClose = async () => {
-    if (!detailDevice) {
-      setDetailDevice(null);
-      return;
-    }
-
-    // 변경사항 체크
-    const hasChanges =
+  // 변경사항 체크
+  const hasEditChanges = useMemo(() => {
+    if (!detailDevice) return false;
+    return (
       editFormData.DEVICE_NAME !== (detailDevice.DEVICE_NAME || '') ||
       editFormData.DEVICE_IP !== (detailDevice.DEVICE_IP || '') ||
       editFormData.GROUP_ID !== detailDevice.GROUP_ID ||
