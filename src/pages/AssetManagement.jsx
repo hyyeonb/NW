@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { GroupTree, DataTable } from '../components';
+import { GroupTree, DataTable, PortTrafficChart } from '../components';
 import SshTerminalModal from '../components/SshTerminalModal';
 import { useGroupStore } from '../stores';
 import ReactECharts from 'echarts-for-react';
