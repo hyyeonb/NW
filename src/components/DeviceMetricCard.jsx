@@ -128,7 +128,16 @@ export default function DeviceMetricCard({ device, history = [] }) {
     return {
       backgroundColor: 'transparent',
       grid: { top: 2, right: 4, bottom: 16, left: 24 },
-      tooltip: { show: false },
+      tooltip: {
+        trigger: 'axis', backgroundColor: 'rgba(30,41,59,0.95)', borderColor: '#334155',
+        textStyle: { color: '#f1f5f9', fontSize: 10 },
+        formatter: (params) => {
+          if (!params?.length) return '';
+          let r = `<div style="font-size:10px;color:#94a3b8;margin-bottom:2px">${params[0].axisValue}</div>`;
+          params.forEach(p => { r += `<div>${p.marker}${p.seriesName}: <b>${p.value != null ? p.value.toFixed(1) + '%' : '-'}</b></div>`; });
+          return r;
+        },
+      },
       legend: { show: false },
       xAxis: {
         type: 'category',
@@ -139,7 +148,7 @@ export default function DeviceMetricCard({ device, history = [] }) {
           color: '#64748b',
           fontSize: 7,
           interval: Math.floor(times.length / 3),
-          formatter: (value) => value.substring(0, 5),
+          formatter: (value) => value,
         },
         axisTick: { show: false },
       },
@@ -164,6 +173,7 @@ export default function DeviceMetricCard({ device, history = [] }) {
 
     interfaces.forEach((iface, idx) => {
       const colorPair = PORT_COLORS[idx % PORT_COLORS.length];
+      const portName = iface.ifName || `IF${iface.ifIndex}`;
 
       // IN 데이터 (단위별 변환)
       const inData = history.slice(0, 20).map(h => {
@@ -183,7 +193,7 @@ export default function DeviceMetricCard({ device, history = [] }) {
       maxValue = Math.max(maxValue, ...inData.map(Math.abs));
 
       series.push({
-        name: `IN`,
+        name: `${portName} IN`,
         type: 'line',
         data: inData,
         smooth: true,
@@ -212,7 +222,7 @@ export default function DeviceMetricCard({ device, history = [] }) {
       maxValue = Math.max(maxValue, ...outData.map(Math.abs));
 
       series.push({
-        name: `OUT`,
+        name: `${portName} OUT`,
         type: 'line',
         data: outData,
         smooth: true,
@@ -230,7 +240,16 @@ export default function DeviceMetricCard({ device, history = [] }) {
     return {
       backgroundColor: 'transparent',
       grid: { top: 2, right: 4, bottom: 16, left: 30 },
-      tooltip: { show: false },
+      tooltip: {
+        trigger: 'axis', backgroundColor: 'rgba(30,41,59,0.95)', borderColor: '#334155',
+        textStyle: { color: '#f1f5f9', fontSize: 10 },
+        formatter: (params) => {
+          if (!params?.length) return '';
+          let r = `<div style="font-size:10px;color:#94a3b8;margin-bottom:2px">${params[0].axisValue}</div>`;
+          params.forEach(p => { r += `<div>${p.marker}${p.seriesName}: <b>${formatTrafficValue(Math.abs(p.value || 0), trafficUnit)}</b></div>`; });
+          return r;
+        },
+      },
       legend: { show: false },
       xAxis: {
         type: 'category',
@@ -241,7 +260,7 @@ export default function DeviceMetricCard({ device, history = [] }) {
           color: '#64748b',
           fontSize: 7,
           interval: Math.floor(times.length / 3),
-          formatter: (value) => value.substring(0, 5),
+          formatter: (value) => value,
         },
         axisTick: { show: false },
       },
@@ -265,6 +284,8 @@ export default function DeviceMetricCard({ device, history = [] }) {
     let maxValue = 1;
 
     interfaces.forEach((iface, idx) => {
+      const portName = iface.ifName || `IF${iface.ifIndex}`;
+
       if (showError) {
         const inErrData = history.slice(0, 20).map(h => {
           const histIface = h.interfaces?.find(i => i.ifIndex === iface.ifIndex);
@@ -278,7 +299,7 @@ export default function DeviceMetricCard({ device, history = [] }) {
         maxValue = Math.max(maxValue, ...inErrData, ...outErrData);
 
         series.push({
-          name: `InErr`,
+          name: `${portName} InErr`,
           type: 'line',
           data: inErrData,
           smooth: true,
@@ -286,7 +307,7 @@ export default function DeviceMetricCard({ device, history = [] }) {
           lineStyle: { width: 1, color: '#ef4444' },
         });
         series.push({
-          name: `OutErr`,
+          name: `${portName} OutErr`,
           type: 'line',
           data: outErrData,
           smooth: true,
@@ -308,7 +329,7 @@ export default function DeviceMetricCard({ device, history = [] }) {
         maxValue = Math.max(maxValue, ...inDiscData, ...outDiscData);
 
         series.push({
-          name: `InDisc`,
+          name: `${portName} InDisc`,
           type: 'line',
           data: inDiscData,
           smooth: true,
@@ -316,7 +337,7 @@ export default function DeviceMetricCard({ device, history = [] }) {
           lineStyle: { width: 1, color: '#f97316' },
         });
         series.push({
-          name: `OutDisc`,
+          name: `${portName} OutDisc`,
           type: 'line',
           data: outDiscData,
           smooth: true,
@@ -329,7 +350,18 @@ export default function DeviceMetricCard({ device, history = [] }) {
     return {
       backgroundColor: 'transparent',
       grid: { top: 2, right: 4, bottom: 16, left: 30 },
-      tooltip: { show: false },
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(30,41,59,0.95)',
+        borderColor: '#334155',
+        textStyle: { color: '#f1f5f9', fontSize: 10 },
+        formatter: (params) => {
+          if (!params || params.length === 0) return '';
+          let r = `<div style="font-size:10px;color:#94a3b8;margin-bottom:2px">${params[0].axisValue}</div>`;
+          params.forEach(p => { r += `<div>${p.marker}${p.seriesName}: <b>${p.value != null ? p.value.toFixed(0) : '-'}</b></div>`; });
+          return r;
+        },
+      },
       legend: { show: false },
       xAxis: {
         type: 'category',
@@ -340,7 +372,7 @@ export default function DeviceMetricCard({ device, history = [] }) {
           color: '#64748b',
           fontSize: 7,
           interval: Math.floor(times.length / 3),
-          formatter: (value) => value.substring(0, 5),
+          formatter: (value) => value,
         },
         axisTick: { show: false },
       },
@@ -369,6 +401,7 @@ export default function DeviceMetricCard({ device, history = [] }) {
           <span className="device-stats">
             <span className="cpu">CPU:{cpuValue !== undefined ? `${cpuValue}%` : '-'}</span>
             <span className="mem">MEM:{memValue !== undefined ? `${memValue.toFixed(0)}%` : '-'}</span>
+            <span className="traffic-unit-hint">{counterType === '64bit' ? '64' : '32'}bit·{trafficUnit === 'bps' ? '%' : trafficUnit === 'byte' ? 'B/s' : 'bps'}</span>
           </span>
           <div className="port-dots">
             {Array.from({ length: 5 }, (_, idx) => {

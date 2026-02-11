@@ -273,123 +273,124 @@ export default function FaultHistory() {
         </div>
       </div>
 
-      {/* 필터 영역 */}
-      <div className="filter-bar glass-card">
-        <div className="filter-group filter-group-levels">
-          <label>등급</label>
-          <div className="level-checkboxes">
-            {ERROR_LEVELS.map((level) => (
-              <label key={level.id} className="level-checkbox" style={{ '--level-color': level.color }}>
-                <input
-                  type="checkbox"
-                  checked={selectedLevels.includes(level.id)}
-                  onChange={() => toggleLevel(level.id)}
-                />
-                <span className="checkbox-label" style={{ color: level.color }}>{level.label}</span>
-              </label>
-            ))}
+      {/* 장애 이력 테이블 */}
+      <div className="fault-content">
+        <div className="table-panel">
+        {/* 필터 영역 */}
+        <div className="filter-bar">
+          <div className="filter-group filter-group-levels">
+            <label>등급</label>
+            <div className="level-checkboxes">
+              {ERROR_LEVELS.map((level) => (
+                <label key={level.id} className="level-checkbox" style={{ '--level-color': level.color }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedLevels.includes(level.id)}
+                    onChange={() => toggleLevel(level.id)}
+                  />
+                  <span className="checkbox-label" style={{ color: level.color }}>{level.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="filter-group">
+            <label>시작일</label>
+            <DatePicker
+              selected={startDate}
+              onChange={(date) => setStartDate(date)}
+              selectsStart
+              startDate={startDate}
+              endDate={endDate}
+              maxDate={endDate || new Date()}
+              locale="ko"
+              dateFormat="yy.M.d"
+              placeholderText="시작일"
+              className="date-picker-input date-picker-sm"
+              isClearable
+              popperProps={{ strategy: 'fixed' }}
+            />
+          </div>
+          <div className="filter-group">
+            <label>종료일</label>
+            <DatePicker
+              selected={endDate}
+              onChange={(date) => setEndDate(date)}
+              selectsEnd
+              startDate={startDate}
+              endDate={endDate}
+              minDate={startDate}
+              maxDate={new Date()}
+              locale="ko"
+              dateFormat="yy.M.d"
+              placeholderText="종료일"
+              className="date-picker-input date-picker-sm"
+              isClearable
+              popperProps={{ strategy: 'fixed' }}
+            />
+          </div>
+          <div className="filter-group">
+            <label>장비코드</label>
+            <select
+              className="filter-select"
+              value={searchDevCode}
+              onChange={(e) => setSearchDevCode(e.target.value)}
+            >
+              <option value="">전체</option>
+              {devCodes.map((code) => (
+                <option key={code.DEV_CODE_ID} value={code.DEV_CODE_ID}>
+                  {code.CODE_NM}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="filter-group">
+            <label>장비명</label>
+            <input
+              type="text"
+              className="filter-input"
+              placeholder="장비명"
+              value={searchDeviceName}
+              onChange={(e) => setSearchDeviceName(e.target.value)}
+            />
+          </div>
+          <div className="filter-group">
+            <label>IP 주소</label>
+            <input
+              type="text"
+              className="filter-input"
+              placeholder="IP"
+              value={searchIp}
+              onChange={(e) => setSearchIp(e.target.value)}
+            />
+          </div>
+          <div className="filter-group">
+            <label>그룹명</label>
+            <input
+              type="text"
+              className="filter-input"
+              placeholder="그룹명"
+              value={searchGroupName}
+              onChange={(e) => setSearchGroupName(e.target.value)}
+            />
+          </div>
+          <div className="filter-group">
+            <label>장애내용</label>
+            <input
+              type="text"
+              className="filter-input"
+              placeholder="장애내용"
+              value={searchErrorMessage}
+              onChange={(e) => setSearchErrorMessage(e.target.value)}
+            />
+          </div>
+          <div className="filter-actions">
+            <button className="btn btn-icon-only" onClick={handleReset} title="초기화">
+              <i className="bi bi-arrow-counterclockwise"></i>
+            </button>
           </div>
         </div>
-        <div className="filter-group">
-          <label>시작일</label>
-          <DatePicker
-            selected={startDate}
-            onChange={(date) => setStartDate(date)}
-            selectsStart
-            startDate={startDate}
-            endDate={endDate}
-            maxDate={endDate || new Date()}
-            locale="ko"
-            dateFormat="yy.M.d"
-            placeholderText="시작일"
-            className="date-picker-input date-picker-sm"
-            isClearable
-            popperProps={{ strategy: 'fixed' }}
-          />
-        </div>
-        <div className="filter-group">
-          <label>종료일</label>
-          <DatePicker
-            selected={endDate}
-            onChange={(date) => setEndDate(date)}
-            selectsEnd
-            startDate={startDate}
-            endDate={endDate}
-            minDate={startDate}
-            maxDate={new Date()}
-            locale="ko"
-            dateFormat="yy.M.d"
-            placeholderText="종료일"
-            className="date-picker-input date-picker-sm"
-            isClearable
-            popperProps={{ strategy: 'fixed' }}
-          />
-        </div>
-        <div className="filter-group">
-          <label>장비코드</label>
-          <select
-            className="filter-select"
-            value={searchDevCode}
-            onChange={(e) => setSearchDevCode(e.target.value)}
-          >
-            <option value="">전체</option>
-            {devCodes.map((code) => (
-              <option key={code.DEV_CODE_ID} value={code.DEV_CODE_ID}>
-                {code.CODE_NM}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="filter-group">
-          <label>장비명</label>
-          <input
-            type="text"
-            className="filter-input"
-            placeholder="장비명"
-            value={searchDeviceName}
-            onChange={(e) => setSearchDeviceName(e.target.value)}
-          />
-        </div>
-        <div className="filter-group">
-          <label>IP 주소</label>
-          <input
-            type="text"
-            className="filter-input"
-            placeholder="IP"
-            value={searchIp}
-            onChange={(e) => setSearchIp(e.target.value)}
-          />
-        </div>
-        <div className="filter-group">
-          <label>그룹명</label>
-          <input
-            type="text"
-            className="filter-input"
-            placeholder="그룹명"
-            value={searchGroupName}
-            onChange={(e) => setSearchGroupName(e.target.value)}
-          />
-        </div>
-        <div className="filter-group">
-          <label>장애내용</label>
-          <input
-            type="text"
-            className="filter-input"
-            placeholder="장애내용"
-            value={searchErrorMessage}
-            onChange={(e) => setSearchErrorMessage(e.target.value)}
-          />
-        </div>
-        <div className="filter-actions">
-          <button className="btn btn-icon-only" onClick={handleReset} title="초기화">
-            <i className="bi bi-arrow-counterclockwise"></i>
-          </button>
-        </div>
-      </div>
-
-      {/* 장애 이력 테이블 */}
-      <div className="fault-content glass-card">
         <DataTable
+          tableId="fault-history"
           columns={columns}
           data={histories}
           rowKey="ERROR_HISTORY_ID"
@@ -412,8 +413,30 @@ export default function FaultHistory() {
             },
             pageSizeOptions: [10, 20, 50, 100],
           }}
-          maxHeight="calc(100vh - 340px)"
+          maxHeight="calc(100vh - 300px)"
+          exportConfig={{
+            fileName: '장애이력',
+            fetchAllData: async () => {
+              const params = {
+                page: 1, size: 999999,
+                sortKey: sortConfig.key,
+                sortDirection: sortConfig.direction,
+              };
+              if (startDate) params.startDate = format(startDate, 'yyyy-MM-dd');
+              if (endDate) params.endDate = format(endDate, 'yyyy-MM-dd');
+              if (searchDevCode) params.devCodeId = searchDevCode;
+              if (searchDeviceName.trim()) params.deviceName = searchDeviceName.trim();
+              if (searchErrorMessage.trim()) params.errorMessage = searchErrorMessage.trim();
+              if (searchIp.trim()) params.deviceIp = searchIp.trim();
+              if (searchGroupName.trim()) params.groupName = searchGroupName.trim();
+              const res = await faultApi.getHistory(params);
+              const data = res.data?.data || {};
+              const rawList = data.content || [];
+              return rawList.filter(e => selectedLevels.includes(e.ERROR_LEVEL));
+            },
+          }}
         />
+        </div>
       </div>
     </div>
   );

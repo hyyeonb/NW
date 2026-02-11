@@ -15,7 +15,8 @@
       "Bash(gh pr create:*)",
       "Bash(git remote:*)",
       "Bash(git checkout:*)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "Bash(npx vite build:*)"
     ]
   }
 }

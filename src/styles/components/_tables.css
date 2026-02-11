@@ -331,7 +331,6 @@
 /* 페이지네이션 영역 (하단 고정) */
 .table-container .pagination-controls {
     flex-shrink: 0;
-    margin-top: 0;
     border-radius: 0 0 var(--radius-xl, 16px) var(--radius-xl, 16px);
 }
 

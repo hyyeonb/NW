@@ -261,6 +261,7 @@ export const useDeviceTrafficRaw = (deviceId, minutes = 60) => {
     },
     enabled: !!deviceId,
     staleTime: 30000,
+    refetchInterval: 30000,
   });
 };
 

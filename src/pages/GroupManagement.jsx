@@ -412,6 +412,7 @@ export default function GroupManagement() {
       label: '그룹 이름',
       sortable: true,
       className: 'cell-truncate',
+      hideable: false,
     },
     {
       key: 'ADDRESS',
@@ -498,7 +499,7 @@ export default function GroupManagement() {
             </div>
 
             {/* 하위 그룹 테이블 */}
-            <div id="child-groups-section" style={{ marginTop: '30px' }}>
+            <div id="child-groups-section" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
 
               <DataTable
                 columns={childGroupColumns}
@@ -520,7 +521,11 @@ export default function GroupManagement() {
                   },
                   pageSizeOptions: [10, 20, 50],
                 }}
-                maxHeight="calc(100vh - 450px)"
+                maxHeight="calc(100vh - 420px)"
+                exportConfig={{
+                  fileName: '그룹목록',
+                  fetchAllData: async () => sortedChildGroups,
+                }}
               />
             </div>
           </div>

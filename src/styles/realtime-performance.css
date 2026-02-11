@@ -1942,6 +1942,15 @@
     color: #8b5cf6;
 }
 
+.card-header-mini .device-stats .traffic-unit-hint {
+    color: #64748b;
+    font-size: 9px;
+    padding: 1px 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 3px;
+}
+
 /* Card Options */
 .card-options-wrapper {
     position: relative;
@@ -2085,20 +2094,20 @@
     position: relative;
 }
 
-/* Chart Accent - Glassmorphism Tint */
+/* Chart Accent - Glassmorphism Border */
 .chart-accent-cpu {
-    background: rgba(59, 130, 246, 0.04);
-    border: 1px solid rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.08), inset 0 0 12px rgba(59, 130, 246, 0.04);
 }
 
 .chart-accent-traffic {
-    background: rgba(16, 185, 129, 0.04);
-    border: 1px solid rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.08), inset 0 0 12px rgba(16, 185, 129, 0.04);
 }
 
 .chart-accent-error {
-    background: rgba(239, 68, 68, 0.04);
-    border: 1px solid rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.08), inset 0 0 12px rgba(239, 68, 68, 0.04);
 }
 
 /* Chart Legend Hint (in watch-header) */
