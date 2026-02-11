@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -21,6 +21,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import Pagination from './Pagination';
+import ExportModal from './ExportModal';
 
 // 드래그 가능한 헤더 셀 컴포넌트
 function DraggableHeader({ column, children, sortable, onSort, sort, enableReorder }) {
@@ -113,6 +114,7 @@ export default function DataTable({
   tableId = 'default-table', // localStorage 키로 사용
   enableColumnReorder = true, // 컬럼 리오더링 활성화
   onColumnOrderChange, // 외부에서 컬럼 순서 변경 감지
+  exportConfig, // { fileName, fetchAllData? }
 }) {
   // localStorage에서 컬럼 순서 불러오기
   const getStoredColumnOrder = useCallback(() => {
@@ -155,6 +157,78 @@ export default function DataTable({
     }
   }, [tableId]);
 
+  // === 컬럼 가시성 ===
+  const colSettingsRef = useRef(null);
+  const [showColSettings, setShowColSettings] = useState(false);
+
+  // localStorage에서 컬럼 가시성 불러오기
+  const getStoredVisibility = useCallback(() => {
+    try {
+      const stored = localStorage.getItem(`table-column-visibility-${tableId}`);
+      if (stored) return JSON.parse(stored);
+    } catch (e) {
+      console.warn('Failed to load column visibility:', e);
+    }
+    return {};
+  }, [tableId]);
+
+  const [columnVisibility, setColumnVisibility] = useState(() => getStoredVisibility());
+
+  // 컬럼 가시성 저장
+  const saveColumnVisibility = useCallback((vis) => {
+    try {
+      localStorage.setItem(`table-column-visibility-${tableId}`, JSON.stringify(vis));
+    } catch (e) {
+      console.warn('Failed to save column visibility:', e);
+    }
+  }, [tableId]);
+
+  // 컬럼 가시성 토글
+  const toggleColumnVisibility = useCallback((key) => {
+    const col = columns.find(c => c.key === key);
+    setColumnVisibility(prev => {
+      const isVisible = prev[key] !== undefined
+        ? prev[key] !== false
+        : !col?.defaultHidden;
+      const next = { ...prev, [key]: !isVisible };
+      saveColumnVisibility(next);
+      return next;
+    });
+  }, [columns, saveColumnVisibility]);
+
+  // 컬럼이 보이는지 확인 (hideable: true가 아닌 컬럼은 항상 보임)
+  const isColumnVisible = useCallback((col) => {
+    if (col.hideable !== true) return true;
+    if (col.key in columnVisibility) return columnVisibility[col.key] !== false;
+    return !col.defaultHidden;
+  }, [columnVisibility]);
+
+  // hideable: true 컬럼이 하나라도 있을 때만 설정 버튼 표시
+  const hasHideableColumns = useMemo(() => {
+    return columns.some(c => c.hideable === true);
+  }, [columns]);
+
+  // 초기화 (전체 표시 + 순서 초기화)
+  const handleResetColumns = useCallback(() => {
+    setColumnVisibility({});
+    saveColumnVisibility({});
+    const defaultOrder = columns.map(c => c.key);
+    setColumnOrder(defaultOrder);
+    saveColumnOrder(defaultOrder);
+  }, [columns, saveColumnVisibility, saveColumnOrder]);
+
+  // 드롭다운 외부 클릭 닫기
+  useEffect(() => {
+    if (!showColSettings) return;
+    const handleClickOutside = (e) => {
+      if (colSettingsRef.current && !colSettingsRef.current.contains(e.target)) {
+        setShowColSettings(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showColSettings]);
+
   // 드래그 센서 설정
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -177,10 +251,11 @@ export default function DataTable({
       enableSorting: false,
     }] : [];
 
-    // 데이터 컬럼 (순서에 따라 정렬)
+    // 데이터 컬럼 (순서에 따라 정렬 + 가시성 필터)
     const orderedColumns = columnOrder
       .map(key => columns.find(c => c.key === key))
       .filter(Boolean)
+      .filter(col => isColumnVisible(col))
       .map(col => ({
         id: col.key,
         accessorKey: col.key,
@@ -195,7 +270,7 @@ export default function DataTable({
       }));
 
     return [...selectColumn, ...orderedColumns];
-  }, [columns, columnOrder, selectable, selectMode]);
+  }, [columns, columnOrder, selectable, selectMode, isColumnVisible]);
 
   // TanStack Table 인스턴스
   const table = useReactTable({
@@ -286,21 +361,81 @@ export default function DataTable({
     }
   };
 
-  // 드래그 가능한 컬럼 ID 목록 (선택 컬럼 제외)
-  const draggableColumnIds = columnOrder;
+  // 드래그 가능한 컬럼 ID 목록 (선택 컬럼 제외, visible 컬럼만)
+  const draggableColumnIds = columnOrder.filter(key => {
+    const col = columns.find(c => c.key === key);
+    return col && isColumnVisible(col);
+  });
+
+  // === Export 기능 ===
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportData, setExportData] = useState([]);
+  const [exportLoading, setExportLoading] = useState(false);
+
+  const handleExport = useCallback(async () => {
+    setShowExportModal(true);
+
+    if (exportConfig?.fetchAllData) {
+      // 서버 페이지네이션: 전체 데이터 fetch
+      setExportLoading(true);
+      try {
+        const allData = await exportConfig.fetchAllData();
+        setExportData(allData);
+      } catch (error) {
+        console.error('Export 데이터 로드 실패:', error);
+        setExportData([]);
+      } finally {
+        setExportLoading(false);
+      }
+    } else {
+      // 클라이언트 데이터 그대로 사용
+      setExportData(data);
+    }
+  }, [exportConfig, data]);
 
   return (
     <div className={`data-table-container ${className}`}>
-      {/* 컬럼 순서 초기화 버튼 (개발/디버그용, 필요시 활성화) */}
-      {/*
-      {enableColumnReorder && (
-        <div className="column-order-controls">
-          <button onClick={resetColumnOrder} className="btn-reset-columns">
-            <i className="bi bi-arrow-counterclockwise"></i> 컬럼 순서 초기화
-          </button>
+      {/* 컬럼 설정 바 */}
+      {hasHideableColumns && (
+        <div className="column-settings-bar">
+          <div className="column-settings-wrapper" ref={colSettingsRef}>
+            <button
+              className="btn-column-settings"
+              onClick={() => setShowColSettings(prev => !prev)}
+              title="컬럼 표시 설정"
+            >
+              <i className="bi bi-layout-three-columns"></i>
+            </button>
+            {showColSettings && (
+              <div className="column-settings-dropdown">
+                <div className="column-settings-header">컬럼 표시 설정</div>
+                <div className="column-settings-list">
+                  {columnOrder
+                    .map(key => columns.find(c => c.key === key))
+                    .filter(Boolean)
+                    .filter(col => col.hideable === true)
+                    .map(col => (
+                      <label key={col.key} className="column-settings-item">
+                        <input
+                          type="checkbox"
+                          checked={isColumnVisible(col)}
+                          onChange={() => toggleColumnVisibility(col.key)}
+                        />
+                        <span>{col.label}</span>
+                      </label>
+                    ))
+                  }
+                </div>
+                <div className="column-settings-footer">
+                  <button className="btn-reset-columns" onClick={handleResetColumns}>
+                    <i className="bi bi-arrow-counterclockwise"></i> 초기화
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
-      */}
 
       {/* 테이블 영역 */}
       <div
@@ -438,6 +573,38 @@ export default function DataTable({
           onPageSizeChange={pagination.onPageSizeChange}
           pageSizeOptions={pagination.pageSizeOptions}
           showPageSizeSelector={pagination.showPageSizeSelector !== false}
+          onExport={exportConfig ? handleExport : undefined}
+        />
+      )}
+
+      {/* 페이지네이션 없이 exportConfig만 있는 경우 내보내기 버튼 단독 표시 */}
+      {!pagination && exportConfig && (
+        <div className="pagination-controls export-only">
+          <div className="pagination-left">
+            <span className="pagination-info">전체 {data.length}건</span>
+          </div>
+          <div className="pagination-right">
+            <button
+              className="btn-export"
+              onClick={handleExport}
+              title="데이터 내보내기"
+            >
+              <i className="bi bi-download"></i>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Export 모달 */}
+      {exportConfig && (
+        <ExportModal
+          open={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          columns={columns}
+          data={exportData}
+          loading={exportLoading}
+          defaultFileName={exportConfig.fileName || 'export'}
+          excludeColumns={exportConfig.excludeColumns}
         />
       )}
 

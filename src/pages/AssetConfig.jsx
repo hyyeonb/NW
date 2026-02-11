@@ -208,35 +208,36 @@ export default function AssetConfig() {
         ) : isLoading ? (
           <p style={{ color: '#94a3b8' }}>로딩 중...</p>
         ) : (
-          <div id="device-list-section" style={{ display: 'block' }}>
-            {/* 검색 필터 바 */}
-            <div className="filter-bar glass-card">
-              <div className="filter-group">
-                <label>장비명</label>
-                <input
-                  type="text"
-                  className="filter-input"
-                  placeholder="장비명"
-                  value={searchDeviceName}
-                  onChange={(e) => setSearchDeviceName(e.target.value)}
-                />
+          <div id="device-list-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+            {/* 검색 필터 바 + 테이블 통합 */}
+            <div className="table-panel">
+              <div className="filter-bar">
+                <div className="filter-group">
+                  <label>장비명</label>
+                  <input
+                    type="text"
+                    className="filter-input"
+                    placeholder="장비명"
+                    value={searchDeviceName}
+                    onChange={(e) => setSearchDeviceName(e.target.value)}
+                  />
+                </div>
+                <div className="filter-group">
+                  <label>IP 주소</label>
+                  <input
+                    type="text"
+                    className="filter-input"
+                    placeholder="IP"
+                    value={searchDeviceIp}
+                    onChange={(e) => setSearchDeviceIp(e.target.value)}
+                  />
+                </div>
+                <div className="filter-actions">
+                  <button className="btn btn-icon-only" onClick={handleSearchReset} title="초기화">
+                    <i className="bi bi-arrow-counterclockwise"></i>
+                  </button>
+                </div>
               </div>
-              <div className="filter-group">
-                <label>IP 주소</label>
-                <input
-                  type="text"
-                  className="filter-input"
-                  placeholder="IP"
-                  value={searchDeviceIp}
-                  onChange={(e) => setSearchDeviceIp(e.target.value)}
-                />
-              </div>
-              <div className="filter-actions">
-                <button className="btn btn-icon-only" onClick={handleSearchReset} title="초기화">
-                  <i className="bi bi-arrow-counterclockwise"></i>
-                </button>
-              </div>
-            </div>
 
             <DataTable
               columns={deviceColumns}
@@ -260,8 +261,9 @@ export default function AssetConfig() {
                   setPage(1);
                 },
               }}
-              maxHeight="calc(100vh - 300px)"
+              maxHeight="calc(100vh - 260px)"
             />
+            </div>
           </div>
         )}
       </main>

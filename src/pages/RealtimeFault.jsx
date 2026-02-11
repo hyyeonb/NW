@@ -338,88 +338,89 @@ export default function RealtimeFault() {
         </div>
       </div>
 
-      {/* 필터 영역 */}
-      <div className="filter-bar glass-card">
-        <div className="filter-group filter-group-levels">
-          <label>등급</label>
-          <div className="level-checkboxes">
-            {ERROR_LEVELS.map((level) => (
-              <label key={level.id} className="level-checkbox" style={{ '--level-color': level.color }}>
-                <input
-                  type="checkbox"
-                  checked={selectedLevels.includes(level.id)}
-                  onChange={() => toggleLevel(level.id)}
-                />
-                <span className="checkbox-label" style={{ color: level.color }}>{level.label}</span>
-              </label>
-            ))}
+      {/* 장애 테이블 */}
+      <div className="fault-content">
+        <div className="table-panel">
+        {/* 필터 영역 */}
+        <div className="filter-bar">
+          <div className="filter-group filter-group-levels">
+            <label>등급</label>
+            <div className="level-checkboxes">
+              {ERROR_LEVELS.map((level) => (
+                <label key={level.id} className="level-checkbox" style={{ '--level-color': level.color }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedLevels.includes(level.id)}
+                    onChange={() => toggleLevel(level.id)}
+                  />
+                  <span className="checkbox-label" style={{ color: level.color }}>{level.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="filter-group">
+            <label>장비코드</label>
+            <select
+              className="filter-select"
+              value={searchDevCode}
+              onChange={(e) => setSearchDevCode(e.target.value)}
+            >
+              <option value="">전체</option>
+              {devCodes.map((code) => (
+                <option key={code.DEV_CODE_ID} value={code.DEV_CODE_ID}>
+                  {code.CODE_NM}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="filter-group">
+            <label>장비명</label>
+            <input
+              type="text"
+              className="filter-input"
+              placeholder="장비명"
+              value={searchDeviceName}
+              onChange={(e) => setSearchDeviceName(e.target.value)}
+            />
+          </div>
+          <div className="filter-group">
+            <label>IP 주소</label>
+            <input
+              type="text"
+              className="filter-input"
+              placeholder="IP"
+              value={searchIp}
+              onChange={(e) => setSearchIp(e.target.value)}
+            />
+          </div>
+          <div className="filter-group">
+            <label>그룹명</label>
+            <input
+              type="text"
+              className="filter-input"
+              placeholder="그룹명"
+              value={searchGroupName}
+              onChange={(e) => setSearchGroupName(e.target.value)}
+            />
+          </div>
+          <div className="filter-group">
+            <label>장애내용</label>
+            <input
+              type="text"
+              className="filter-input"
+              placeholder="장애내용"
+              value={searchErrorMessage}
+              onChange={(e) => setSearchErrorMessage(e.target.value)}
+            />
+          </div>
+          <div className="filter-actions">
+            <button className="btn btn-icon-only" onClick={handleReset} title="초기화">
+              <i className="bi bi-arrow-counterclockwise"></i>
+            </button>
           </div>
         </div>
-        <div className="filter-group">
-          <label>장비코드</label>
-          <select
-            className="filter-select"
-            value={searchDevCode}
-            onChange={(e) => setSearchDevCode(e.target.value)}
-          >
-            <option value="">전체</option>
-            {devCodes.map((code) => (
-              <option key={code.DEV_CODE_ID} value={code.DEV_CODE_ID}>
-                {code.CODE_NM}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="filter-group">
-          <label>장비명</label>
-          <input
-            type="text"
-            className="filter-input"
-            placeholder="장비명"
-            value={searchDeviceName}
-            onChange={(e) => setSearchDeviceName(e.target.value)}
-          />
-        </div>
-        <div className="filter-group">
-          <label>IP 주소</label>
-          <input
-            type="text"
-            className="filter-input"
-            placeholder="IP"
-            value={searchIp}
-            onChange={(e) => setSearchIp(e.target.value)}
-          />
-        </div>
-        <div className="filter-group">
-          <label>그룹명</label>
-          <input
-            type="text"
-            className="filter-input"
-            placeholder="그룹명"
-            value={searchGroupName}
-            onChange={(e) => setSearchGroupName(e.target.value)}
-          />
-        </div>
-        <div className="filter-group">
-          <label>장애내용</label>
-          <input
-            type="text"
-            className="filter-input"
-            placeholder="장애내용"
-            value={searchErrorMessage}
-            onChange={(e) => setSearchErrorMessage(e.target.value)}
-          />
-        </div>
-        <div className="filter-actions">
-          <button className="btn btn-icon-only" onClick={handleReset} title="초기화">
-            <i className="bi bi-arrow-counterclockwise"></i>
-          </button>
-        </div>
-      </div>
-
-      {/* 장애 테이블 */}
-      <div className="fault-content glass-card">
         <DataTable
+          tableId="realtime-fault"
           columns={columns}
           data={paginatedErrors}
           rowKey="ERROR_ID"
@@ -436,7 +437,7 @@ export default function RealtimeFault() {
             if (selectedError?.ERROR_ID === row.ERROR_ID) classes.push('selected');
             return classes.join(' ');
           }}
-          maxHeight="calc(100vh - 350px)"
+          maxHeight="calc(100vh - 310px)"
           pagination={{
             currentPage: currentPage,
             pageSize: pageSize,
@@ -445,7 +446,12 @@ export default function RealtimeFault() {
             onPageSizeChange: handlePageSizeChange,
             pageSizeOptions: [10, 20, 50, 100],
           }}
+          exportConfig={{
+            fileName: '실시간장애',
+            fetchAllData: async () => sortedErrors,
+          }}
         />
+        </div>
       </div>
 
       {/* 인지 처리 모달 */}
