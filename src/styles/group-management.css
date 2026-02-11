@@ -243,6 +243,10 @@
     animation: fadeInUp 0.4s ease;
     /* glow-border-animated에서 상속 */
     background: var(--theme-bg-panel) !important;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
 }
 
 /* ==================
@@ -452,7 +456,6 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 24px;
 }
 
 .items-per-page {

@@ -349,7 +349,6 @@ select:focus {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 30px;
 }
 
 .items-per-page {
@@ -625,11 +624,11 @@ select:focus {
 .device-detail-modal {
     max-width: 1500px !important;
     width: 96%;
-    max-height: 92vh !important;
-    height: auto !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    padding: 20px 24px 20px 24px;
+    height: 92vh !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 20px 24px 0 24px;
     margin: 20px auto;
     /* 커스텀 스크롤바 */
     scrollbar-width: thin;
@@ -977,12 +976,38 @@ select:focus {
     border-radius: 12px;
 }
 
+.tab-badge.danger {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(239, 68, 68, 0.15) 100%);
+    color: #f87171;
+}
+
+/* 활성 장애 행 강조 */
+.fault-active-row {
+    position: relative;
+}
+
+.fault-active-row td {
+    background: rgba(239, 68, 68, 0.03) !important;
+}
+
+.fault-active-row td:first-child {
+    box-shadow: inset 3px 0 0 rgba(239, 68, 68, 0.35);
+}
+
+.fault-active-row:hover td {
+    background: rgba(239, 68, 68, 0.06) !important;
+}
+
 .detail-tab-content {
     display: none;
 }
 
 .detail-tab-content.active {
     display: block;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
     animation: tabFadeIn 0.3s ease;
 }
 
@@ -1125,10 +1150,22 @@ select:focus {
     color: #a855f7;
 }
 
+/* 포트 테이블 컴팩트 스타일 (사이드 스크롤 방지) */
+.port-data-table .data-table th {
+    padding: 10px 10px;
+    font-size: 10px;
+    letter-spacing: 0.3px;
+}
+
+.port-data-table .data-table td {
+    padding: 8px 10px;
+    font-size: 12px;
+}
+
 .port-speed {
     color: #60a5fa;
     font-family: 'Consolas', monospace;
-    font-size: 12px;
+    font-size: 11px;
 }
 
 .port-mac {
@@ -2858,6 +2895,75 @@ select:focus {
 }
 
 /* ==================
+   PortTrafficChart 컴포넌트
+   ================== */
+
+.port-traffic-chart {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* 트래픽 박스 내 설정 드롭다운 z-index */
+.traffic-box .global-settings-wrapper {
+    position: relative;
+    margin-left: auto;
+}
+
+.traffic-box .global-settings-dropdown {
+    z-index: 500;
+    max-height: 240px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #64748b #1e293b;
+}
+
+/* 차트 영역 */
+.ptc-chart-area {
+    flex: 1;
+    min-height: 0;
+}
+
+/* Error/Discard 차트 영역 */
+.ptc-quality-area {
+    height: 140px;
+    flex-shrink: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    padding-top: 4px;
+    position: relative;
+}
+
+.ptc-quality-label {
+    display: flex;
+    gap: 6px;
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    z-index: 10;
+}
+
+.ptc-ql-badge {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.ptc-ql-badge.error {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.ptc-ql-badge.discard {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* ==================
    장비 정보 탭 - 이전 레이아웃 (참조용)
    ================== */
 
@@ -3662,6 +3768,24 @@ select:focus {
     background: rgba(99, 102, 241, 0.15);
     border-color: rgba(99, 102, 241, 0.3);
     color: #a78bfa;
+}
+
+.settings-gear-btn.save-active {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #10b981;
+    animation: savePulse 1.5s ease infinite;
+}
+
+.settings-gear-btn.save-active:hover {
+    background: rgba(16, 185, 129, 0.25);
+    border-color: rgba(16, 185, 129, 0.6);
+    color: #34d399;
+}
+
+@keyframes savePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.3); }
+    50% { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0); }
 }
 
 /* info-box-header에 flex 적용 (톱니바퀴 우측 정렬) */

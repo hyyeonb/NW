@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { GroupTree, DataTable } from '../components';
+import { GroupTree, DataTable, PortTrafficChart } from '../components';
 import { useGroupStore } from '../stores';
 import ReactECharts from 'echarts-for-react';
 import {
@@ -10,10 +10,11 @@ import {
   useUpdatePort,
   useDeviceScope,
   useUpdateDeviceScope,
-  useDeviceTraffic,
+  useDeviceTrafficRaw,
   useDeviceErrorLevels,
 } from '../hooks';
 import { devicesApi } from '../api/devices';
+import { faultApi } from '../api/fault';
 
 export default function AssetManagement() {
   const { selectedGroup } = useGroupStore();
@@ -67,6 +68,15 @@ export default function AssetManagement() {
   const [portSortField, setPortSortField] = useState('IF_INDEX');
   const [portSortOrder, setPortSortOrder] = useState('asc');
 
+  // 장애 탭 상태
+  const [faultData, setFaultData] = useState([]);
+  const [faultLoading, setFaultLoading] = useState(false);
+  const [faultPage, setFaultPage] = useState(1);
+  const [faultPageSize, setFaultPageSize] = useState(20);
+  const [faultTotal, setFaultTotal] = useState(0);
+  const [faultSortField, setFaultSortField] = useState('OCCUR_AT');
+  const [faultSortOrder, setFaultSortOrder] = useState('desc');
+
   // 검색 상태
   const [searchDeviceName, setSearchDeviceName] = useState('');
   const [searchDeviceIp, setSearchDeviceIp] = useState('');
@@ -74,8 +84,30 @@ export default function AssetManagement() {
   // 차트 표시할 포트 Set (세션 기반 - IF_INDEX 저장)
   const [chartPortsSet, setChartPortsSet] = useState(new Set());
 
+  // 트래픽 차트 설정 상태
+  const [showTrafficSettings, setShowTrafficSettings] = useState(false);
+  const [trafficChartSettings, setTrafficChartSettings] = useState({
+    counterType: '64bit',
+    trafficUnit: 'bit',
+    showError: false,
+    showDiscard: false,
+  });
+  const trafficSettingsRef = useRef(null);
+
   // CPU/MEM 데이터 상태
   const [cpuMemData, setCpuMemData] = useState(null);
+
+  // 트래픽 설정 드롭다운 외부 클릭 닫기
+  useEffect(() => {
+    if (!showTrafficSettings) return;
+    const handleClickOutside = (e) => {
+      if (trafficSettingsRef.current && !trafficSettingsRef.current.contains(e.target)) {
+        setShowTrafficSettings(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showTrafficSettings]);
 
   // 그룹 변경 시 페이지 및 검색 초기화
   useEffect(() => {
@@ -104,7 +136,7 @@ export default function AssetManagement() {
   );
   const { data: portsDataRaw, isLoading: portsLoading } = useDevicePorts(detailDevice?.DEVICE_ID);
   const { data: deviceScope, isLoading: scopeLoading } = useDeviceScope(detailDevice?.DEVICE_ID);
-  const { data: trafficData, isLoading: trafficLoading } = useDeviceTraffic(detailDevice?.DEVICE_ID, 60);
+  const { data: trafficRawData, isLoading: trafficLoading } = useDeviceTrafficRaw(detailDevice?.DEVICE_ID, 60);
 
   // 장비별 활성 장애 등급 조회
   const { deviceErrorMap } = useDeviceErrorLevels();
@@ -155,6 +187,80 @@ export default function AssetManagement() {
     return () => clearInterval(interval);
   }, [detailDevice?.DEVICE_ID]);
 
+  // 장애 건수 조회 (장비 상세 열릴 때 바로)
+  useEffect(() => {
+    if (!detailDevice?.DEVICE_ID) {
+      setFaultTotal(0);
+      return;
+    }
+    const fetchFaultCount = async () => {
+      try {
+        const [errRes, histRes] = await Promise.all([
+          faultApi.getErrors({ deviceId: detailDevice.DEVICE_ID }),
+          faultApi.getHistory({ page: 1, size: 1, deviceId: detailDevice.DEVICE_ID }),
+        ]);
+        const activeList = errRes.data?.data?.list || [];
+        const activeCount = Array.isArray(activeList)
+          ? activeList.filter(e => e.DEVICE_ID === detailDevice.DEVICE_ID).length
+          : 0;
+        const histTotal = histRes.data?.data?.totalElements || 0;
+        setFaultTotal(activeCount + histTotal);
+      } catch {
+        setFaultTotal(0);
+      }
+    };
+    fetchFaultCount();
+  }, [detailDevice?.DEVICE_ID]);
+
+  // 장애 데이터 조회 (장애 탭 활성화 시)
+  useEffect(() => {
+    if (!detailDevice?.DEVICE_ID || activeTab !== 'fault-info') {
+      return;
+    }
+    const fetchFaults = async () => {
+      setFaultLoading(true);
+      try {
+        // 현재 활성 장애
+        const errRes = await faultApi.getErrors({ deviceId: detailDevice.DEVICE_ID });
+        const activeList = errRes.data?.data?.list || [];
+        const deviceActiveErrors = Array.isArray(activeList)
+          ? activeList.filter(e => e.DEVICE_ID === detailDevice.DEVICE_ID)
+          : [];
+
+        // 장애 이력
+        const histRes = await faultApi.getHistory({
+          page: faultPage,
+          size: faultPageSize,
+          sortKey: faultSortField,
+          sortDirection: faultSortOrder,
+          deviceId: detailDevice.DEVICE_ID,
+        });
+        const histData = histRes.data?.data || {};
+        const histList = histData.content || [];
+
+        // 활성 장애 + 이력 합치기
+        const activeFormatted = deviceActiveErrors.map((e, i) => ({
+          ...e,
+          _isActive: true,
+          _faultRowId: `active_${e.ERROR_ID || i}`,
+        }));
+        const histFormatted = histList.map((e, i) => ({
+          ...e,
+          _faultRowId: `hist_${e.ERROR_HISTORY_ID || i}`,
+        }));
+
+        setFaultData([...activeFormatted, ...histFormatted]);
+        setFaultTotal(deviceActiveErrors.length + (histData.totalElements || 0));
+      } catch (error) {
+        console.error('장애 데이터 조회 실패:', error);
+        setFaultData([]);
+      } finally {
+        setFaultLoading(false);
+      }
+    };
+    fetchFaults();
+  }, [detailDevice?.DEVICE_ID, activeTab, faultPage, faultPageSize, faultSortField, faultSortOrder]);
+
   // 가상 인터페이스 필터링 (docker, veth, br-, lo 등 제외)
   const portsData = useMemo(() => {
     if (!portsDataRaw) return [];
@@ -196,36 +302,6 @@ export default function AssetManagement() {
       }
     }
   }, [portsData, detailDevice?.DEVICE_ID]);
-
-  // 트래픽 차트 데이터 (세션 기반 chartPortsSet 필터링)
-  const trafficChartData = useMemo(() => {
-    if (!trafficData || !trafficData.series || trafficData.series.length === 0) {
-      return { timeLabels: [], series: [] };
-    }
-
-    // 선택된 포트가 없으면 빈 차트
-    if (chartPortsSet.size === 0) {
-      return { timeLabels: [], series: [] };
-    }
-
-    // 선택된 포트만 표시
-    const filteredSeries = trafficData.series.filter(item => {
-      // series에 ifIndex가 있다고 가정
-      if (item.ifIndex !== undefined) {
-        return chartPortsSet.has(item.ifIndex);
-      }
-      // name 기반 매칭 (포트 이름이 series name에 포함되어 있는지)
-      return Array.from(chartPortsSet).some(ifIndex => {
-        const port = portsData?.find(p => p.IF_INDEX === ifIndex);
-        if (port) {
-          const portName = port.IF_NAME || port.IF_DESCR || '';
-          return item.name && item.name.includes(portName);
-        }
-        return false;
-      });
-    });
-    return { timeLabels: trafficData.timeLabels, series: filteredSeries };
-  }, [trafficData, chartPortsSet, portsData]);
 
   // 포트 차트 토글 핸들러 (세션 기반)
   const handleToggleChartPort = (port) => {
@@ -525,15 +601,10 @@ export default function AssetManagement() {
     }
   };
 
-  // 장비 수정 저장 및 모달 닫기
-  const handleSaveAndClose = async () => {
-    if (!detailDevice) {
-      setDetailDevice(null);
-      return;
-    }
-
-    // 변경사항 체크
-    const hasChanges =
+  // 변경사항 감지
+  const hasEditChanges = useMemo(() => {
+    if (!detailDevice) return false;
+    return (
       editFormData.DEVICE_NAME !== (detailDevice.DEVICE_NAME || '') ||
       editFormData.DEVICE_IP !== (detailDevice.DEVICE_IP || '') ||
       editFormData.GROUP_ID !== detailDevice.GROUP_ID ||
@@ -545,13 +616,13 @@ export default function AssetManagement() {
       editFormData.SNMP_AUTH_PROTOCOL !== (detailDevice.SNMP_AUTH_PROTOCOL || 'MD5') ||
       editFormData.SNMP_AUTH_PASSWORD !== (detailDevice.SNMP_AUTH_PASSWORD || '') ||
       editFormData.SNMP_PRIV_PROTOCOL !== (detailDevice.SNMP_PRIV_PROTOCOL || 'DES') ||
-      editFormData.SNMP_PRIV_PASSWORD !== (detailDevice.SNMP_PRIV_PASSWORD || '');
+      editFormData.SNMP_PRIV_PASSWORD !== (detailDevice.SNMP_PRIV_PASSWORD || '')
+    );
+  }, [detailDevice, editFormData]);
 
-    if (!hasChanges) {
-      setDetailDevice(null);
-      return;
-    }
-
+  // 장비 수정 저장
+  const handleSaveDevice = async () => {
+    if (!detailDevice || !hasEditChanges) return;
     setEditSaving(true);
     try {
       await updateDeviceMutation.mutateAsync({
@@ -559,7 +630,6 @@ export default function AssetManagement() {
         data: editFormData
       });
       alert('장비 정보가 저장되었습니다.');
-      setDetailDevice(null);
     } catch (error) {
       console.error('장비 수정 오류:', error);
       alert('장비 수정에 실패했습니다: ' + (error.response?.data?.message || error.message));
@@ -576,7 +646,7 @@ export default function AssetManagement() {
 
     try {
       await updatePortMutation.mutateAsync({
-        deviceId: detailDevice.DEVICE_ID,
+        deviceId: port.DEVICE_ID || detailDevice?.DEVICE_ID,
         ifIndex: ifIndex,
         data: { [field]: newValue }
       });
@@ -711,6 +781,9 @@ export default function AssetManagement() {
   const handleRowClick = (device) => {
     setDetailDevice(device);
     setActiveTab('device-info');
+    setFaultData([]);
+    setFaultTotal(0);
+    setFaultPage(1);
     // 편집 폼 초기화
     setEditFormData({
       DEVICE_NAME: device.DEVICE_NAME || '',
@@ -784,6 +857,84 @@ export default function AssetManagement() {
     return '-';
   };
 
+  // 장애 등급 라벨/클래스
+  const getFaultLevelLabel = (level) => {
+    switch (level) { case 'C': return 'Cr'; case 'M': return 'Mj'; case 'N': return 'Mn'; case 'W': return 'Wr'; default: return level; }
+  };
+  const getFaultLevelClass = (level) => {
+    switch (level) { case 'C': return 'critical'; case 'M': return 'major'; case 'N': return 'minor'; case 'W': return 'warning'; default: return ''; }
+  };
+  const formatFaultDate = (dateStr) => {
+    if (!dateStr) return '-';
+    try {
+      return new Date(dateStr).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch { return dateStr; }
+  };
+  const calcDuration = (occurAt, clearAt) => {
+    if (!occurAt) return '-';
+    const occur = new Date(occurAt);
+    const clear = clearAt ? new Date(clearAt) : new Date();
+    const diff = Math.floor((clear - occur) / 1000);
+    if (diff < 60) return `${diff}초`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}분 ${diff % 60}초`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}시간 ${Math.floor((diff % 3600) / 60)}분`;
+    return `${Math.floor(diff / 86400)}일 ${Math.floor((diff % 86400) / 3600)}시간`;
+  };
+
+  // 장애 탭 컬럼 정의
+  const faultColumns = useMemo(() => [
+    {
+      key: 'ERROR_LEVEL',
+      label: '등급',
+      width: '70px',
+      sortable: true,
+      align: 'center',
+      render: (value) => (
+        <span className={`severity-badge ${getFaultLevelClass(value)}`}>
+          {getFaultLevelLabel(value)}
+        </span>
+      ),
+    },
+    {
+      key: 'ERROR_MESSAGE',
+      label: '장애 내용',
+      sortable: true,
+      className: 'cell-truncate',
+    },
+    {
+      key: 'OCCUR_AT',
+      label: '발생 시간',
+      width: '155px',
+      sortable: true,
+      className: 'cell-date',
+      render: (value) => formatFaultDate(value),
+    },
+    {
+      key: 'CLEAR_AT',
+      label: '해소 시간',
+      width: '155px',
+      sortable: true,
+      className: 'cell-date',
+      render: (value, row) => row._isActive ? <span style={{ color: '#ef4444', fontWeight: 500 }}>진행 중</span> : formatFaultDate(value),
+    },
+    {
+      key: 'duration',
+      label: '소요 시간',
+      width: '110px',
+      render: (_, row) => calcDuration(row.OCCUR_AT, row.CLEAR_AT),
+    },
+  ], []);
+
+  const handleFaultSort = (key) => {
+    if (faultSortField === key) {
+      setFaultSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setFaultSortField(key);
+      setFaultSortOrder('desc');
+    }
+    setFaultPage(1);
+  };
+
   // 포트 테이블 컬럼 정의
   const portColumns = useMemo(() => [
     {
@@ -792,6 +943,7 @@ export default function AssetManagement() {
       width: '70px',
       sortable: true,
       align: 'center',
+      hideable: false,
     },
     {
       key: 'IF_NAME',
@@ -799,6 +951,7 @@ export default function AssetManagement() {
       width: '120px',
       sortable: true,
       render: (value) => value || '-',
+      hideable: false,
     },
     {
       key: 'IF_DESCR',
@@ -806,6 +959,7 @@ export default function AssetManagement() {
       width: '130px',
       sortable: true,
       className: 'cell-truncate',
+      hideable: true,
       render: (value) => value || '-',
     },
     {
@@ -814,6 +968,7 @@ export default function AssetManagement() {
       width: '130px',
       sortable: true,
       className: 'cell-truncate',
+      hideable: true,
       render: (value) => value || '-',
     },
     {
@@ -821,6 +976,7 @@ export default function AssetManagement() {
       label: '타입',
       width: '100px',
       sortable: true,
+      hideable: true,
       render: (value, row) => (
         <span className={`port-type-badge ${getPortTypeBadgeClass(value)}`}>
           {row.ifTypeText || getPortTypeText(value)}
@@ -833,6 +989,8 @@ export default function AssetManagement() {
       width: '70px',
       sortable: true,
       align: 'center',
+      hideable: true,
+      defaultHidden: true,
       render: (value) => value || '-',
     },
     {
@@ -841,6 +999,7 @@ export default function AssetManagement() {
       width: '100px',
       sortable: true,
       className: 'port-speed',
+      hideable: true,
       render: (value, row) => formatSpeed(row),
     },
     {
@@ -849,6 +1008,34 @@ export default function AssetManagement() {
       width: '140px',
       sortable: true,
       className: 'port-mac',
+      hideable: true,
+      render: (value) => value || '-',
+    },
+    {
+      key: 'IF_LAST_CHANGE',
+      label: 'Last Change',
+      width: '130px',
+      sortable: true,
+      hideable: true,
+      defaultHidden: true,
+      render: (value) => value != null ? Number(value).toLocaleString() : '-',
+    },
+    {
+      key: 'IF_IP_ADDRESS',
+      label: 'IP',
+      width: '130px',
+      sortable: true,
+      className: 'cell-ip',
+      hideable: true,
+      render: (value) => value || '-',
+    },
+    {
+      key: 'IF_IP_NETMASK',
+      label: 'Netmask',
+      width: '130px',
+      sortable: true,
+      hideable: true,
+      defaultHidden: true,
       render: (value) => value || '-',
     },
     {
@@ -857,6 +1044,7 @@ export default function AssetManagement() {
       width: '70px',
       sortable: true,
       align: 'center',
+      hideable: true,
       render: (value) => (
         <span className={`status-badge ${value === 1 ? 'up' : 'down'}`}>
           {value === 1 ? 'Up' : 'Down'}
@@ -869,6 +1057,7 @@ export default function AssetManagement() {
       width: '70px',
       sortable: true,
       align: 'center',
+      hideable: true,
       render: (value) => (
         <span className={`status-badge ${value === 1 ? 'up' : 'down'}`}>
           {value === 1 ? 'Up' : 'Down'}
@@ -881,6 +1070,7 @@ export default function AssetManagement() {
       width: '90px',
       sortable: true,
       align: 'center',
+      hideable: true,
       render: (value, row) => (
         <span
           className={`flag-badge clickable ${value === 1 || value === true ? 'active' : 'inactive'}`}
@@ -897,6 +1087,7 @@ export default function AssetManagement() {
       width: '90px',
       sortable: true,
       align: 'center',
+      hideable: true,
       render: (value, row) => (
         <span
           className={`flag-badge clickable ${value === 1 || value === true ? 'active' : 'inactive'}`}
@@ -1023,7 +1214,7 @@ export default function AssetManagement() {
         ) : isLoading ? (
           <p style={{ color: '#94a3b8' }}>로딩 중...</p>
         ) : (
-          <div id="device-list-section" style={{ display: 'block' }}>
+          <div id="device-list-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             {selectedDevices.length > 0 && (
               <div style={{ display: 'flex', marginBottom: '12px', gap: '8px' }}>
                 <button
@@ -1044,36 +1235,38 @@ export default function AssetManagement() {
               </div>
             )}
 
-            {/* 검색 필터 바 */}
-            <div className="filter-bar glass-card">
-              <div className="filter-group">
-                <label>장비명</label>
-                <input
-                  type="text"
-                  className="filter-input"
-                  placeholder="장비명"
-                  value={searchDeviceName}
-                  onChange={(e) => setSearchDeviceName(e.target.value)}
-                />
+            {/* 검색 필터 바 + 테이블 통합 */}
+            <div className="table-panel">
+              <div className="filter-bar">
+                <div className="filter-group">
+                  <label>장비명</label>
+                  <input
+                    type="text"
+                    className="filter-input"
+                    placeholder="장비명"
+                    value={searchDeviceName}
+                    onChange={(e) => setSearchDeviceName(e.target.value)}
+                  />
+                </div>
+                <div className="filter-group">
+                  <label>IP 주소</label>
+                  <input
+                    type="text"
+                    className="filter-input"
+                    placeholder="IP"
+                    value={searchDeviceIp}
+                    onChange={(e) => setSearchDeviceIp(e.target.value)}
+                  />
+                </div>
+                <div className="filter-actions">
+                  <button className="btn btn-icon-only" onClick={handleSearchReset} title="초기화">
+                    <i className="bi bi-arrow-counterclockwise"></i>
+                  </button>
+                </div>
               </div>
-              <div className="filter-group">
-                <label>IP 주소</label>
-                <input
-                  type="text"
-                  className="filter-input"
-                  placeholder="IP"
-                  value={searchDeviceIp}
-                  onChange={(e) => setSearchDeviceIp(e.target.value)}
-                />
-              </div>
-              <div className="filter-actions">
-                <button className="btn btn-icon-only" onClick={handleSearchReset} title="초기화">
-                  <i className="bi bi-arrow-counterclockwise"></i>
-                </button>
-              </div>
-            </div>
 
             <DataTable
+              tableId="asset-devices"
               columns={deviceColumns}
               data={pagedDevices}
               rowKey="DEVICE_ID"
@@ -1098,8 +1291,20 @@ export default function AssetManagement() {
                   setPage(1);
                 },
               }}
-              maxHeight="calc(100vh - 420px)"
+              maxHeight="calc(100vh - 370px)"
+              exportConfig={{
+                fileName: '장비목록',
+                excludeColumns: ['STATUS'],
+                fetchAllData: async () => {
+                  const res = await devicesApi.getDevicesByGroupPaged(
+                    selectedGroup?.GROUP_ID, 1, 999999, 'DEVICE_ID', 'asc', true
+                  );
+                  const d = res.data?.data;
+                  return Array.isArray(d) ? d : (d?.content || []);
+                },
+              }}
             />
+            </div>
           </div>
         )}
         </main>
@@ -1292,6 +1497,10 @@ export default function AssetManagement() {
                   <i className="bi bi-ethernet"></i> 포트 정보
                   {portsDataRaw?.length > 0 && <span className="tab-badge">{portsDataRaw.length}</span>}
                 </button>
+                <button className={`detail-tab ${activeTab === 'fault-info' ? 'active' : ''}`} onClick={() => setActiveTab('fault-info')}>
+                  <i className="bi bi-exclamation-triangle"></i> 장애
+                  {faultTotal > 0 && <span className="tab-badge danger">{faultTotal}</span>}
+                </button>
               </div>
             </div>
 
@@ -1305,9 +1514,15 @@ export default function AssetManagement() {
                     <div className="info-box">
                       <div className="info-box-header">
                         <span><i className="bi bi-hdd-network"></i> 장비 정보</span>
-                        <button className="settings-gear-btn" onClick={handleOpenSettingsSidebar} title="장비 설정">
-                          <i className="bi bi-gear"></i>
-                        </button>
+                        {hasEditChanges ? (
+                          <button className="settings-gear-btn save-active" onClick={handleSaveDevice} disabled={editSaving} title="변경사항 저장">
+                            {editSaving ? <i className="bi bi-arrow-repeat spinning"></i> : <i className="bi bi-check-lg"></i>}
+                          </button>
+                        ) : (
+                          <button className="settings-gear-btn" onClick={handleOpenSettingsSidebar} title="장비 설정">
+                            <i className="bi bi-gear"></i>
+                          </button>
+                        )}
                       </div>
                       <div className="info-box-body">
                         <div className="info-row">
@@ -1506,41 +1721,68 @@ export default function AssetManagement() {
                         <span className="time-label">
                           {chartPortsSet.size > 0
                             ? `선택: ${chartPortsSet.size}개 포트`
-                            : 'TOP 5 (포트 클릭으로 선택)'}
+                            : 'OPER UP 포트 (포트 클릭으로 선택)'}
                         </span>
-                        {chartPortsSet.size > 0 && (
+                        {trafficLoading && <i className="bi bi-arrow-repeat spinning" style={{marginLeft:'8px',fontSize:'11px',color:'#64748b'}}></i>}
+                        <div className="global-settings-wrapper" ref={trafficSettingsRef}>
                           <button
-                            className="chart-clear-btn"
-                            onClick={handleResetChartFlags}
-                            title="선택 초기화"
+                            className="btn btn-icon"
+                            onClick={() => setShowTrafficSettings(prev => !prev)}
+                            title="차트 설정"
                           >
-                            <i className="bi bi-x-circle"></i> 초기화
+                            <i className="bi bi-sliders"></i>
                           </button>
-                        )}
-                        {trafficLoading && <i className="bi bi-arrow-repeat spinning" style={{marginLeft:'8px',fontSize:'11px'}}></i>}
+                          {showTrafficSettings && (
+                            <div className="global-settings-dropdown">
+                              <div className="option-group-label">트래픽 카운터</div>
+                              <label className="option-item">
+                                <input type="radio" name="ptcCounter" checked={trafficChartSettings.counterType === '32bit'} onChange={() => setTrafficChartSettings(s => ({...s, counterType: '32bit'}))} />
+                                <span>32-bit</span>
+                              </label>
+                              <label className="option-item">
+                                <input type="radio" name="ptcCounter" checked={trafficChartSettings.counterType === '64bit'} onChange={() => setTrafficChartSettings(s => ({...s, counterType: '64bit'}))} />
+                                <span>64-bit</span>
+                              </label>
+
+                              <div className="option-group-label">표시 단위</div>
+                              <label className="option-item">
+                                <input type="radio" name="ptcUnit" checked={trafficChartSettings.trafficUnit === 'bit'} onChange={() => setTrafficChartSettings(s => ({...s, trafficUnit: 'bit'}))} />
+                                <span>bit (bps)</span>
+                              </label>
+                              <label className="option-item">
+                                <input type="radio" name="ptcUnit" checked={trafficChartSettings.trafficUnit === 'byte'} onChange={() => setTrafficChartSettings(s => ({...s, trafficUnit: 'byte'}))} />
+                                <span>byte (B/s)</span>
+                              </label>
+                              <label className="option-item">
+                                <input type="radio" name="ptcUnit" checked={trafficChartSettings.trafficUnit === 'bps'} onChange={() => setTrafficChartSettings(s => ({...s, trafficUnit: 'bps'}))} />
+                                <span>사용률 (%)</span>
+                              </label>
+
+                              <div className="option-group-label">품질 지표</div>
+                              <label className="option-item">
+                                <input type="checkbox" checked={trafficChartSettings.showError} onChange={(e) => setTrafficChartSettings(s => ({...s, showError: e.target.checked}))} />
+                                <span style={{color:'#ef4444'}}>Error</span>
+                              </label>
+                              <label className="option-item">
+                                <input type="checkbox" checked={trafficChartSettings.showDiscard} onChange={(e) => setTrafficChartSettings(s => ({...s, showDiscard: e.target.checked}))} />
+                                <span style={{color:'#f97316'}}>Discard</span>
+                              </label>
+
+                              <div className="option-group-label">포트 선택</div>
+                              <label className="option-item" style={{cursor:'pointer'}} onClick={handleResetChartFlags}>
+                                <i className="bi bi-arrow-counterclockwise" style={{fontSize:12,color:'#94a3b8'}}></i>
+                                <span>선택 초기화</span>
+                              </label>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="info-box-body">
-                        <ReactECharts
-                          key={`traffic-${Array.from(chartPortsSet).join('-')}`}
-                          notMerge={true}
-                          option={{
-                            tooltip:{trigger:'axis',backgroundColor:'rgba(15,23,42,0.95)',borderColor:'rgba(59,130,246,0.3)',textStyle:{color:'#e2e8f0',fontSize:11},formatter:(params)=>{
-                              if(!params||params.length===0)return'';
-                              let result=`<div style="font-weight:600;margin-bottom:4px">${params[0].axisValue}</div>`;
-                              params.forEach(p=>{
-                                const val=p.value||0;
-                                const formattedVal=val>=1000000?(val/1000000).toFixed(2)+' Mbps':val>=1000?(val/1000).toFixed(2)+' Kbps':val.toFixed(2)+' bps';
-                                result+=`<div style="display:flex;justify-content:space-between;gap:16px"><span>${p.marker}${p.seriesName}</span><span style="font-weight:500">${formattedVal}</span></div>`;
-                              });
-                              return result;
-                            }},
-                            legend:{type:'scroll',show:true,bottom:0,left:'center',width:'90%',textStyle:{color:'#94a3b8',fontSize:10},itemWidth:12,itemHeight:8,itemGap:10,pageButtonItemGap:5,pageButtonGap:10,pageIconColor:'#94a3b8',pageIconInactiveColor:'#4a5568',pageTextStyle:{color:'#94a3b8',fontSize:10}},
-                            grid:{left:'3%',right:'3%',bottom:'15%',top:'5%',containLabel:true},
-                            xAxis:{type:'category',boundaryGap:false,data:trafficChartData.timeLabels||[],axisLabel:{color:'#64748b',fontSize:9},axisLine:{lineStyle:{color:'rgba(255,255,255,0.1)'}},splitLine:{show:false}},
-                            yAxis:{type:'value',axisLabel:{color:'#64748b',fontSize:9,formatter:v=>v>=1000000?(v/1000000).toFixed(0)+'M':v>=1000?(v/1000).toFixed(0)+'K':v},axisLine:{show:false},splitLine:{lineStyle:{color:'rgba(255,255,255,0.05)'}}},
-                            series:trafficChartData.series&&trafficChartData.series.length>0?trafficChartData.series.map(item=>({name:item.name,type:'line',smooth:true,symbol:'circle',symbolSize:4,showSymbol:false,lineStyle:{width:2},areaStyle:{opacity:0.05},data:item.data})):[{name:'데이터 없음',type:'line',data:[]}]
-                          }}
-                          style={{height:'100%',width:'100%'}}
+                        <PortTrafficChart
+                          rawData={trafficRawData}
+                          chartPortsSet={chartPortsSet}
+                          portsData={portsData}
+                          settings={trafficChartSettings}
                         />
                       </div>
                     </div>
@@ -1553,6 +1795,7 @@ export default function AssetManagement() {
             {activeTab === 'port-info' && (
               <div id="port-info-tab" className="detail-tab-content active">
                 <DataTable
+                  tableId="asset-ports"
                   columns={portColumns}
                   data={sortedPorts}
                   rowKey="IF_INDEX"
@@ -1564,18 +1807,56 @@ export default function AssetManagement() {
                   onSort={handlePortSort}
                   maxHeight="calc(100vh - 380px)"
                   className="port-data-table"
+                  exportConfig={{ fileName: '포트정보' }}
                 />
               </div>
             )}
 
-            <div className="detail-modal-footer">
-              <button className="btn btn-secondary" onClick={() => setDetailDevice(null)} disabled={editSaving}>
-                취소
-              </button>
-              <button id="detail-modal-ok-btn" className="btn btn-primary" onClick={handleSaveAndClose} disabled={editSaving}>
-                {editSaving ? <><i className="bi bi-arrow-repeat spinning"></i> 저장 중...</> : <><i className="bi bi-check-lg"></i> 확인</>}
-              </button>
-            </div>
+            {/* 장애 탭 */}
+            {activeTab === 'fault-info' && (
+              <div id="fault-info-tab" className="detail-tab-content active">
+                <DataTable
+                  tableId="asset-faults"
+                  columns={faultColumns}
+                  data={faultData}
+                  rowKey="_faultRowId"
+                  loading={faultLoading}
+                  loadingText="장애 이력을 불러오는 중..."
+                  emptyText="장애 이력이 없습니다"
+                  emptyIcon="bi-check-circle"
+                  sort={{ field: faultSortField, order: faultSortOrder }}
+                  onSort={handleFaultSort}
+                  maxHeight="calc(100vh - 380px)"
+                  rowClassName={(row) => row._isActive ? 'fault-active-row' : ''}
+                  pagination={{
+                    currentPage: faultPage,
+                    pageSize: faultPageSize,
+                    totalItems: faultTotal,
+                    onPageChange: setFaultPage,
+                    onPageSizeChange: (size) => {
+                      setFaultPageSize(size);
+                      setFaultPage(1);
+                    },
+                    pageSizeOptions: [10, 20, 50],
+                  }}
+                  exportConfig={{
+                    fileName: `장애조회_${detailDevice?.DEVICE_NAME || ''}`,
+                    excludeColumns: ['_isActive'],
+                    fetchAllData: async () => {
+                      const [errRes, histRes] = await Promise.all([
+                        faultApi.getErrors({ deviceId: detailDevice.DEVICE_ID }),
+                        faultApi.getHistory({ page: 1, size: 999999, deviceId: detailDevice.DEVICE_ID, sortKey: faultSortField, sortDirection: faultSortOrder }),
+                      ]);
+                      const activeList = errRes.data?.data?.list || [];
+                      const deviceActive = Array.isArray(activeList) ? activeList.filter(e => e.DEVICE_ID === detailDevice.DEVICE_ID) : [];
+                      const histList = histRes.data?.data?.content || [];
+                      return [...deviceActive.map(e => ({ ...e, _isActive: true })), ...histList];
+                    },
+                  }}
+                />
+              </div>
+            )}
+
           </div>
         </div>
       )}

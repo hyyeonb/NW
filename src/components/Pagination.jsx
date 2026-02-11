@@ -74,15 +74,16 @@ const darkTheme = createTheme({
           },
         },
         select: {
-          padding: '6px 32px 6px 12px',
-          fontSize: '13px',
+          padding: '4px 24px 4px 8px',
+          fontSize: '12px',
           color: '#d1d9e8',
           backgroundColor: 'rgba(22, 27, 45, 0.98)',
-          borderRadius: '8px',
-          minWidth: '60px',
+          borderRadius: '6px',
+          minWidth: '32px',
         },
         icon: {
           color: '#7c8ba3',
+          right: 2,
         },
       },
     },
@@ -185,15 +186,16 @@ const lightTheme = createTheme({
           },
         },
         select: {
-          padding: '6px 32px 6px 12px',
-          fontSize: '13px',
+          padding: '4px 24px 4px 8px',
+          fontSize: '12px',
           color: '#1e293b',
           backgroundColor: '#ffffff',
-          borderRadius: '8px',
-          minWidth: '60px',
+          borderRadius: '6px',
+          minWidth: '32px',
         },
         icon: {
           color: '#64748b',
+          right: 2,
         },
       },
     },
@@ -241,6 +243,7 @@ export default function PaginationComponent({
   onPageSizeChange,
   pageSizeOptions = [10, 20, 50, 100],
   showPageSizeSelector = true,
+  onExport,
 }) {
   // 테마 상태
   const { resolvedTheme } = useThemeStore();
@@ -305,7 +308,7 @@ export default function PaginationComponent({
           </span>
         </div>
 
-        {/* 우측: MUI 페이지네이션 */}
+        {/* 중앙: MUI 페이지네이션 */}
         <Pagination
           count={totalPages}
           page={currentPage}
@@ -317,6 +320,19 @@ export default function PaginationComponent({
           siblingCount={1}
           boundaryCount={1}
         />
+
+        {/* 우측: 내보내기 버튼 */}
+        <div className="pagination-right">
+          {onExport && (
+            <button
+              className="btn-export"
+              onClick={onExport}
+              title="데이터 내보내기"
+            >
+              <i className="bi bi-download"></i>
+            </button>
+          )}
+        </div>
       </div>
     </ThemeProvider>
   );

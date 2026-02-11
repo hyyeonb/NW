@@ -9,9 +9,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 18px;
+    padding: 8px 18px;
     background: transparent;
     flex-shrink: 0;
+    margin-top: auto;
     position: relative;
 }
 
@@ -111,7 +112,7 @@
 
 /* MUI FormControl 컨테이너 */
 .items-per-page .MuiFormControl-root {
-    min-width: 70px;
+    min-width: 56px;
 }
 
 /* MUI Select 기본 스타일 보정 */
@@ -122,6 +123,15 @@
 /* MUI Select 아이콘 위치 조정 */
 .items-per-page .MuiSelect-icon {
     right: 8px;
+}
+
+/* MUI Select 값 텍스트 가운데 정렬 (드롭다운 아이콘 고려) */
+.items-per-page .MuiSelect-select {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    padding-right: 28px !important;
+    text-align: center;
 }
 
 /* ==================
@@ -140,6 +150,40 @@
 
 .pagination-controls .MuiPagination-ul {
     gap: 4px;
+}
+
+/* 우측 영역 (내보내기 버튼) */
+.pagination-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 페이지네이션 없이 내보내기만 있는 경우 */
+.pagination-controls.export-only {
+    justify-content: space-between;
+}
+
+/* 내보내기 버튼 */
+.btn-export {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--theme-bg-panel-header, rgba(22, 27, 45, 0.98));
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: 8px;
+    color: var(--theme-text-muted, #7c8ba3);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-export:hover {
+    background: rgba(99, 102, 241, 0.12);
+    border-color: rgba(99, 102, 241, 0.35);
+    color: var(--theme-accent-light, #a5b4fc);
 }
 
 /* ==================
