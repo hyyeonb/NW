@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { GroupTree, DataTable } from '../components';
+import SshTerminalModal from '../components/SshTerminalModal';
 import { useGroupStore } from '../stores';
 import ReactECharts from 'echarts-for-react';
 import {
@@ -43,6 +44,11 @@ export default function AssetManagement() {
 
   // SNMP 수집 결과 모달 상태
   const [snmpResultModal, setSnmpResultModal] = useState(null);
+
+  // SSH 터미널 모달 상태
+  const [sshTerminalDevice, setSshTerminalDevice] = useState(null);
+  const [sshTerminalInfo, setSshTerminalInfo] = useState(null);
+  const [sshAlertDevice, setSshAlertDevice] = useState(null);
 
   // 장비 설정 사이드바 상태
   const [showSettingsSidebar, setShowSettingsSidebar] = useState(false);
@@ -525,6 +531,27 @@ export default function AssetManagement() {
     }
   };
 
+  // SSH 터미널 열기
+  const handleOpenSshTerminal = useCallback(async (device, e) => {
+    e.stopPropagation();
+    try {
+      const response = await devicesApi.getDeviceSsh(device.DEVICE_ID);
+      const data = response.data?.data;
+      if (!data?.SSH_USER) {
+        setSshAlertDevice(device);
+        return;
+      }
+      setSshTerminalInfo({
+        SSH_USER: data.SSH_USER,
+        SSH_PASS: data.SSH_PASS || '',
+        SSH_PORT: data.SSH_PORT || 22,
+      });
+      setSshTerminalDevice(device);
+    } catch {
+      alert('SSH 접속 정보를 불러오지 못했습니다.');
+    }
+  }, []);
+
   // 장비 수정 저장 및 모달 닫기
   const handleSaveAndClose = async () => {
     if (!detailDevice) {
@@ -973,6 +1000,22 @@ export default function AssetManagement() {
       render: (value) => formatDate(value),
     },
     {
+      key: 'SSH',
+      label: 'SSH',
+      width: '70px',
+      align: 'center',
+      render: (_, row) => (
+        <button
+          className="action-btn"
+          title="SSH 접속"
+          onClick={(e) => handleOpenSshTerminal(row, e)}
+          style={{ color: '#38bdf8', fontSize: '16px', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+        >
+          <i className="bi bi-terminal" />
+        </button>
+      ),
+    },
+    {
       key: 'STATUS',
       label: '상태',
       width: '60px',
@@ -993,7 +1036,7 @@ export default function AssetManagement() {
         );
       },
     },
-  ], [deviceErrorMap]);
+  ], [deviceErrorMap, handleOpenSshTerminal]);
 
   return (
     <div className="asset-management-container">
@@ -1856,6 +1899,59 @@ export default function AssetManagement() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* SSH 접속 정보 미설정 안내 모달 */}
+      {sshAlertDevice && (
+        <div className="modal-overlay" onClick={() => setSshAlertDevice(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', padding: 0 }}>
+            <div style={{ padding: '32px 28px 20px', textAlign: 'center' }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: '50%',
+                background: 'rgba(251, 191, 36, 0.15)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 16px',
+              }}>
+                <i className="bi bi-terminal" style={{ fontSize: 28, color: '#fbbf24' }} />
+              </div>
+              <h3 style={{ margin: '0 0 8px', fontSize: 17, color: '#e2e8f0' }}>
+                SSH 접속 정보 없음
+              </h3>
+              <p style={{ margin: 0, color: '#94a3b8', fontSize: 14, lineHeight: 1.6 }}>
+                <strong style={{ color: '#cbd5e1' }}>{sshAlertDevice.DEVICE_NAME}</strong> ({sshAlertDevice.DEVICE_IP})의<br />
+                SSH 접속 정보가 설정되지 않았습니다.
+              </p>
+              <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: 13 }}>
+                장비 상세 &gt; 설정에서 SSH 정보를 입력해주세요.
+              </p>
+            </div>
+            <div style={{ padding: '12px 28px 24px', display: 'flex', gap: 8, justifyContent: 'center' }}>
+              <button className="btn btn-secondary" onClick={() => setSshAlertDevice(null)}>
+                닫기
+              </button>
+              <button className="btn btn-primary" onClick={() => {
+                setSshAlertDevice(null);
+                setDetailDevice(sshAlertDevice);
+                setShowSettingsSidebar(true);
+              }}>
+                <i className="bi bi-gear" style={{ marginRight: 4 }} />
+                설정으로 이동
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SSH 터미널 모달 */}
+      {sshTerminalDevice && sshTerminalInfo && (
+        <SshTerminalModal
+          device={sshTerminalDevice}
+          sshInfo={sshTerminalInfo}
+          onClose={() => {
+            setSshTerminalDevice(null);
+            setSshTerminalInfo(null);
+          }}
+        />
       )}
 
     </div>

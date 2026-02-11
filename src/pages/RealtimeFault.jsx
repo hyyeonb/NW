@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { faultApi, devicesApi } from '../api';
 import { useAlertStore } from '../stores/alertStore';
 import { DataTable } from '../components';
@@ -13,8 +14,19 @@ const ERROR_LEVELS = [
 ];
 
 export default function RealtimeFault() {
-  // 등급 체크박스 (기본 전체 선택)
-  const [selectedLevels, setSelectedLevels] = useState(['C', 'M', 'N', 'W']);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // URL 쿼리 파라미터에서 초기 등급 필터 설정
+  const getInitialLevels = () => {
+    const levelParam = searchParams.get('level');
+    if (levelParam && ['C', 'M', 'N', 'W'].includes(levelParam)) {
+      return [levelParam];
+    }
+    return ['C', 'M', 'N', 'W'];
+  };
+
+  // 등급 체크박스
+  const [selectedLevels, setSelectedLevels] = useState(getInitialLevels);
   const [errors, setErrors] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedError, setSelectedError] = useState(null);
@@ -99,6 +111,10 @@ export default function RealtimeFault() {
     setSearchIp('');
     setSearchGroupName('');
     setSelectedLevels(['C', 'M', 'N', 'W']);
+    // URL 쿼리 파라미터도 제거
+    if (searchParams.has('level')) {
+      setSearchParams({}, { replace: true });
+    }
   };
 
   // 초기 로드 및 필터 변경 시

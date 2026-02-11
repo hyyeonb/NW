@@ -17,6 +17,11 @@ export default defineConfig({
         target: 'http://localhost:18081',
         changeOrigin: true,
       },
+      // SSH WebSocket 프록시
+      '/ws/ssh': {
+        target: 'ws://localhost:8082',
+        ws: true,
+      },
       // Spring Boot API (기존)
       '/api': {
         target: 'http://localhost:8080',

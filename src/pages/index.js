@@ -17,3 +17,5 @@ export { default as FaultMonitoring } from './FaultMonitoring';
 export { default as RealtimeFault } from './RealtimeFault';
 export { default as FaultHistory } from './FaultHistory';
 export { default as RealtimePerformance } from './RealtimePerformance';
+export { default as FileBoard } from './FileBoard';
+export { default as NoticeBoard } from './NoticeBoard';

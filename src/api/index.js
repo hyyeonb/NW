@@ -6,3 +6,4 @@ export { topologyApi } from './topology';
 export { dashboardApi } from './dashboard';
 export { snmpApi } from './snmp';
 export { faultApi } from './fault';
+export { boardApi } from './board';
