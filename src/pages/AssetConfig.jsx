@@ -124,6 +124,7 @@ export default function AssetConfig() {
       minWidth: '120px',
       sortable: true,
       className: 'cell-truncate',
+      hideable: true,
       render: (value) => (
         <span style={{ color: '#94a3b8' }}>{value || '-'}</span>
       ),
@@ -135,6 +136,7 @@ export default function AssetConfig() {
       minWidth: '130px',
       sortable: true,
       className: 'cell-ip',
+      hideable: true,
     },
     {
       key: 'modelNm',
@@ -143,6 +145,7 @@ export default function AssetConfig() {
       minWidth: '120px',
       sortable: true,
       className: 'cell-truncate',
+      hideable: true,
       render: (value) => value || '-',
     },
     {
@@ -152,6 +155,7 @@ export default function AssetConfig() {
       minWidth: '120px',
       sortable: true,
       className: 'cell-date',
+      hideable: true,
       render: (value) => {
         if (!value) return <span style={{ color: '#64748b' }}>미수집</span>;
         return (
@@ -165,6 +169,7 @@ export default function AssetConfig() {
       key: 'actions',
       label: '',
       width: '60px',
+      hideable: true,
       render: (_, row) => (
         <button
           className="btn btn-icon-only btn-sm"

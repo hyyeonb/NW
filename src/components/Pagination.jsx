@@ -244,6 +244,7 @@ export default function PaginationComponent({
   pageSizeOptions = [10, 20, 50, 100],
   showPageSizeSelector = true,
   onExport,
+  extraButtons,
 }) {
   // 테마 상태
   const { resolvedTheme } = useThemeStore();
@@ -321,8 +322,9 @@ export default function PaginationComponent({
           boundaryCount={1}
         />
 
-        {/* 우측: 내보내기 버튼 */}
+        {/* 우측: 추가 버튼 + 내보내기 버튼 */}
         <div className="pagination-right">
+          {extraButtons}
           {onExport && (
             <button
               className="btn-export"

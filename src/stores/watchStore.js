@@ -33,6 +33,36 @@ export const useWatchStore = create(
       gridSize: 'S', // 'S' | 'M' | 'L'
       setGridSize: (size) => set({ gridSize: size }),
 
+      // 숨긴 장비 (그룹별)
+      hiddenDeviceIds: {}, // { [groupId]: [deviceId, ...] }
+      hideDevice: (groupId, deviceId) => set((state) => ({
+        hiddenDeviceIds: {
+          ...state.hiddenDeviceIds,
+          [groupId]: [...(state.hiddenDeviceIds[groupId] || []), deviceId],
+        },
+      })),
+      showDevice: (groupId, deviceId) => set((state) => ({
+        hiddenDeviceIds: {
+          ...state.hiddenDeviceIds,
+          [groupId]: (state.hiddenDeviceIds[groupId] || []).filter(id => id !== deviceId),
+        },
+      })),
+      showAllDevices: (groupId) => set((state) => ({
+        hiddenDeviceIds: {
+          ...state.hiddenDeviceIds,
+          [groupId]: [],
+        },
+      })),
+
+      // 장비 순서 (그룹별)
+      deviceOrder: {}, // { [groupId]: [deviceId, ...] }
+      setDeviceOrder: (groupId, orderedIds) => set((state) => ({
+        deviceOrder: {
+          ...state.deviceOrder,
+          [groupId]: orderedIds,
+        },
+      })),
+
       // 전역 차트 설정
       globalChartSettings: {
         showCpu: false,
@@ -96,6 +126,8 @@ export const useWatchStore = create(
         selectedInterfaces: state.selectedInterfaces,
         globalChartSettings: state.globalChartSettings,
         gridSize: state.gridSize,
+        hiddenDeviceIds: state.hiddenDeviceIds,
+        deviceOrder: state.deviceOrder,
       }),
     }
   )

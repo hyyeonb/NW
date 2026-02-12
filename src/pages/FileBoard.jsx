@@ -135,6 +135,7 @@ export default function FileBoard() {
       label: '번호',
       width: '70px',
       align: 'center',
+      hideable: true,
       render: (value, row, index) => (page - 1) * pageSize + index + 1,
     },
     {
@@ -143,6 +144,7 @@ export default function FileBoard() {
       width: '100px',
       align: 'center',
       sortable: true,
+      hideable: true,
       render: (value) => (
         <span className={`board-category-badge ${value}`}>{value || '-'}</span>
       ),
@@ -166,6 +168,7 @@ export default function FileBoard() {
       width: '80px',
       align: 'center',
       sortable: true,
+      hideable: true,
     },
     {
       key: 'createdAt',
@@ -173,6 +176,7 @@ export default function FileBoard() {
       width: '120px',
       align: 'center',
       sortable: true,
+      hideable: true,
       render: (value) => formatDate(value),
     },
   ], [totalElements, page, pageSize]);

@@ -15,6 +15,7 @@ export const devicesApi = {
     if (search.deviceName) params.append('deviceName', search.deviceName);
     if (search.deviceIp) params.append('deviceIp', search.deviceIp);
     if (search.groupName) params.append('groupName', search.groupName);
+    if (search.devCodeId) params.append('devCodeId', search.devCodeId);
     return apiClient.get(`/mgmt/devices/by-group/${groupId}?${params.toString()}`);
   },
 

@@ -59,12 +59,23 @@ export default function FaultHistory() {
     });
   };
 
-  // 장비 코드 목록 로드
+  // 장비 코드 목록 로드 (트리를 평탄화하여 모든 레벨 표시)
   useEffect(() => {
+    const flattenTree = (nodes, depth = 0) => {
+      const result = [];
+      for (const node of nodes) {
+        result.push({ ...node, _depth: depth });
+        if (node.children && node.children.length > 0) {
+          result.push(...flattenTree(node.children, depth + 1));
+        }
+      }
+      return result;
+    };
     const loadDevCodes = async () => {
       try {
         const response = await devicesApi.getDevCodeTree();
-        setDevCodes(response.data?.data || []);
+        const tree = response.data?.data || [];
+        setDevCodes(flattenTree(tree));
       } catch (error) {
         console.error('장비 코드 조회 실패:', error);
       }
@@ -192,6 +203,7 @@ export default function FaultHistory() {
       width: '80px',
       sortable: true,
       align: 'center',
+      hideable: true,
       render: (value) => (
         <span className={`severity-badge ${getLevelClass(value)}`}>
           {getLevelLabel(value)}
@@ -211,6 +223,7 @@ export default function FaultHistory() {
       width: '130px',
       sortable: true,
       className: 'cell-ip',
+      hideable: true,
     },
     {
       key: 'GROUP_NAME',
@@ -218,6 +231,7 @@ export default function FaultHistory() {
       width: '120px',
       sortable: true,
       className: 'cell-truncate',
+      hideable: true,
     },
     {
       key: 'ERROR_MESSAGE',
@@ -231,6 +245,7 @@ export default function FaultHistory() {
       width: '155px',
       sortable: true,
       className: 'cell-date',
+      hideable: true,
       render: (value) => formatDateTime(value),
     },
     {
@@ -239,12 +254,14 @@ export default function FaultHistory() {
       width: '155px',
       sortable: true,
       className: 'cell-date',
+      hideable: true,
       render: (value) => formatDateTime(value),
     },
     {
       key: 'duration',
       label: '소요 시간',
       width: '100px',
+      hideable: true,
       render: (_, row) => calculateDuration(row.OCCUR_AT, row.CLEAR_AT),
     },
   ], []);

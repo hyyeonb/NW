@@ -15,6 +15,7 @@
     gap: var(--spacing-4);
     height: calc(100vh - 80px);
     animation: fadeInUp 0.6s ease;
+    overflow: hidden;
 }
 
 @keyframes fadeInUp {
@@ -365,18 +366,6 @@
     border: 1px solid var(--theme-border-subtle);
     box-shadow: var(--theme-shadow-sm);
     overflow: hidden;
-    animation: cardFadeIn 0.4s ease both;
-}
-
-@keyframes cardFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 .device-metric-card:hover {
@@ -811,6 +800,134 @@
     min-height: 0;
 }
 
+/* 3열 레이아웃 (그룹 트리 + 장비 목록 + 포트 선택) */
+.device-selection-area.three-column {
+    grid-template-columns: 240px 280px 1fr;
+    flex: 1;
+    min-height: 0;
+}
+
+/* 그룹 필터 패널 */
+.group-filter-panel {
+    background: var(--theme-bg-tertiary);
+    border: 1px solid var(--theme-border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-4);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.group-filter-panel h4 {
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-semibold);
+    color: var(--theme-text-secondary);
+    margin: 0 0 var(--spacing-3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-bottom: var(--spacing-2);
+    border-bottom: 1px solid var(--theme-border-subtle);
+    flex-shrink: 0;
+}
+
+.group-filter-tree {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.group-filter-tree::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-filter-tree::-webkit-scrollbar-track {
+    background: var(--theme-scrollbar-track);
+    border-radius: 3px;
+}
+
+.group-filter-tree::-webkit-scrollbar-thumb {
+    background: var(--theme-scrollbar-thumb);
+    border-radius: 3px;
+}
+
+.group-filter-node {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--theme-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background var(--transition-fast);
+}
+
+.group-filter-node:hover {
+    background: var(--theme-bg-hover);
+}
+
+.group-filter-node.active {
+    background: var(--theme-accent-bg);
+    color: var(--theme-accent-light);
+}
+
+.group-filter-node .expand-icon {
+    font-size: 10px;
+    width: 14px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.group-filter-node .expand-icon-placeholder {
+    width: 14px;
+    flex-shrink: 0;
+}
+
+.group-filter-node .group-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+}
+
+.group-device-count {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--theme-text-muted);
+    background: var(--theme-bg-hover);
+    padding: 1px 6px;
+    border-radius: var(--radius-full);
+    min-width: 20px;
+    text-align: center;
+}
+
+.group-filter-node.active .group-device-count {
+    color: var(--theme-accent-light);
+    background: rgba(99, 102, 241, 0.2);
+}
+
+.filter-badge {
+    font-size: 11px;
+    color: var(--theme-accent-light);
+    background: var(--theme-accent-bg);
+    padding: 1px 8px;
+    border-radius: 10px;
+    margin-left: 6px;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: var(--font-weight-medium);
+}
+
+.filter-badge.linked {
+    color: var(--color-success);
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
 .device-selection-column {
     background: var(--theme-bg-tertiary);
     border: 1px solid var(--theme-border-subtle);
@@ -1013,9 +1130,14 @@
         grid-template-columns: 1fr;
     }
 
-    .device-selection-area.two-column {
+    .device-selection-area.two-column,
+    .device-selection-area.three-column {
         grid-template-columns: 1fr;
         min-height: auto;
+    }
+
+    .group-filter-panel {
+        max-height: 200px;
     }
 
     .port-selection-panel {
@@ -1105,8 +1227,8 @@
    Watch Modal - Large (장비/포트 선택용)
    ================== */
 .watch-modal-large {
-    max-width: 900px !important;
-    height: 600px;
+    max-width: 1100px !important;
+    height: 650px;
 }
 
 .watch-modal-large .watch-modal-body {
@@ -1768,6 +1890,7 @@
     display: flex;
     position: relative;
     min-height: 0;
+    overflow: hidden;
 }
 
 
@@ -1793,7 +1916,7 @@
     grid-template-columns: repeat(4, 1fr);
     grid-auto-rows: calc((100% - 16px) / 3);
     overflow-y: auto;
-    overflow-x: hidden;
+    overflow-x: clip;
 }
 
 /* L: 3열 2행, 스크롤 허용 */
@@ -1801,7 +1924,7 @@
     grid-template-columns: repeat(3, 1fr);
     grid-auto-rows: calc((100% - 8px) / 2);
     overflow-y: auto;
-    overflow-x: hidden;
+    overflow-x: clip;
 }
 
 /* M: 차트 영역 확대 */
@@ -1889,6 +2012,8 @@
     gap: 4px;
     overflow: hidden;
     transition: all var(--transition-fast);
+    height: 100%;
+    box-sizing: border-box;
 }
 
 .device-card-mini:hover {
@@ -2457,3 +2582,406 @@
     padding: 8px 8px 4px;
     margin-top: 6px;
 }
+
+/* ==================
+   Card Options - Hide Button & Divider
+   ================== */
+.card-options-divider {
+    height: 1px;
+    background: var(--theme-border-default);
+    margin: 4px 0;
+}
+
+.card-hide-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 5px 6px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--theme-text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.card-hide-btn:hover {
+    background: var(--theme-danger-bg);
+    color: var(--theme-danger-text);
+}
+
+.card-hide-btn i {
+    font-size: 12px;
+}
+
+/* ==================
+   Hidden Devices Badge & Dropdown
+   ================== */
+.hidden-devices-wrapper {
+    position: relative;
+}
+
+.hidden-devices-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: var(--radius-md);
+    color: #f87171;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.hidden-devices-badge:hover {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+.hidden-devices-badge i {
+    font-size: 14px;
+}
+
+.hidden-devices-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 260px;
+    max-height: 320px;
+    overflow-y: auto;
+    background: var(--theme-bg-elevated);
+    border: 1px solid var(--theme-border-default);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--theme-shadow-xl);
+    z-index: 200;
+    animation: contextMenuFadeIn 0.15s ease;
+}
+
+.hidden-devices-header {
+    padding: 10px 14px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--theme-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--theme-border-subtle);
+}
+
+.hidden-device-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    gap: 12px;
+    transition: background var(--transition-fast);
+}
+
+.hidden-device-item:hover {
+    background: var(--theme-bg-hover);
+}
+
+.hidden-device-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.hidden-device-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--theme-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hidden-device-ip {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--theme-text-muted);
+}
+
+.hidden-device-show-btn {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    background: var(--theme-accent-bg);
+    border: 1px solid var(--theme-accent-border);
+    border-radius: var(--radius-sm);
+    color: var(--theme-accent-light);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.hidden-device-show-btn:hover {
+    background: var(--theme-accent-bg-hover);
+}
+
+.hidden-devices-show-all {
+    display: block;
+    width: 100%;
+    padding: 10px 14px;
+    border: none;
+    border-top: 1px solid var(--theme-border-subtle);
+    background: transparent;
+    color: var(--theme-accent-light);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    transition: background var(--transition-fast);
+}
+
+.hidden-devices-show-all:hover {
+    background: var(--theme-accent-bg);
+}
+
+/* ==================
+   Linked Group Styles (장비 그룹 연동)
+   ================== */
+
+/* 연동 그룹 아이콘 스타일 */
+.group-item.linked .linked-icon {
+    color: var(--theme-accent-light);
+    opacity: 0.7;
+}
+
+.mini-group-item .linked-icon {
+    color: var(--theme-accent-light);
+    opacity: 0.7;
+}
+
+/* 사이드바 하단 버튼 영역 */
+.sidebar-footer {
+    padding: var(--spacing-3);
+    border-top: 1px solid var(--theme-border-subtle);
+    flex-shrink: 0;
+}
+
+.import-group-btn {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--theme-accent-bg);
+    border: 1px dashed var(--theme-accent-border);
+    border-radius: var(--radius-md);
+    color: var(--theme-accent-light);
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.import-group-btn:hover {
+    background: var(--theme-glass-bg-hover);
+    border-color: var(--theme-accent-primary);
+}
+
+/* ==================
+   Import Group Modal (장비 그룹 가져오기 모달)
+   주의: 전역 label { display: block } 때문에 <label> 사용 금지
+   모든 클래스 import- 접두사로 충돌 방지
+   ================== */
+
+.import-modal {
+    max-width: 520px !important;
+    height: 560px;
+}
+
+.import-modal .watch-modal-body {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 24px;
+}
+
+.import-desc {
+    color: var(--theme-text-muted);
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0 0 16px;
+    flex-shrink: 0;
+}
+
+/* 전체 선택 / 해제 툴바 */
+.import-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+}
+
+.import-toolbar-btn {
+    background: none;
+    border: 1px solid var(--theme-border-subtle);
+    color: var(--theme-accent-light);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.import-toolbar-btn:hover {
+    background: var(--theme-accent-bg);
+    border-color: var(--theme-accent-border);
+}
+
+.import-toolbar-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.import-toolbar-count {
+    margin-left: auto;
+    color: var(--theme-text-muted);
+    font-size: 12px;
+}
+
+/* 트리 스크롤 박스 */
+.import-tree-box {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid var(--theme-border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--theme-bg-primary);
+    padding: 4px 0;
+}
+
+.import-tree-box::-webkit-scrollbar {
+    width: 6px;
+}
+
+.import-tree-box::-webkit-scrollbar-track {
+    background: var(--theme-scrollbar-track);
+}
+
+.import-tree-box::-webkit-scrollbar-thumb {
+    background: var(--theme-scrollbar-thumb);
+    border-radius: 3px;
+}
+
+/* 트리 행 — flat flex, 중첩 없음 */
+.import-row {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding-right: 14px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+.import-row:hover {
+    background: var(--theme-glass-bg-hover);
+}
+
+.import-row.is-linked {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* 토글 (▶) */
+.import-row-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    cursor: pointer;
+    color: var(--theme-text-muted);
+    transition: transform 0.15s ease;
+}
+
+.import-row-toggle svg {
+    transition: transform 0.15s ease;
+}
+
+.import-row-toggle.open svg {
+    transform: rotate(90deg);
+}
+
+.import-row-toggle-space {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+/* 체크박스 */
+.import-row-checkbox {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--theme-accent-primary);
+}
+
+.import-row.is-linked .import-row-checkbox {
+    cursor: default;
+}
+
+/* 그룹 이름 */
+.import-row-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--theme-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 연동됨 뱃지 */
+.import-row-badge {
+    flex-shrink: 0;
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    background: var(--theme-accent-bg);
+    color: var(--theme-accent-light);
+    border: 1px solid var(--theme-accent-border);
+    white-space: nowrap;
+}
+
+/* 빈 상태 */
+.import-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: var(--theme-text-muted);
+    font-size: 13px;
+}
+
+.import-empty-state i {
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+/* Form hint for linked groups */
+.form-hint {
+    display: block;
+    font-size: 11px;
+    color: var(--theme-text-muted);
+    margin-top: 4px;
+}
+

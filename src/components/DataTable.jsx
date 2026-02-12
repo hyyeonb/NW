@@ -24,7 +24,7 @@ import Pagination from './Pagination';
 import ExportModal from './ExportModal';
 
 // 드래그 가능한 헤더 셀 컴포넌트
-function DraggableHeader({ column, children, sortable, onSort, sort, enableReorder }) {
+function DraggableHeader({ column, children, sortable, onSort, sort, enableReorder, resizeHandle, computedWidth, autoWidth }) {
   const {
     attributes,
     listeners,
@@ -45,7 +45,7 @@ function DraggableHeader({ column, children, sortable, onSort, sort, enableReord
   const style = {
     transform: transform ? `translateX(${transform.x}px)` : undefined,
     transition,
-    width: column.columnDef.width,
+    width: computedWidth || autoWidth || undefined,
     textAlign: column.columnDef.align || 'left',
     zIndex: isDragging ? 100 : undefined,
   };
@@ -72,6 +72,7 @@ function DraggableHeader({ column, children, sortable, onSort, sort, enableReord
     <th
       ref={setNodeRef}
       style={style}
+      data-col-id={column.id}
       className={`${sortable ? 'sortable' : ''} ${isDragging ? 'dragging' : ''} ${column.columnDef.className || ''}`}
       onClick={handleClick}
       {...attributes}
@@ -79,6 +80,7 @@ function DraggableHeader({ column, children, sortable, onSort, sort, enableReord
     >
       <span className="th-label">{children}</span>
       {renderSortIcon()}
+      {resizeHandle}
     </th>
   );
 }
@@ -157,8 +159,99 @@ export default function DataTable({
     }
   }, [tableId]);
 
+  // === 컬럼 너비 조절 ===
+  const tableRef = useRef(null);
+  const columnWidthsRef = useRef(null);
+
+  const [columnWidths, setColumnWidths] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`table-column-widths-${tableId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        columnWidthsRef.current = parsed;
+        return parsed;
+      }
+    } catch (e) {}
+    return null;
+  });
+
+  // ref 동기화
+  useEffect(() => {
+    columnWidthsRef.current = columnWidths;
+  }, [columnWidths]);
+
+  const saveColumnWidths = useCallback((widths) => {
+    try {
+      if (widths) {
+        localStorage.setItem(`table-column-widths-${tableId}`, JSON.stringify(widths));
+      } else {
+        localStorage.removeItem(`table-column-widths-${tableId}`);
+      }
+    } catch (e) {}
+  }, [tableId]);
+
+  // 현재 렌더된 컬럼 너비 측정
+  const initColumnWidths = useCallback(() => {
+    if (!tableRef.current) return null;
+    const ths = tableRef.current.querySelectorAll('thead th[data-col-id]');
+    const widths = {};
+    ths.forEach(th => {
+      widths[th.dataset.colId] = th.getBoundingClientRect().width;
+    });
+    return Object.keys(widths).length > 0 ? widths : null;
+  }, []);
+
+  // 리사이즈 시작
+  const handleResizeStart = useCallback((e, columnId, nextColumnId) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    let currentWidths = columnWidthsRef.current;
+    if (!currentWidths) {
+      currentWidths = initColumnWidths();
+      if (!currentWidths) return;
+      setColumnWidths(currentWidths);
+      columnWidthsRef.current = currentWidths;
+    }
+
+    const startX = e.clientX;
+    const startWidth = currentWidths[columnId] || 100;
+    const nextStartWidth = currentWidths[nextColumnId] || 100;
+    const minWidth = 50;
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (moveE) => {
+      const delta = moveE.clientX - startX;
+      const clampedDelta = Math.min(
+        Math.max(delta, -(startWidth - minWidth)),
+        nextStartWidth - minWidth
+      );
+
+      const newWidths = {
+        ...columnWidthsRef.current,
+        [columnId]: startWidth + clampedDelta,
+        [nextColumnId]: nextStartWidth - clampedDelta,
+      };
+
+      setColumnWidths(newWidths);
+      columnWidthsRef.current = newWidths;
+    };
+
+    const handleMouseUp = () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      saveColumnWidths(columnWidthsRef.current);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [initColumnWidths, saveColumnWidths]);
+
   // === 컬럼 가시성 ===
-  const colSettingsRef = useRef(null);
   const [showColSettings, setShowColSettings] = useState(false);
 
   // localStorage에서 컬럼 가시성 불러오기
@@ -194,7 +287,11 @@ export default function DataTable({
       saveColumnVisibility(next);
       return next;
     });
-  }, [columns, saveColumnVisibility]);
+    // 수동 너비 초기화 → 비례 자동 재분배
+    setColumnWidths(null);
+    columnWidthsRef.current = null;
+    saveColumnWidths(null);
+  }, [columns, saveColumnVisibility, saveColumnWidths]);
 
   // 컬럼이 보이는지 확인 (hideable: true가 아닌 컬럼은 항상 보임)
   const isColumnVisible = useCallback((col) => {
@@ -208,26 +305,18 @@ export default function DataTable({
     return columns.some(c => c.hideable === true);
   }, [columns]);
 
-  // 초기화 (전체 표시 + 순서 초기화)
+  // 초기화 (전체 표시 + 순서 + 너비 초기화)
   const handleResetColumns = useCallback(() => {
     setColumnVisibility({});
     saveColumnVisibility({});
     const defaultOrder = columns.map(c => c.key);
     setColumnOrder(defaultOrder);
     saveColumnOrder(defaultOrder);
-  }, [columns, saveColumnVisibility, saveColumnOrder]);
+    setColumnWidths(null);
+    columnWidthsRef.current = null;
+    saveColumnWidths(null);
+  }, [columns, saveColumnVisibility, saveColumnOrder, saveColumnWidths]);
 
-  // 드롭다운 외부 클릭 닫기
-  useEffect(() => {
-    if (!showColSettings) return;
-    const handleClickOutside = (e) => {
-      if (colSettingsRef.current && !colSettingsRef.current.contains(e.target)) {
-        setShowColSettings(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showColSettings]);
 
   // 드래그 센서 설정
   const sensors = useSensors(
@@ -271,6 +360,25 @@ export default function DataTable({
 
     return [...selectColumn, ...orderedColumns];
   }, [columns, columnOrder, selectable, selectMode, isColumnVisible]);
+
+  // === 컬럼 비례 너비 계산 (수동 리사이즈 없을 때) ===
+  const autoWidths = useMemo(() => {
+    if (columnWidths) return null;
+    const visibleDataCols = tableColumns.filter(c => c.id !== '_select');
+    if (visibleDataCols.length === 0) return null;
+    let totalWeight = 0;
+    const weights = {};
+    visibleDataCols.forEach(col => {
+      const w = parseInt(col.width) || 100;
+      weights[col.id] = w;
+      totalWeight += w;
+    });
+    const result = {};
+    visibleDataCols.forEach(col => {
+      result[col.id] = `${((weights[col.id] / totalWeight) * 100).toFixed(2)}%`;
+    });
+    return result;
+  }, [tableColumns, columnWidths]);
 
   // TanStack Table 인스턴스
   const table = useReactTable({
@@ -393,50 +501,21 @@ export default function DataTable({
     }
   }, [exportConfig, data]);
 
+  // 컬럼 설정 버튼 (페이지네이션 우측에 렌더)
+  const columnSettingsBtn = hasHideableColumns ? (
+    <div className="column-settings-wrapper">
+      <button
+        className="btn-column-settings"
+        onClick={() => setShowColSettings(prev => !prev)}
+        title="컬럼 표시 설정"
+      >
+        <i className="bi bi-layout-three-columns"></i>
+      </button>
+    </div>
+  ) : null;
+
   return (
     <div className={`data-table-container ${className}`}>
-      {/* 컬럼 설정 바 */}
-      {hasHideableColumns && (
-        <div className="column-settings-bar">
-          <div className="column-settings-wrapper" ref={colSettingsRef}>
-            <button
-              className="btn-column-settings"
-              onClick={() => setShowColSettings(prev => !prev)}
-              title="컬럼 표시 설정"
-            >
-              <i className="bi bi-layout-three-columns"></i>
-            </button>
-            {showColSettings && (
-              <div className="column-settings-dropdown">
-                <div className="column-settings-header">컬럼 표시 설정</div>
-                <div className="column-settings-list">
-                  {columnOrder
-                    .map(key => columns.find(c => c.key === key))
-                    .filter(Boolean)
-                    .filter(col => col.hideable === true)
-                    .map(col => (
-                      <label key={col.key} className="column-settings-item">
-                        <input
-                          type="checkbox"
-                          checked={isColumnVisible(col)}
-                          onChange={() => toggleColumnVisibility(col.key)}
-                        />
-                        <span>{col.label}</span>
-                      </label>
-                    ))
-                  }
-                </div>
-                <div className="column-settings-footer">
-                  <button className="btn-reset-columns" onClick={handleResetColumns}>
-                    <i className="bi bi-arrow-counterclockwise"></i> 초기화
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* 테이블 영역 */}
       <div
         className={`data-table-wrapper ${stickyHeader ? 'sticky-header' : ''}`}
@@ -447,7 +526,7 @@ export default function DataTable({
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <table className="data-table">
+          <table className="data-table" ref={tableRef} style={{ tableLayout: 'fixed' }}>
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -455,7 +534,7 @@ export default function DataTable({
                     items={draggableColumnIds}
                     strategy={horizontalListSortingStrategy}
                   >
-                    {headerGroup.headers.map((header) => {
+                    {headerGroup.headers.map((header, headerIndex) => {
                       // 선택 컬럼
                       if (header.id === '_select') {
                         return (
@@ -474,6 +553,11 @@ export default function DataTable({
                         );
                       }
 
+                      // 다음 데이터 컬럼 찾기 (리사이즈 대상)
+                      const nextDataHeader = headerGroup.headers
+                        .slice(headerIndex + 1)
+                        .find(h => h.id !== '_select');
+
                       // 데이터 컬럼 (드래그 가능)
                       const colDef = columns.find(c => c.key === header.id);
                       return (
@@ -484,6 +568,16 @@ export default function DataTable({
                           onSort={onSort}
                           sort={sort}
                           enableReorder={enableColumnReorder}
+                          computedWidth={columnWidths?.[header.id] ? `${columnWidths[header.id]}px` : undefined}
+                          autoWidth={autoWidths?.[header.id]}
+                          resizeHandle={nextDataHeader ? (
+                            <div
+                              className="col-resize-handle"
+                              onMouseDown={(e) => handleResizeStart(e, header.id, nextDataHeader.id)}
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          ) : null}
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
                         </DraggableHeader>
@@ -574,6 +668,7 @@ export default function DataTable({
           pageSizeOptions={pagination.pageSizeOptions}
           showPageSizeSelector={pagination.showPageSizeSelector !== false}
           onExport={exportConfig ? handleExport : undefined}
+          extraButtons={columnSettingsBtn}
         />
       )}
 
@@ -584,6 +679,7 @@ export default function DataTable({
             <span className="pagination-info">전체 {data.length}건</span>
           </div>
           <div className="pagination-right">
+            {columnSettingsBtn}
             <button
               className="btn-export"
               onClick={handleExport}
@@ -591,6 +687,16 @@ export default function DataTable({
             >
               <i className="bi bi-download"></i>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 페이지네이션도 export도 없지만 hideable 컬럼이 있는 경우 */}
+      {!pagination && !exportConfig && hasHideableColumns && (
+        <div className="pagination-controls export-only">
+          <div className="pagination-left" />
+          <div className="pagination-right">
+            {columnSettingsBtn}
           </div>
         </div>
       )}
@@ -606,6 +712,43 @@ export default function DataTable({
           defaultFileName={exportConfig.fileName || 'export'}
           excludeColumns={exportConfig.excludeColumns}
         />
+      )}
+
+      {/* 컬럼 설정 사이드바 */}
+      {hasHideableColumns && (
+        <div
+          className={`column-sidebar-overlay${showColSettings ? ' open' : ''}`}
+          onClick={() => setShowColSettings(false)}
+        >
+          <div className="column-sidebar" onClick={(e) => e.stopPropagation()}>
+            <div className="column-sidebar-header">
+              <span className="column-sidebar-title">컬럼 표시 설정</span>
+              <span className="column-sidebar-close" onClick={() => setShowColSettings(false)}>&times;</span>
+            </div>
+            <div className="column-sidebar-body">
+              {columnOrder
+                .map(key => columns.find(c => c.key === key))
+                .filter(Boolean)
+                .filter(col => col.hideable === true)
+                .map(col => (
+                  <label key={col.key} className="column-sidebar-item">
+                    <input
+                      type="checkbox"
+                      checked={isColumnVisible(col)}
+                      onChange={() => toggleColumnVisibility(col.key)}
+                    />
+                    <span>{col.label}</span>
+                  </label>
+                ))
+              }
+            </div>
+            <div className="column-sidebar-footer">
+              <button className="btn-reset-columns" onClick={handleResetColumns}>
+                <i className="bi bi-arrow-counterclockwise"></i> 초기화
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

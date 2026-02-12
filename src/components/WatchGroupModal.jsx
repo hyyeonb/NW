@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
 import { devicesApi } from '../api';
 import { watchApi } from '../api/watch';
+import { useGroupTree } from '../hooks/useGroups';
 
 // 트래픽 포맷팅 함수
 const formatBps = (bps) => {
@@ -70,16 +71,95 @@ function PortMiniChart({ deviceId, ifIndex }) {
   );
 }
 
+// 그룹별 장비 수 계산 (자기 자신 + 하위 그룹 재귀)
+function countDevicesInGroup(group, countMap) {
+  let count = countMap.get(group.GROUP_ID) || 0;
+  if (group.children) {
+    for (const child of group.children) {
+      count += countDevicesInGroup(child, countMap);
+    }
+  }
+  return count;
+}
+
+// 그룹 필터 트리 노드 (경량 - 필터링 전용)
+function GroupFilterNode({ group, selectedGroupId, onSelect, depth, deviceCountMap }) {
+  const [expanded, setExpanded] = useState(depth < 2);
+  const hasChildren = group.children?.length > 0;
+  const totalCount = useMemo(() => countDevicesInGroup(group, deviceCountMap), [group, deviceCountMap]);
+  return (
+    <div>
+      <div
+        className={`group-filter-node ${selectedGroupId === group.GROUP_ID ? 'active' : ''}`}
+        style={{ paddingLeft: `${(depth + 1) * 16}px` }}
+        onClick={() => onSelect(group.GROUP_ID)}
+      >
+        {hasChildren ? (
+          <i
+            className={`bi bi-chevron-${expanded ? 'down' : 'right'} expand-icon`}
+            onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+          />
+        ) : (
+          <span className="expand-icon-placeholder" />
+        )}
+        <span className="group-name">{group.GROUP_NAME}</span>
+        <span className="group-device-count">{totalCount}</span>
+      </div>
+      {expanded && hasChildren && group.children.map(child => (
+        <GroupFilterNode
+          key={child.GROUP_ID}
+          group={child}
+          selectedGroupId={selectedGroupId}
+          onSelect={onSelect}
+          depth={depth + 1}
+          deviceCountMap={deviceCountMap}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function WatchGroupModal({ isOpen, onClose, onSave, editingGroup = null, parentGroupId = null, mode = null }) {
   // 폼 상태
   const [groupName, setGroupName] = useState('');
   const [selectedDevices, setSelectedDevices] = useState([]); // [{ deviceId, ifIndexes: [] }]
   const [browsingDeviceId, setBrowsingDeviceId] = useState(null); // 현재 포트를 보고 있는 장비
+  const [selectedGroupId, setSelectedGroupId] = useState(null); // 그룹 필터
 
-  // 장비 목록 조회
-  const { data: devicesData, isLoading: devicesLoading } = useQuery({
+  // 그룹 트리 데이터
+  const { data: groupTree } = useGroupTree();
+
+  // 전체 장비 목록 (그룹별 카운트 계산용)
+  const { data: allDevicesData } = useQuery({
     queryKey: ['allDevices'],
     queryFn: async () => {
+      const response = await devicesApi.getAllDevices();
+      return response.data?.data || [];
+    },
+    staleTime: 60000,
+  });
+
+  // 그룹별 장비 수 맵 (GROUP_ID → count)
+  const deviceCountMap = useMemo(() => {
+    const map = new Map();
+    if (allDevicesData) {
+      for (const d of allDevicesData) {
+        if (d.GROUP_ID) {
+          map.set(d.GROUP_ID, (map.get(d.GROUP_ID) || 0) + 1);
+        }
+      }
+    }
+    return map;
+  }, [allDevicesData]);
+
+  // 장비 목록 조회 (그룹 필터 적용)
+  const { data: devicesData, isLoading: devicesLoading } = useQuery({
+    queryKey: ['watchModalDevices', selectedGroupId],
+    queryFn: async () => {
+      if (selectedGroupId) {
+        const response = await devicesApi.getDevicesByGroup(selectedGroupId, true);
+        return response.data?.data?.content || response.data?.data || [];
+      }
       const response = await devicesApi.getAllDevices();
       return response.data?.data || [];
     },
@@ -125,13 +205,23 @@ export default function WatchGroupModal({ isOpen, onClose, onSave, editingGroup 
     return ports.filter(p => p.IF_OPER_STATUS === 1);
   }, [ports]);
 
+  // 연동 그룹 여부
+  const isLinkedGroup = !!editingGroup?.linkedGroupId;
+
   // 편집 모드일 때 초기값 설정 (groupDetailData 사용)
   useEffect(() => {
     if (editingGroup) {
       setGroupName(editingGroup.groupName || '');
+      // 연동 그룹인 경우 해당 R_GROUP_T 그룹으로 자동 필터링 (고정)
+      if (editingGroup.linkedGroupId) {
+        setSelectedGroupId(editingGroup.linkedGroupId);
+      } else {
+        setSelectedGroupId(null);
+      }
     } else {
       setGroupName('');
       setSelectedDevices([]);
+      setSelectedGroupId(null);
     }
     setBrowsingDeviceId(null);
   }, [editingGroup, isOpen]);
@@ -277,16 +367,53 @@ export default function WatchGroupModal({ isOpen, onClose, onSave, editingGroup 
                 onChange={(e) => setGroupName(e.target.value)}
                 placeholder="관제 그룹명을 입력하세요"
                 autoFocus
+                disabled={!!editingGroup?.linkedGroupId}
               />
+              {editingGroup?.linkedGroupId && (
+                <span className="form-hint">연동 그룹은 이름을 변경할 수 없습니다.</span>
+              )}
             </div>
           )}
 
           {/* 장비 선택 영역 - devices 모드이거나 전체 모드일 때 표시 */}
           {(mode === 'devices' || mode === null) && (
-          <div className="device-selection-area two-column">
-            {/* LEFT: 장비 목록 */}
+          <div className={`device-selection-area ${isLinkedGroup ? 'two-column' : 'three-column'}`}>
+            {/* LEFT: 그룹 필터 트리 (연동 그룹일 때 숨김) */}
+            {!isLinkedGroup && (
+            <div className="group-filter-panel">
+              <h4>그룹</h4>
+              <div className="group-filter-tree">
+                <div
+                  className={`group-filter-node ${!selectedGroupId ? 'active' : ''}`}
+                  onClick={() => setSelectedGroupId(null)}
+                >
+                  <i className="bi bi-grid"></i>
+                  <span className="group-name">전체</span>
+                  <span className="group-device-count">{allDevicesData?.length || 0}</span>
+                </div>
+                {groupTree?.map(group => (
+                  <GroupFilterNode
+                    key={group.GROUP_ID}
+                    group={group}
+                    selectedGroupId={selectedGroupId}
+                    onSelect={setSelectedGroupId}
+                    depth={0}
+                    deviceCountMap={deviceCountMap}
+                  />
+                ))}
+              </div>
+            </div>
+            )}
+
+            {/* CENTER: 장비 목록 (필터링됨) */}
             <div className="device-list-panel">
-              <h4>장비 목록</h4>
+              <h4>
+                장비 목록
+                {isLinkedGroup
+                  ? <span className="filter-badge linked">🔗 {editingGroup.groupName} 소속</span>
+                  : selectedGroupId && <span className="filter-badge">필터링됨</span>
+                }
+              </h4>
               {devicesLoading ? (
                 <div className="watch-loading">
                   <div className="spinner"></div>

@@ -1220,3 +1220,63 @@ h1 {
     border-color: rgba(255, 255, 255, 0.3);
     color: #f1f5f9;
 }
+
+/* ==================
+   Login Transition Overlay
+   (세션 확인, 소셜 로그인 콜백, 로그인 성공 전환)
+   ================== */
+.login-transition-overlay {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    min-height: 100vh;
+}
+
+.login-transition-content {
+    text-align: center;
+    animation: transitionFadeIn 0.5s ease-out;
+}
+
+.login-transition-logo {
+    width: 56px;
+    height: 56px;
+    margin-bottom: 28px;
+    animation: transitionLogoPulse 2.5s ease-in-out infinite;
+}
+
+.login-transition-spinner {
+    width: 36px;
+    height: 36px;
+    border: 2.5px solid rgba(255, 255, 255, 0.06);
+    border-top: 2.5px solid #3b82f6;
+    border-radius: 50%;
+    margin: 0 auto 18px;
+    animation: spin 0.75s linear infinite;
+}
+
+.login-transition-text {
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 1px;
+}
+
+@keyframes transitionFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes transitionLogoPulse {
+    0%, 100% { transform: scale(1); opacity: 0.85; }
+    50% { transform: scale(1.06); opacity: 1; }
+}
