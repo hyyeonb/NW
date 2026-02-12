@@ -264,6 +264,7 @@ export default function RealtimeFault() {
       width: '80px',
       sortable: true,
       align: 'center',
+      hideable: true,
       render: (value) => (
         <span className={`severity-badge ${getLevelClass(value)}`}>
           {getLevelLabel(value)}
@@ -276,6 +277,7 @@ export default function RealtimeFault() {
       width: '80px',
       sortable: true,
       align: 'center',
+      hideable: true,
       render: (value) => (
         <span className={`status-badge ${value === 1 ? 'acknowledged' : 'active'}`}>
           {value === 1 ? '인지' : '발생'}
@@ -295,6 +297,7 @@ export default function RealtimeFault() {
       width: '130px',
       sortable: true,
       className: 'cell-ip',
+      hideable: true,
     },
     {
       key: 'GROUP_NAME',
@@ -302,6 +305,7 @@ export default function RealtimeFault() {
       width: '120px',
       sortable: true,
       className: 'cell-truncate',
+      hideable: true,
     },
     {
       key: 'ERROR_MESSAGE',
@@ -315,6 +319,7 @@ export default function RealtimeFault() {
       width: '155px',
       sortable: true,
       className: 'cell-date',
+      hideable: true,
       render: (value) => formatDateTime(value),
     },
     {
@@ -322,6 +327,7 @@ export default function RealtimeFault() {
       label: '작업',
       width: '80px',
       align: 'center',
+      hideable: true,
       render: (_, row) => (
         <button
           className="action-btn"

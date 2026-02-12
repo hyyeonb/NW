@@ -419,12 +419,14 @@ export default function GroupManagement() {
       label: '주소',
       sortable: true,
       className: 'cell-truncate',
+      hideable: true,
     },
     {
       key: 'PHONE',
       label: '전화번호',
       width: '130px',
       sortable: true,
+      hideable: true,
     },
     {
       key: 'CREATE_AT',
@@ -432,6 +434,7 @@ export default function GroupManagement() {
       width: '110px',
       sortable: true,
       className: 'cell-date',
+      hideable: true,
       render: (value) => formatDate(value),
     },
   ], []);

@@ -364,29 +364,29 @@ export default function DeviceDetailModal({ deviceId, onClose }) {
   const portColumns = useMemo(() => [
     { key: 'IF_INDEX', label: 'Index', width: '70px', sortable: true, align: 'center' },
     { key: 'IF_NAME', label: '이름', width: '120px', sortable: true, render: (v) => v || '-' },
-    { key: 'IF_DESCR', label: '설명', width: '130px', sortable: true, className: 'cell-truncate', render: (v) => v || '-' },
-    { key: 'IF_DESCRIPTION', label: 'Description', width: '130px', sortable: true, className: 'cell-truncate', render: (v) => v || '-' },
+    { key: 'IF_DESCR', label: '설명', width: '130px', sortable: true, className: 'cell-truncate', hideable: true, render: (v) => v || '-' },
+    { key: 'IF_DESCRIPTION', label: 'Description', width: '130px', sortable: true, className: 'cell-truncate', hideable: true, render: (v) => v || '-' },
     {
-      key: 'IF_TYPE', label: '타입', width: '100px', sortable: true,
+      key: 'IF_TYPE', label: '타입', width: '100px', sortable: true, hideable: true,
       render: (value, row) => (
         <span className={`port-type-badge ${getPortTypeBadgeClass(value)}`}>
           {row.ifTypeText || getPortTypeText(value)}
         </span>
       ),
     },
-    { key: 'IF_MTU', label: 'MTU', width: '70px', sortable: true, align: 'center', render: (v) => v || '-' },
-    { key: 'IF_HIGH_SPEED', label: '속도', width: '100px', sortable: true, className: 'port-speed', render: (_, row) => formatSpeed(row) },
-    { key: 'IF_MAC_ADDRESS', label: 'MAC', width: '140px', sortable: true, className: 'port-mac', render: (v) => v || '-' },
+    { key: 'IF_MTU', label: 'MTU', width: '70px', sortable: true, align: 'center', hideable: true, render: (v) => v || '-' },
+    { key: 'IF_HIGH_SPEED', label: '속도', width: '100px', sortable: true, className: 'port-speed', hideable: true, render: (_, row) => formatSpeed(row) },
+    { key: 'IF_MAC_ADDRESS', label: 'MAC', width: '140px', sortable: true, className: 'port-mac', hideable: true, render: (v) => v || '-' },
     {
-      key: 'IF_ADMIN_STATUS', label: 'Admin', width: '70px', sortable: true, align: 'center',
+      key: 'IF_ADMIN_STATUS', label: 'Admin', width: '70px', sortable: true, align: 'center', hideable: true,
       render: (v) => <span className={`status-badge ${v === 1 ? 'up' : 'down'}`}>{v === 1 ? 'Up' : 'Down'}</span>,
     },
     {
-      key: 'IF_OPER_STATUS', label: 'Oper', width: '70px', sortable: true, align: 'center',
+      key: 'IF_OPER_STATUS', label: 'Oper', width: '70px', sortable: true, align: 'center', hideable: true,
       render: (v) => <span className={`status-badge ${v === 1 ? 'up' : 'down'}`}>{v === 1 ? 'Up' : 'Down'}</span>,
     },
     {
-      key: 'IF_OPER_FLAG', label: 'Oper 감시', width: '90px', sortable: true, align: 'center',
+      key: 'IF_OPER_FLAG', label: 'Oper 감시', width: '90px', sortable: true, align: 'center', hideable: true,
       render: (value, row) => (
         <span
           className={`flag-badge clickable ${value === 1 || value === true ? 'active' : 'inactive'}`}
@@ -398,7 +398,7 @@ export default function DeviceDetailModal({ deviceId, onClose }) {
       ),
     },
     {
-      key: 'IF_PERF_FLAG', label: '성능 감시', width: '90px', sortable: true, align: 'center',
+      key: 'IF_PERF_FLAG', label: '성능 감시', width: '90px', sortable: true, align: 'center', hideable: true,
       render: (value, row) => (
         <span
           className={`flag-badge clickable ${value === 1 || value === true ? 'active' : 'inactive'}`}

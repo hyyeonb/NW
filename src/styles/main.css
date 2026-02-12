@@ -1183,6 +1183,7 @@ select:disabled {
     padding: 20px;
     transition: margin-left var(--transition-normal);
     min-height: 100vh;
+    overflow-x: hidden;
 }
 
 .app-main.sidebar-collapsed {

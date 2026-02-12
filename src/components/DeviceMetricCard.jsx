@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import ReactECharts from 'echarts-for-react';
 import { useWatchStore } from '../stores/watchStore';
@@ -39,8 +39,14 @@ const formatTime = (timeValue) => {
   return `${hh}:${mm}:${ss}`;
 };
 
-export default function DeviceMetricCard({ device, history = [] }) {
-  const { globalChartSettings, globalSettingsVersion } = useWatchStore();
+function DeviceMetricCard({ device, history = [], onHide }) {
+  const { globalChartSettings, globalSettingsVersion, gridSize } = useWatchStore();
+
+  // [DEBUG] mount/unmount 감지
+  useEffect(() => {
+    console.log('[DEBUG-CARD] MOUNT:', device.deviceId, device.deviceName);
+    return () => console.warn('[DEBUG-CARD] ❌ UNMOUNT:', device.deviceId, device.deviceName);
+  }, []);
 
   const [showCpu, setShowCpu] = useState(globalChartSettings.showCpu);
   const [showMem, setShowMem] = useState(globalChartSettings.showMem);
@@ -90,8 +96,8 @@ export default function DeviceMetricCard({ device, history = [] }) {
   // CPU/MEM 차트 옵션
   const cpuMemChartOption = useMemo(() => {
     const times = history.slice(0, 20).map(h => formatTime(h.time)).reverse();
-    const cpuData = history.slice(0, 20).map(h => h.cpu || 0).reverse();
-    const memData = history.slice(0, 20).map(h => h.mem || 0).reverse();
+    const cpuData = history.slice(0, 20).map(h => h.cpu ?? null).reverse();
+    const memData = history.slice(0, 20).map(h => h.mem ?? null).reverse();
 
     const series = [];
     if (showCpu) {
@@ -175,22 +181,24 @@ export default function DeviceMetricCard({ device, history = [] }) {
       const colorPair = PORT_COLORS[idx % PORT_COLORS.length];
       const portName = iface.ifName || `IF${iface.ifIndex}`;
 
-      // IN 데이터 (단위별 변환)
+      // IN 데이터 (단위별 변환) - 인터페이스 데이터 없으면 null (0이 아님)
       const inData = history.slice(0, 20).map(h => {
         const histIface = h.interfaces?.find(i => i.ifIndex === iface.ifIndex);
+        if (!histIface) return null;
         if (trafficUnit === 'bps') {
-          return histIface?.inUsed || 0;
+          return histIface.inUsed ?? null;
         }
         let raw;
         if (counterType === '64bit') {
-          raw = histIface?.highInBps || 0;
+          raw = histIface.highInBps ?? null;
         } else {
-          raw = histIface?.inBps || 0;
+          raw = histIface.inBps ?? null;
         }
+        if (raw == null) return null;
         return trafficUnit === 'byte' ? raw / 8 : raw;
       }).reverse();
 
-      maxValue = Math.max(maxValue, ...inData.map(Math.abs));
+      maxValue = Math.max(maxValue, ...inData.filter(v => v != null).map(Math.abs));
 
       series.push({
         name: `${portName} IN`,
@@ -204,22 +212,24 @@ export default function DeviceMetricCard({ device, history = [] }) {
         }},
       });
 
-      // OUT 데이터 (단위별 변환)
+      // OUT 데이터 (단위별 변환) - 인터페이스 데이터 없으면 null (0이 아님)
       const outData = history.slice(0, 20).map(h => {
         const histIface = h.interfaces?.find(i => i.ifIndex === iface.ifIndex);
+        if (!histIface) return null;
         if (trafficUnit === 'bps') {
-          return -(histIface?.outUsed || 0);
+          return histIface.outUsed != null ? -histIface.outUsed : null;
         }
         let raw;
         if (counterType === '64bit') {
-          raw = histIface?.highOutBps || 0;
+          raw = histIface.highOutBps ?? null;
         } else {
-          raw = histIface?.outBps || 0;
+          raw = histIface.outBps ?? null;
         }
+        if (raw == null) return null;
         return trafficUnit === 'byte' ? -(raw / 8) : -raw;
       }).reverse();
 
-      maxValue = Math.max(maxValue, ...outData.map(Math.abs));
+      maxValue = Math.max(maxValue, ...outData.filter(v => v != null).map(Math.abs));
 
       series.push({
         name: `${portName} OUT`,
@@ -289,14 +299,14 @@ export default function DeviceMetricCard({ device, history = [] }) {
       if (showError) {
         const inErrData = history.slice(0, 20).map(h => {
           const histIface = h.interfaces?.find(i => i.ifIndex === iface.ifIndex);
-          return histIface?.inError || 0;
+          return histIface ? (histIface.inError ?? null) : null;
         }).reverse();
         const outErrData = history.slice(0, 20).map(h => {
           const histIface = h.interfaces?.find(i => i.ifIndex === iface.ifIndex);
-          return histIface?.outError || 0;
+          return histIface ? (histIface.outError ?? null) : null;
         }).reverse();
 
-        maxValue = Math.max(maxValue, ...inErrData, ...outErrData);
+        maxValue = Math.max(maxValue, ...inErrData.filter(v => v != null), ...outErrData.filter(v => v != null));
 
         series.push({
           name: `${portName} InErr`,
@@ -319,14 +329,14 @@ export default function DeviceMetricCard({ device, history = [] }) {
       if (showDiscard) {
         const inDiscData = history.slice(0, 20).map(h => {
           const histIface = h.interfaces?.find(i => i.ifIndex === iface.ifIndex);
-          return histIface?.inDiscard || 0;
+          return histIface ? (histIface.inDiscard ?? null) : null;
         }).reverse();
         const outDiscData = history.slice(0, 20).map(h => {
           const histIface = h.interfaces?.find(i => i.ifIndex === iface.ifIndex);
-          return histIface?.outDiscard || 0;
+          return histIface ? (histIface.outDiscard ?? null) : null;
         }).reverse();
 
-        maxValue = Math.max(maxValue, ...inDiscData, ...outDiscData);
+        maxValue = Math.max(maxValue, ...inDiscData.filter(v => v != null), ...outDiscData.filter(v => v != null));
 
         series.push({
           name: `${portName} InDisc`,
@@ -399,9 +409,9 @@ export default function DeviceMetricCard({ device, history = [] }) {
         <span className="device-name" title={device.deviceIp}>{device.deviceName}</span>
         <div className="card-header-right">
           <span className="device-stats">
-            <span className="cpu">CPU:{cpuValue !== undefined ? `${cpuValue}%` : '-'}</span>
-            <span className="mem">MEM:{memValue !== undefined ? `${memValue.toFixed(0)}%` : '-'}</span>
-            <span className="traffic-unit-hint">{counterType === '64bit' ? '64' : '32'}bit·{trafficUnit === 'bps' ? '%' : trafficUnit === 'byte' ? 'B/s' : 'bps'}</span>
+            <span className="cpu">CPU:{cpuValue != null ? `${cpuValue}%` : '-'}</span>
+            <span className="mem">MEM:{memValue != null ? `${memValue.toFixed(0)}%` : '-'}</span>
+            {gridSize !== 'S' && <span className="traffic-unit-hint">{counterType === '64bit' ? '64' : '32'}bit·{trafficUnit === 'bps' ? '%' : trafficUnit === 'byte' ? 'B/s' : 'bps'}</span>}
           </span>
           <div className="port-dots">
             {Array.from({ length: 5 }, (_, idx) => {
@@ -521,6 +531,21 @@ export default function DeviceMetricCard({ device, history = [] }) {
                   />
                   <span style={{ color: '#f97316' }}>Discard</span>
                 </label>
+                {onHide && (
+                  <>
+                    <div className="card-options-divider"></div>
+                    <button
+                      className="card-hide-btn"
+                      onClick={() => {
+                        onHide(device.deviceId);
+                        setShowOptions(false);
+                      }}
+                    >
+                      <i className="bi bi-eye-slash"></i>
+                      <span>이 장비 숨기기</span>
+                    </button>
+                  </>
+                )}
               </div>,
               document.body
             )}
@@ -540,7 +565,7 @@ export default function DeviceMetricCard({ device, history = [] }) {
           {(showCpu || showMem) && (
             <div className="chart-mini chart-accent-cpu">
               {history.length > 0 ? (
-                <ReactECharts option={cpuMemChartOption} notMerge={true} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
+                <ReactECharts option={cpuMemChartOption} notMerge={false} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
               ) : (
                 <div className="chart-no-data">-</div>
               )}
@@ -550,7 +575,7 @@ export default function DeviceMetricCard({ device, history = [] }) {
           {/* Traffic 차트 (IN/OUT 항상 표시) */}
           <div className="chart-mini chart-accent-traffic">
             {history.length > 0 ? (
-              <ReactECharts option={trafficChartOption} notMerge={true} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
+              <ReactECharts option={trafficChartOption} notMerge={false} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
             ) : (
               <div className="chart-no-data">-</div>
             )}
@@ -560,7 +585,7 @@ export default function DeviceMetricCard({ device, history = [] }) {
           {(showError || showDiscard) && (
             <div className="chart-mini chart-accent-error">
               {history.length > 0 ? (
-                <ReactECharts option={errorDiscardChartOption} notMerge={true} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
+                <ReactECharts option={errorDiscardChartOption} notMerge={false} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
               ) : (
                 <div className="chart-no-data">-</div>
               )}
@@ -571,3 +596,19 @@ export default function DeviceMetricCard({ device, history = [] }) {
     </div>
   );
 }
+
+export default memo(DeviceMetricCard, (prev, next) => {
+  // device.deviceId가 같고, 핵심 데이터가 같으면 re-render 스킵
+  if (prev.device.deviceId !== next.device.deviceId) return false;
+  if (prev.device.cpu?.usage !== next.device.cpu?.usage) return false;
+  if (prev.device.mem?.usage !== next.device.mem?.usage) return false;
+  if (prev.device.disabled !== next.device.disabled) return false;
+  if (prev.history.length !== next.history.length) return false;
+  if (prev.history[0] !== next.history[0]) return false;
+  // interfaces 변경 체크 (길이 + 첫 항목 inBps)
+  const pIf = prev.device.interfaces || [];
+  const nIf = next.device.interfaces || [];
+  if (pIf.length !== nIf.length) return false;
+  if (pIf.length > 0 && (pIf[0].inBps !== nIf[0].inBps || pIf[0].outBps !== nIf[0].outBps)) return false;
+  return true;
+});

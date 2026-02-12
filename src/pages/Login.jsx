@@ -101,6 +101,26 @@ export default function Login() {
     }
   };
 
+  // OAuth 콜백 처리 중이면 로그인 폼 대신 로딩 화면 표시
+  if (searchParams.get('code')) {
+    return (
+      <div className="login-page">
+        <div className="background-animation">
+          <div className="floating-shape shape-1"></div>
+          <div className="floating-shape shape-2"></div>
+          <div className="floating-shape shape-3"></div>
+        </div>
+        <div className="login-transition-overlay">
+          <div className="login-transition-content">
+            <img src="/logo-single.svg" alt="" className="login-transition-logo" />
+            <div className="login-transition-spinner" />
+            <p className="login-transition-text">로그인 처리 중</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="login-page">
       {/* Animated Background */}

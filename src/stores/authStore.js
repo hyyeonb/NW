@@ -8,6 +8,7 @@ export const useAuthStore = create(
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      isLoginTransitioning: false,
       error: null,
 
       setUser: (user) =>
@@ -79,6 +80,7 @@ export const useAuthStore = create(
             user: loginData,
             isAuthenticated: true,
             isLoading: false,
+            isLoginTransitioning: true,
           });
           return loginData;
         } catch (error) {
@@ -121,6 +123,7 @@ export const useAuthStore = create(
             user: loginData,
             isAuthenticated: true,
             isLoading: false,
+            isLoginTransitioning: true,
           });
           return loginData;
         } catch (error) {
@@ -157,6 +160,7 @@ export const useAuthStore = create(
       },
 
       clearError: () => set({ error: null }),
+      clearLoginTransition: () => set({ isLoginTransitioning: false }),
     }),
     {
       name: 'auth-storage',

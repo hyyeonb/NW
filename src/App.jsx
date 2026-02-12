@@ -17,9 +17,29 @@ const queryClient = new QueryClient({
   },
 });
 
+// 전체 화면 로딩 (세션 확인, 로그인 전환)
+function FullScreenLoader({ message }) {
+  return (
+    <div className="login-page">
+      <div className="background-animation">
+        <div className="floating-shape shape-1"></div>
+        <div className="floating-shape shape-2"></div>
+        <div className="floating-shape shape-3"></div>
+      </div>
+      <div className="login-transition-overlay">
+        <div className="login-transition-content">
+          <img src="/logo-single.svg" alt="" className="login-transition-logo" />
+          <div className="login-transition-spinner" />
+          <p className="login-transition-text">{message}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // 세션 검증 및 인증 상태 관리
 function AuthProvider({ children }) {
-  const { isAuthenticated, fetchCurrentUser, validateSession } = useAuthStore();
+  const { isAuthenticated, isLoginTransitioning, clearLoginTransition, fetchCurrentUser, validateSession } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
@@ -44,37 +64,24 @@ function AuthProvider({ children }) {
     checkSession();
   }, []);
 
-  // 세션 체크 중일 때 로딩 표시
+  // 로그인 전환 화면 자동 해제
+  useEffect(() => {
+    if (isLoginTransitioning) {
+      const timer = setTimeout(() => {
+        clearLoginTransition();
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoginTransitioning, clearLoginTransition]);
+
+  // 세션 체크 중
   if (isChecking) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-        color: '#e2e8f0'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '3px solid #334155',
-            borderTop: '3px solid #3b82f6',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 16px'
-          }} />
-          <p>세션 확인 중...</p>
-          <style>{`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}</style>
-        </div>
-      </div>
-    );
+    return <FullScreenLoader message="세션 확인 중..." />;
+  }
+
+  // 로그인 성공 전환 중
+  if (isLoginTransitioning) {
+    return <FullScreenLoader message="로그인 성공" />;
   }
 
   return children;

@@ -42,6 +42,7 @@ export const useWatchGroups = () => {
         deviceCount: g.DEVICE_COUNT || g.deviceCount || 0,
         depth: g.DEPTH || g.depth || 0,
         iconName: g.ICON_NAME || g.iconName || null,
+        linkedGroupId: g.LINKED_GROUP_ID || g.linkedGroupId || null,
       }));
       // 트리 구조로 변환
       return buildTree(flatList);
@@ -135,6 +136,43 @@ export const useUpdateWatchGroupIcon = () => {
   });
 };
 
+// ==================== 장비 그룹 연동 Hooks ====================
+
+// 장비 그룹 가져오기 (R_GROUP_T → R_WATCH_GROUP_T)
+export const useImportFromGroups = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (groupIds) => watchApi.importFromGroups(groupIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['watchGroups'] });
+      queryClient.invalidateQueries({ queryKey: ['linkedGroupIds'] });
+    },
+  });
+};
+
+// 이미 연동된 GROUP_ID 목록 조회
+export const useLinkedGroupIds = () => {
+  return useQuery({
+    queryKey: ['linkedGroupIds'],
+    queryFn: async () => {
+      const response = await watchApi.getLinkedGroupIds();
+      return response.data?.data || [];
+    },
+  });
+};
+
+// 연동 해제
+export const useDeleteLinkedGroup = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (linkedGroupId) => watchApi.deleteLinkedGroup(linkedGroupId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['watchGroups'] });
+      queryClient.invalidateQueries({ queryKey: ['linkedGroupIds'] });
+    },
+  });
+};
+
 // ==================== 관제 시작/중지 Hooks ====================
 
 // 관제 시작
@@ -208,21 +246,41 @@ export const useWatchSSE = (groupId, enabled = false) => {
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('[SSE] 메트릭 수신:', data);
-        setMetrics(data);
 
-        // 히스토리 업데이트
+        // [DEBUG] SSE 원본 수신
+        console.log('[DEBUG-SSE] 수신 data.devices:', Array.isArray(data.devices) ? data.devices.length + '개' : data.devices, data.devices?.map?.(d => d.deviceId));
+
+        // 장비 데이터가 없는 메시지(heartbeat/ping)는 무시
+        if (!Array.isArray(data.devices) || data.devices.length === 0) {
+          console.warn('[DEBUG-SSE] 빈 메시지 무시됨');
+          return;
+        }
+
+        // 이전 상태와 병합 — 부분 수신 시 기존 장비가 사라지지 않도록
+        setMetrics((prev) => {
+          if (!prev?.devices || prev.devices.length === 0) {
+            console.log('[DEBUG-SSE] setMetrics: prev 없음, data 그대로 사용. ids:', data.devices.map(d => d.deviceId));
+            return data;
+          }
+
+          const merged = new Map(prev.devices.map(d => [d.deviceId, d]));
+          data.devices.forEach(d => merged.set(d.deviceId, d));
+          const result = { ...data, devices: Array.from(merged.values()) };
+          console.log('[DEBUG-SSE] setMetrics: merge 결과. prev:', prev.devices.length, 'new:', data.devices.length, '→ merged:', result.devices.length, 'ids:', result.devices.map(d => d.deviceId));
+          return result;
+        });
+
+        // 히스토리 업데이트 (수신된 장비만 추가)
         setHistory((prev) => {
           const newHistory = { ...prev };
-          // ISO 형식으로 저장하여 DeviceMetricCard에서 파싱 가능하게
           const currentTime = new Date().toISOString();
 
-          data.devices?.forEach((device) => {
+          data.devices.forEach((device) => {
             const deviceHistory = newHistory[device.deviceId] || [];
             const historyEntry = {
               time: currentTime,
-              cpu: device.cpu?.usage || 0,
-              mem: device.mem?.usage || 0,
+              cpu: device.cpu?.usage ?? null,
+              mem: device.mem?.usage ?? null,
               interfaces: device.interfaces || [],
             };
 
@@ -238,7 +296,7 @@ export const useWatchSSE = (groupId, enabled = false) => {
     };
 
     eventSource.onerror = (err) => {
-      console.error('[SSE] 연결 오류:', err);
+      console.error('[DEBUG-SSE] 연결 오류 (readyState:', eventSource.readyState, '):', err);
       setConnected(false);
       setError('SSE 연결 오류');
 

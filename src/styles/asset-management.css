@@ -1003,11 +1003,13 @@ select:focus {
 }
 
 .detail-tab-content.active {
-    display: block;
+    display: flex;
+    flex-direction: column;
     flex: 1;
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    padding-bottom: 20px;
     animation: tabFadeIn 0.3s ease;
 }
 
@@ -3475,6 +3477,14 @@ select:focus {
     display: flex;
     align-items: stretch;
     border-radius: inherit;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.settings-sidebar-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .settings-sidebar {
@@ -3487,12 +3497,12 @@ select:focus {
     border-radius: 16px 0 0 16px;
     display: flex;
     flex-direction: column;
-    animation: slideInLeft 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes slideInLeft {
-    from { transform: translateX(-100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+.settings-sidebar-overlay.open .settings-sidebar {
+    transform: translateX(0);
 }
 
 .settings-sidebar-header {

@@ -12,17 +12,56 @@ import {
   useStopWatch,
   useSendHeartbeat,
   useWatchSSE,
+  useDeleteLinkedGroup,
 } from '../hooks/useWatch';
 import { useWatchStore } from '../stores/watchStore';
 import { watchApi } from '../api/watch';
 import DeviceMetricCard from '../components/DeviceMetricCard';
 import WatchGroupModal from '../components/WatchGroupModal';
 import WatchIconSelectorModal from '../components/WatchIconSelectorModal';
+import ImportGroupModal from '../components/ImportGroupModal';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import '../styles/realtime-performance.css';
 import '../styles/group-tree.css';
 
+// 드래그 시 수평(X축) 이동을 윈도우 범위 내로 제한하는 modifier
+const restrictHorizontalToWindow = ({ transform, draggingNodeRect, windowRect }) => {
+  if (!draggingNodeRect || !windowRect) return transform;
+  return {
+    ...transform,
+    x: Math.min(
+      Math.max(transform.x, windowRect.left - draggingNodeRect.left),
+      windowRect.right - draggingNodeRect.right
+    ),
+  };
+};
+
+// 드래그 정렬 가능한 장비 카드 래퍼
+function SortableDeviceCard({ id, device, history, onHide }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+
+  const style = {
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+      : undefined,
+    transition,
+    opacity: isDragging ? 0.3 : 1,
+    zIndex: isDragging ? 999 : 'auto',
+    position: isDragging ? 'relative' : undefined,
+    minWidth: 0,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <DeviceMetricCard device={device} history={history} onHide={onHide} />
+    </div>
+  );
+}
+
 // 컨텍스트 메뉴 컴포넌트
-function WatchContextMenu({ x, y, group, onClose, onAdd, onAddChild, onRename, onEditDevices, onDelete, onSetIcon }) {
+function WatchContextMenu({ x, y, group, onClose, onAdd, onAddChild, onRename, onEditDevices, onDelete, onSetIcon, onUnlink }) {
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -84,32 +123,38 @@ function WatchContextMenu({ x, y, group, onClose, onAdd, onAddChild, onRename, o
     );
   }
 
+  const isLinked = !!group.linkedGroupId;
+
   return createPortal(
     <div
       ref={menuRef}
       className="watch-context-menu"
       style={{ left: x, top: y }}
     >
-      <div
-        className="watch-context-menu-item"
-        onClick={() => {
-          onSetIcon(group);
-          onClose();
-        }}
-      >
-        <i className="bi bi-palette"></i>
-        <span>아이콘 설정</span>
-      </div>
-      <div
-        className="watch-context-menu-item"
-        onClick={() => {
-          onRename(group);
-          onClose();
-        }}
-      >
-        <i className="bi bi-pencil"></i>
-        <span>그룹 이름 변경</span>
-      </div>
+      {!isLinked && (
+        <div
+          className="watch-context-menu-item"
+          onClick={() => {
+            onSetIcon(group);
+            onClose();
+          }}
+        >
+          <i className="bi bi-palette"></i>
+          <span>아이콘 설정</span>
+        </div>
+      )}
+      {!isLinked && (
+        <div
+          className="watch-context-menu-item"
+          onClick={() => {
+            onRename(group);
+            onClose();
+          }}
+        >
+          <i className="bi bi-pencil"></i>
+          <span>그룹 이름 변경</span>
+        </div>
+      )}
       <div
         className="watch-context-menu-item"
         onClick={() => {
@@ -120,27 +165,42 @@ function WatchContextMenu({ x, y, group, onClose, onAdd, onAddChild, onRename, o
         <i className="bi bi-hdd-network"></i>
         <span>관제 장비 설정</span>
       </div>
-      <div
-        className="watch-context-menu-item"
-        onClick={() => {
-          onAddChild(group);
-          onClose();
-        }}
-      >
-        <i className="bi bi-plus-lg"></i>
-        <span>하위 그룹 추가</span>
-      </div>
+      {!isLinked && (
+        <div
+          className="watch-context-menu-item"
+          onClick={() => {
+            onAddChild(group);
+            onClose();
+          }}
+        >
+          <i className="bi bi-plus-lg"></i>
+          <span>하위 그룹 추가</span>
+        </div>
+      )}
       <div className="watch-context-menu-divider"></div>
-      <div
-        className="watch-context-menu-item danger"
-        onClick={() => {
-          onDelete(group);
-          onClose();
-        }}
-      >
-        <i className="bi bi-trash"></i>
-        <span>삭제</span>
-      </div>
+      {isLinked ? (
+        <div
+          className="watch-context-menu-item danger"
+          onClick={() => {
+            onUnlink(group);
+            onClose();
+          }}
+        >
+          <i className="bi bi-link-45deg"></i>
+          <span>연동 해제</span>
+        </div>
+      ) : (
+        <div
+          className="watch-context-menu-item danger"
+          onClick={() => {
+            onDelete(group);
+            onClose();
+          }}
+        >
+          <i className="bi bi-trash"></i>
+          <span>삭제</span>
+        </div>
+      )}
     </div>,
     document.body
   );
@@ -183,6 +243,10 @@ function WatchGroupNode({
         return <span className="material-icons group-icon custom-icon">{iconName}</span>;
       }
     }
+    // 연동 그룹은 링크 아이콘
+    if (group.linkedGroupId) {
+      return <i className="bi bi-link-45deg group-icon custom-icon linked-icon"></i>;
+    }
     // 기본 아이콘
     return <i className="bi bi-speedometer2 group-icon custom-icon"></i>;
   };
@@ -203,16 +267,16 @@ function WatchGroupNode({
           <div className="toggle-icon" style={{ visibility: 'hidden' }}></div>
         )}
         <div
-          className={`group-item depth-${depth} ${isSelected ? 'selected' : ''}`}
+          className={`group-item depth-${depth} ${isSelected ? 'selected' : ''} ${group.linkedGroupId ? 'linked' : ''}`}
           data-group-id={group.watchGroupId}
-          draggable
+          draggable={!group.linkedGroupId}
           onClick={() => onSelect(group)}
           onContextMenu={(e) => {
             e.preventDefault();
             e.stopPropagation();
             onContextMenu(e, group);
           }}
-          onDragStart={(e) => onDragStart(e, group)}
+          onDragStart={(e) => !group.linkedGroupId && onDragStart(e, group)}
           onDragEnd={onDragEnd}
           onDragOver={(e) => onDragOver(e, group)}
           onDragLeave={onDragLeave}
@@ -274,11 +338,20 @@ export default function RealtimePerformance() {
     applyGlobalSettings,
     gridSize,
     setGridSize,
+    hiddenDeviceIds,
+    hideDevice,
+    showDevice,
+    showAllDevices,
+    deviceOrder,
+    setDeviceOrder,
   } = useWatchStore();
 
   // 첫 그룹 등록 모달 상태
   const [showFirstGroupModal, setShowFirstGroupModal] = useState(false);
   const [firstGroupName, setFirstGroupName] = useState('');
+
+  // 장비 그룹 가져오기 모달 상태
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // 사이드바 접힘 상태
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -286,6 +359,15 @@ export default function RealtimePerformance() {
   // 일괄 설정 드롭다운 상태
   const [showGlobalSettings, setShowGlobalSettings] = useState(false);
   const globalSettingsRef = useRef(null);
+
+  // 숨긴 장비 드롭다운 상태
+  const [showHiddenDropdown, setShowHiddenDropdown] = useState(false);
+  const hiddenDropdownRef = useRef(null);
+
+  // 드래그 앤 드롭
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   // 컨텍스트 메뉴 상태
   const [contextMenu, setContextMenu] = useState(null);
@@ -310,6 +392,7 @@ export default function RealtimePerformance() {
   const deleteGroupMutation = useDeleteWatchGroup();
   const moveGroupMutation = useMoveWatchGroup();
   const updateIconMutation = useUpdateWatchGroupIcon();
+  const deleteLinkedGroupMutation = useDeleteLinkedGroup();
 
   // SSE 기반 실시간 메트릭 (Redis 미사용)
   const {
@@ -369,6 +452,7 @@ export default function RealtimePerformance() {
       await startWatchMutation.mutateAsync(groupId);
       setIsWatching(true);
       setLastUpdated(new Date());
+      setSidebarCollapsed(true);
 
       // Heartbeat 시작 (30초 주기)
       heartbeatIntervalRef.current = setInterval(() => {
@@ -396,8 +480,10 @@ export default function RealtimePerformance() {
         heartbeatIntervalRef.current = null;
       }
 
-      // SSE 히스토리 초기화
+      // SSE 히스토리 + 캐시 초기화
       resetHistory();
+      lastDevicesRef.current = [];
+      stableVisibleRef.current = [];
     } catch (error) {
       console.error('관제 중지 실패:', error);
     }
@@ -410,6 +496,8 @@ export default function RealtimePerformance() {
     }
     setSelectedWatchGroup(group);
     resetHistory();
+    lastDevicesRef.current = [];
+    stableVisibleRef.current = [];
   };
 
   // 그룹 저장 (생성/수정)
@@ -446,6 +534,23 @@ export default function RealtimePerformance() {
     } catch (error) {
       console.error('그룹 삭제 실패:', error);
       alert('그룹 삭제에 실패했습니다.');
+    }
+  };
+
+  // 연동 해제
+  const handleUnlinkGroup = async (group) => {
+    if (!confirm(`"${group.groupName}" 연동을 해제하시겠습니까?`)) return;
+
+    try {
+      await deleteLinkedGroupMutation.mutateAsync(group.linkedGroupId);
+      if (selectedWatchGroup?.watchGroupId === group.watchGroupId) {
+        setSelectedWatchGroup(null);
+        setIsWatching(false);
+      }
+      refetchGroups();
+    } catch (error) {
+      console.error('연동 해제 실패:', error);
+      alert('연동 해제에 실패했습니다.');
     }
   };
 
@@ -667,22 +772,58 @@ export default function RealtimePerformance() {
     };
   }, []);
 
-  // 페이지 이탈 시 관제 중지
+  // 관제 중지 요청을 확실하게 전송 (페이지 이탈/언마운트 시에도 동작)
+  const fireAndForgetStop = useCallback((groupId) => {
+    if (!groupId) return;
+    const url = `/api/watch/stop/${groupId}`;
+    // sendBeacon: 페이지 닫힘/새로고침 시에도 브라우저가 요청 완료를 보장
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(url, new Blob(['{}'], { type: 'application/json' }));
+    } else {
+      fetch(url, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    }
+  }, []);
+
+  // ref로 최신 상태 추적 (cleanup에서 stale closure 방지)
+  const watchStateRef = useRef({ isWatching: false, groupId: null });
+  useEffect(() => {
+    watchStateRef.current = {
+      isWatching,
+      groupId: selectedWatchGroup?.watchGroupId || null,
+    };
+  }, [isWatching, selectedWatchGroup]);
+
+  // 페이지 닫기/새로고침 시 관제 중지
   useEffect(() => {
     const handleBeforeUnload = () => {
-      if (isWatching && selectedWatchGroup?.watchGroupId) {
-        stopWatchMutation.mutate(selectedWatchGroup.watchGroupId);
+      const { isWatching: watching, groupId } = watchStateRef.current;
+      if (watching && groupId) {
+        fireAndForgetStop(groupId);
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      if (isWatching && selectedWatchGroup?.watchGroupId) {
-        stopWatchMutation.mutate(selectedWatchGroup.watchGroupId);
+    };
+  }, [fireAndForgetStop]);
+
+  // 컴포넌트 언마운트 시 관제 중지 (SPA 페이지 이동)
+  useEffect(() => {
+    return () => {
+      const { isWatching: watching, groupId } = watchStateRef.current;
+      if (watching && groupId) {
+        fireAndForgetStop(groupId);
+        // Zustand 상태 즉시 초기화 (다시 돌아올 때 '대기 중' 표시)
+        setIsWatching(false);
+      }
+      // Heartbeat 정리
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
       }
     };
-  }, [isWatching, selectedWatchGroup]);
+  }, [fireAndForgetStop, setIsWatching]);
 
   // 일괄 설정 드롭다운 외부 클릭 감지
   useEffect(() => {
@@ -707,6 +848,164 @@ export default function RealtimePerformance() {
     });
   };
 
+  // ==================== 장비 숨기기 / 순서 관리 ====================
+  const groupId = selectedWatchGroup?.watchGroupId;
+  const currentHiddenIds = useMemo(() => (groupId && hiddenDeviceIds[groupId]) || [], [groupId, hiddenDeviceIds]);
+  const currentOrder = useMemo(() => (groupId && deviceOrder[groupId]) || [], [groupId, deviceOrder]);
+
+  // 마지막 유효 장비 데이터 캐시 (관제 중 데이터 일시 공백 시 위젯 유지용)
+  const lastDevicesRef = useRef([]);
+
+  // 현재 장비 목록 통합 (관제 중 or 미리보기)
+  // SSE 부분 수신 시 groupDetail 프리뷰와 병합하여 카드가 사라지지 않도록 처리
+  const currentDevices = useMemo(() => {
+    const previewDevices = (groupDetail?.devices && groupDetail.devices.length > 0)
+      ? groupDetail.devices.map(d => ({
+          deviceId: d.deviceId,
+          deviceName: d.deviceName,
+          deviceIp: d.deviceIp,
+          cpu: {},
+          mem: {},
+          interfaces: d.ifIndexes?.map(idx => ({ ifIndex: idx })) || [],
+          _isPreview: true,
+        }))
+      : [];
+
+    if (metricsData?.devices && metricsData.devices.length > 0) {
+      // SSE 데이터가 groupDetail보다 적으면 (부분 수신) → 프리뷰와 병합
+      if (previewDevices.length > 0 && metricsData.devices.length < previewDevices.length) {
+        const merged = new Map(previewDevices.map(d => [d.deviceId, d]));
+        metricsData.devices.forEach(d => merged.set(d.deviceId, d));
+        const result = Array.from(merged.values());
+        lastDevicesRef.current = result;
+        return result;
+      }
+      lastDevicesRef.current = metricsData.devices;
+      return metricsData.devices;
+    }
+    // 관제 중인데 SSE 데이터가 일시적으로 비어있으면 마지막 수신 데이터 유지
+    if (isWatching && lastDevicesRef.current.length > 0) {
+      return lastDevicesRef.current;
+    }
+    if (previewDevices.length > 0) {
+      return previewDevices;
+    }
+    return [];
+  }, [metricsData, groupDetail, isWatching]);
+
+  // 정렬 + 필터링된 장비 목록
+  const orderedVisibleDevices = useMemo(() => {
+    if (!currentDevices.length || !groupId) return [];
+    const hidden = new Set(currentHiddenIds);
+    const deviceMap = new Map(currentDevices.map(d => [d.deviceId, d]));
+    const allIds = currentDevices.map(d => d.deviceId);
+
+    const orderedIds = [];
+    const seen = new Set();
+
+    // 저장된 순서 우선
+    currentOrder.forEach(id => {
+      if (deviceMap.has(id) && !hidden.has(id) && !seen.has(id)) {
+        orderedIds.push(id);
+        seen.add(id);
+      }
+    });
+
+    // 새 장비 (순서에 없는 것)는 ID순으로 뒤에 추가
+    allIds.sort((a, b) => a - b).forEach(id => {
+      if (!seen.has(id) && !hidden.has(id)) {
+        orderedIds.push(id);
+        seen.add(id);
+      }
+    });
+
+    const result = orderedIds.map(id => deviceMap.get(id)).filter(Boolean);
+    console.log('[DEBUG-RENDER] orderedVisibleDevices:', result.length, '개, ids:', result.map(d => d.deviceId), 'currentDevices:', currentDevices.length, 'hidden:', currentHiddenIds.length);
+    return result;
+  }, [currentDevices, groupId, currentHiddenIds, currentOrder]);
+
+  // 관제 중 위젯이 절대 사라지지 않도록 마지막 유효 목록 캐시
+  const stableVisibleRef = useRef([]);
+  useEffect(() => {
+    if (orderedVisibleDevices.length > 0) {
+      stableVisibleRef.current = orderedVisibleDevices;
+    }
+  }, [orderedVisibleDevices]);
+
+  // 렌더링용: 관제 중 빈 목록이 되면 마지막 캐시 사용
+  const useStableFallback = isWatching && orderedVisibleDevices.length === 0 && stableVisibleRef.current.length > 0;
+  const renderDevices = useStableFallback ? stableVisibleRef.current : orderedVisibleDevices;
+  if (useStableFallback) {
+    console.warn('[DEBUG-RENDER] ⚠️ stableVisibleRef 폴백 사용! orderedVisible=0, stable=', stableVisibleRef.current.length);
+  }
+  console.log('[DEBUG-RENDER] renderDevices 최종:', renderDevices.length, '개, isWatching:', isWatching);
+
+  // 숨긴 장비 정보 (드롭다운 표시용)
+  const hiddenDevicesInfo = useMemo(() => {
+    if (!currentHiddenIds.length) return [];
+    const allDevices = [
+      ...(metricsData?.devices || []),
+      ...(groupDetail?.devices || []).map(d => ({
+        deviceId: d.deviceId,
+        deviceName: d.deviceName,
+        deviceIp: d.deviceIp,
+      })),
+    ];
+    const deviceMap = new Map(allDevices.map(d => [d.deviceId, d]));
+    return currentHiddenIds.map(id => deviceMap.get(id)).filter(Boolean);
+  }, [currentHiddenIds, metricsData, groupDetail]);
+
+  // 장비 숨기기
+  const handleHideDevice = useCallback((deviceId) => {
+    if (!groupId) return;
+    hideDevice(groupId, deviceId);
+  }, [groupId, hideDevice]);
+
+  // 장비 표시
+  const handleShowDevice = useCallback((deviceId) => {
+    if (!groupId) return;
+    showDevice(groupId, deviceId);
+    if (currentHiddenIds.length <= 1) {
+      setShowHiddenDropdown(false);
+    }
+  }, [groupId, showDevice, currentHiddenIds]);
+
+  // 모두 표시
+  const handleShowAllDevices = useCallback(() => {
+    if (!groupId) return;
+    showAllDevices(groupId);
+    setShowHiddenDropdown(false);
+  }, [groupId, showAllDevices]);
+
+  // 숨긴 장비 드롭다운 외부 클릭
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (hiddenDropdownRef.current && !hiddenDropdownRef.current.contains(e.target)) {
+        setShowHiddenDropdown(false);
+      }
+    };
+    if (showHiddenDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showHiddenDropdown]);
+
+  // ==================== 드래그 앤 드롭 핸들러 (장비 카드) ====================
+  const handleCardDragEnd = useCallback((event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !groupId) return;
+
+    const orderedIds = orderedVisibleDevices.map(d => d.deviceId);
+    const oldIndex = orderedIds.indexOf(active.id);
+    const newIndex = orderedIds.indexOf(over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newOrder = arrayMove(orderedIds, oldIndex, newIndex);
+    // 숨긴 장비도 순서에 보존
+    const hiddenInOrder = currentOrder.filter(id => currentHiddenIds.includes(id));
+    setDeviceOrder(groupId, [...newOrder, ...hiddenInOrder]);
+  }, [groupId, orderedVisibleDevices, currentOrder, currentHiddenIds, setDeviceOrder]);
+
   // 트리 구조를 1차원 배열로 풀기 (미니 사이드바용)
   const flattenedGroups = useMemo(() => {
     const result = [];
@@ -727,6 +1026,9 @@ export default function RealtimePerformance() {
       if (iconName.startsWith('fa-')) return <i className={`fa-solid ${iconName}`} />;
       if (iconName.startsWith('bi-')) return <i className={iconName} />;
       return <span className="material-icons">{iconName}</span>;
+    }
+    if (group.linkedGroupId) {
+      return <i className="bi bi-link-45deg linked-icon"></i>;
     }
     return <i className="bi bi-speedometer2"></i>;
   };
@@ -804,6 +1106,14 @@ export default function RealtimePerformance() {
               </div>
             )}
           </div>
+          {!sidebarCollapsed && (
+            <div className="sidebar-footer">
+              <button className="import-group-btn" onClick={() => setShowImportModal(true)}>
+                <i className="bi bi-box-arrow-in-down"></i>
+                장비 그룹 가져오기
+              </button>
+            </div>
+          )}
         </aside>
 
         {/* 메인 콘텐츠 영역 */}
@@ -851,6 +1161,42 @@ export default function RealtimePerformance() {
                       </button>
                     ))}
                   </div>
+                  {currentHiddenIds.length > 0 && (
+                    <div className="hidden-devices-wrapper" ref={hiddenDropdownRef}>
+                      <button
+                        className="hidden-devices-badge"
+                        onClick={() => setShowHiddenDropdown(!showHiddenDropdown)}
+                      >
+                        <i className="bi bi-eye-slash"></i>
+                        숨김 {currentHiddenIds.length}
+                      </button>
+                      {showHiddenDropdown && (
+                        <div className="hidden-devices-dropdown">
+                          <div className="hidden-devices-header">숨긴 장비</div>
+                          {hiddenDevicesInfo.map(device => (
+                            <div key={device.deviceId} className="hidden-device-item">
+                              <div className="hidden-device-info">
+                                <span className="hidden-device-name">{device.deviceName}</span>
+                                <span className="hidden-device-ip">{device.deviceIp}</span>
+                              </div>
+                              <button
+                                className="hidden-device-show-btn"
+                                onClick={() => handleShowDevice(device.deviceId)}
+                              >
+                                표시
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            className="hidden-devices-show-all"
+                            onClick={handleShowAllDevices}
+                          >
+                            모두 표시
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="global-settings-wrapper" ref={globalSettingsRef}>
                     <button
                       className="btn btn-icon"
@@ -995,45 +1341,45 @@ export default function RealtimePerformance() {
               </div>
 
               {/* 장비 카드 그리드 */}
-              <div className="watch-content-wrapper">
-                <div className={`watch-content-grid grid-${gridSize.toLowerCase()}`}>
-                  {metricsData?.devices && metricsData.devices.length > 0 ? (
-                    [...metricsData.devices].sort((a, b) => a.deviceId - b.deviceId).map((device) => (
-                      <DeviceMetricCard
-                        key={device.deviceId}
-                        device={device}
-                        history={deviceHistories[device.deviceId] || []}
-                      />
-                    ))
-                  ) : isWatching ? (
-                    <div className="watch-loading-full">
-                      <div className="spinner"></div>
-                      <p>메트릭 데이터 수집 중...</p>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleCardDragEnd}
+                modifiers={[restrictHorizontalToWindow]}
+                autoScroll={false}
+              >
+                <div className="watch-content-wrapper">
+                  <SortableContext
+                    items={renderDevices.map(d => d.deviceId)}
+                    strategy={rectSortingStrategy}
+                  >
+                    <div className={`watch-content-grid grid-${gridSize.toLowerCase()}`}>
+                      {renderDevices.length > 0 ? (
+                        renderDevices.map((device) => (
+                          <SortableDeviceCard
+                            key={device.deviceId}
+                            id={device.deviceId}
+                            device={device}
+                            history={deviceHistories[device.deviceId] || []}
+                            onHide={handleHideDevice}
+                          />
+                        ))
+                      ) : isWatching ? (
+                        <div className="watch-loading-full">
+                          <div className="spinner"></div>
+                          <p>메트릭 데이터 수집 중...</p>
+                        </div>
+                      ) : (
+                        <div className="watch-no-selection-full">
+                          <i className="bi bi-hdd-network"></i>
+                          <h2>장비가 없습니다</h2>
+                          <p>그룹을 수정하여 장비를 추가해주세요.</p>
+                        </div>
+                      )}
                     </div>
-                  ) : groupDetail?.devices && groupDetail.devices.length > 0 ? (
-                    [...groupDetail.devices].sort((a, b) => a.deviceId - b.deviceId).map((device) => (
-                      <DeviceMetricCard
-                        key={device.deviceId}
-                        device={{
-                          deviceId: device.deviceId,
-                          deviceName: device.deviceName,
-                          deviceIp: device.deviceIp,
-                          cpu: {},
-                          mem: {},
-                          interfaces: device.ifIndexes?.map(idx => ({ ifIndex: idx })) || [],
-                        }}
-                        history={[]}
-                      />
-                    ))
-                  ) : (
-                    <div className="watch-no-selection-full">
-                      <i className="bi bi-hdd-network"></i>
-                      <h2>장비가 없습니다</h2>
-                      <p>그룹을 수정하여 장비를 추가해주세요.</p>
-                    </div>
-                  )}
+                  </SortableContext>
                 </div>
-              </div>
+              </DndContext>
             </>
           ) : (
             <div className="watch-no-selection">
@@ -1068,6 +1414,7 @@ export default function RealtimePerformance() {
           onEditDevices={(group) => openGroupModal(group, null, 'devices')}
           onDelete={handleDeleteGroup}
           onSetIcon={handleSetIcon}
+          onUnlink={handleUnlinkGroup}
         />
       )}
 
@@ -1078,6 +1425,12 @@ export default function RealtimePerformance() {
           onSuccess={() => refetchGroups()}
         />
       )}
+
+      {/* 장비 그룹 가져오기 모달 */}
+      <ImportGroupModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+      />
 
       {/* 첫 관제 그룹 등록 모달 */}
       {showFirstGroupModal && (

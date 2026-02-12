@@ -70,6 +70,20 @@ export const watchApi = {
     return apiClient.get(`/watch/groups/${watchGroupId}/descendants/count`);
   },
 
+  // ==================== 장비 그룹 연동 ====================
+
+  // 장비 그룹 가져오기 (R_GROUP_T → R_WATCH_GROUP_T 연동)
+  importFromGroups: (groupIds) =>
+    apiClient.post('/watch/groups/import', { groupIds }),
+
+  // 이미 연동된 GROUP_ID 목록 조회
+  getLinkedGroupIds: () =>
+    apiClient.get('/watch/groups/linked-ids'),
+
+  // 연동 해제
+  deleteLinkedGroup: (linkedGroupId) =>
+    apiClient.delete(`/watch/groups/linked/${linkedGroupId}`),
+
   // ==================== 관제 시작/중지/Heartbeat ====================
 
   // 관제 수집 시작

@@ -82,10 +82,17 @@ export default function AssetManagement() {
   const [faultTotal, setFaultTotal] = useState(0);
   const [faultSortField, setFaultSortField] = useState('OCCUR_AT');
   const [faultSortOrder, setFaultSortOrder] = useState('desc');
+  const [showFaultAckModal, setShowFaultAckModal] = useState(false);
+  const [faultAckMessage, setFaultAckMessage] = useState('');
+  const [selectedFaultError, setSelectedFaultError] = useState(null);
 
   // 검색 상태
   const [searchDeviceName, setSearchDeviceName] = useState('');
   const [searchDeviceIp, setSearchDeviceIp] = useState('');
+  const [searchDevCode, setSearchDevCode] = useState('');
+
+  // 장비 코드 목록
+  const [devCodes, setDevCodes] = useState([]);
 
   // 차트 표시할 포트 Set (세션 기반 - IF_INDEX 저장)
   const [chartPortsSet, setChartPortsSet] = useState(new Set());
@@ -115,24 +122,55 @@ export default function AssetManagement() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showTrafficSettings]);
 
+  // ESC 키로 모달 닫기 (가장 위 모달부터 순차 닫기)
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key !== 'Escape') return;
+      if (showFaultAckModal) { setShowFaultAckModal(false); return; }
+      if (sshAlertDevice) { setSshAlertDevice(null); return; }
+      if (showSnmpModal) { setShowSnmpModal(false); return; }
+      if (showMoveGroupModal) { setShowMoveGroupModal(false); setTargetGroup(null); return; }
+      if (showSettingsSidebar) { setShowSettingsSidebar(false); return; }
+      if (detailDevice) { setDetailDevice(null); return; }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [showFaultAckModal, sshAlertDevice, showSnmpModal, showMoveGroupModal, showSettingsSidebar, detailDevice]);
+
+  // 장비 코드 목록 로드
+  useEffect(() => {
+    const loadDevCodes = async () => {
+      try {
+        const response = await devicesApi.getDevCodeTree();
+        setDevCodes(response.data?.data || []);
+      } catch (error) {
+        console.error('장비 코드 조회 실패:', error);
+      }
+    };
+    loadDevCodes();
+  }, []);
+
   // 그룹 변경 시 페이지 및 검색 초기화
   useEffect(() => {
     setPage(1);
     setSelectedDevices([]);
     setSearchDeviceName('');
     setSearchDeviceIp('');
+    setSearchDevCode('');
   }, [selectedGroup?.GROUP_ID]);
 
   // 검색 파라미터 (useMemo로 불필요한 객체 생성 방지)
   const searchParams = useMemo(() => ({
     deviceName: searchDeviceName.trim(),
-    deviceIp: searchDeviceIp.trim()
-  }), [searchDeviceName, searchDeviceIp]);
+    deviceIp: searchDeviceIp.trim(),
+    devCodeId: searchDevCode || undefined,
+  }), [searchDeviceName, searchDeviceIp, searchDevCode]);
 
   // 검색 초기화 함수
   const handleSearchReset = () => {
     setSearchDeviceName('');
     setSearchDeviceIp('');
+    setSearchDevCode('');
     setPage(1);
   };
 
@@ -916,9 +954,23 @@ export default function AssetManagement() {
       width: '70px',
       sortable: true,
       align: 'center',
+      hideable: true,
       render: (value) => (
         <span className={`severity-badge ${getFaultLevelClass(value)}`}>
           {getFaultLevelLabel(value)}
+        </span>
+      ),
+    },
+    {
+      key: 'ERROR_FLAG',
+      label: '상태',
+      width: '80px',
+      sortable: true,
+      align: 'center',
+      hideable: true,
+      render: (value, row) => (
+        <span className={`status-badge ${row._isActive ? (value === 1 ? 'acknowledged' : 'active') : 'cleared'}`}>
+          {row._isActive ? (value === 1 ? '인지' : '발생') : '해소'}
         </span>
       ),
     },
@@ -934,6 +986,7 @@ export default function AssetManagement() {
       width: '155px',
       sortable: true,
       className: 'cell-date',
+      hideable: true,
       render: (value) => formatFaultDate(value),
     },
     {
@@ -942,13 +995,31 @@ export default function AssetManagement() {
       width: '155px',
       sortable: true,
       className: 'cell-date',
+      hideable: true,
       render: (value, row) => row._isActive ? <span style={{ color: '#ef4444', fontWeight: 500 }}>진행 중</span> : formatFaultDate(value),
     },
     {
       key: 'duration',
       label: '소요 시간',
       width: '110px',
+      hideable: true,
       render: (_, row) => calcDuration(row.OCCUR_AT, row.CLEAR_AT),
+    },
+    {
+      key: 'actions',
+      label: '인지',
+      width: '70px',
+      align: 'center',
+      render: (_, row) => row._isActive ? (
+        <button
+          className="action-btn"
+          title="인지처리"
+          onClick={(e) => handleFaultAckClick(row, e)}
+          disabled={row.ERROR_FLAG === 1}
+        >
+          <i className="bi bi-check-lg"></i>
+        </button>
+      ) : null,
     },
   ], []);
 
@@ -960,6 +1031,53 @@ export default function AssetManagement() {
       setFaultSortOrder('desc');
     }
     setFaultPage(1);
+  };
+
+  // 장애 인지 버튼 클릭
+  const handleFaultAckClick = (error, e) => {
+    e.stopPropagation();
+    setSelectedFaultError(error);
+    setShowFaultAckModal(true);
+  };
+
+  // 장애 인지 처리
+  const handleFaultAcknowledge = async () => {
+    if (!selectedFaultError) return;
+    try {
+      await faultApi.acknowledgeError(selectedFaultError.ERROR_ID, faultAckMessage);
+      setShowFaultAckModal(false);
+      setFaultAckMessage('');
+      setSelectedFaultError(null);
+      // 장애 데이터 새로고침 (useEffect 트리거)
+      setFaultSortOrder(prev => prev);
+      // 직접 재조회
+      setFaultLoading(true);
+      const errRes = await faultApi.getErrors({ deviceId: detailDevice.DEVICE_ID });
+      const activeList = errRes.data?.data?.list || [];
+      const deviceActiveErrors = Array.isArray(activeList)
+        ? activeList.filter(e => e.DEVICE_ID === detailDevice.DEVICE_ID)
+        : [];
+      const histRes = await faultApi.getHistory({
+        page: faultPage, size: faultPageSize,
+        sortKey: faultSortField, sortDirection: faultSortOrder,
+        deviceId: detailDevice.DEVICE_ID,
+      });
+      const histData = histRes.data?.data || {};
+      const histList = histData.content || [];
+      const activeFormatted = deviceActiveErrors.map((e, i) => ({
+        ...e, _isActive: true, _faultRowId: `active_${e.ERROR_ID || i}`,
+      }));
+      const histFormatted = histList.map((e, i) => ({
+        ...e, _faultRowId: `hist_${e.ERROR_HISTORY_ID || i}`,
+      }));
+      setFaultData([...activeFormatted, ...histFormatted]);
+      setFaultTotal(deviceActiveErrors.length + (histData.totalElements || 0));
+      setFaultLoading(false);
+    } catch (error) {
+      console.error('인지 처리 실패:', error);
+      alert('인지 처리에 실패했습니다.');
+      setFaultLoading(false);
+    }
   };
 
   // 포트 테이블 컬럼 정의
@@ -1142,6 +1260,7 @@ export default function AssetManagement() {
       width: '120px',
       sortable: true,
       className: 'cell-truncate',
+      hideable: true,
       render: (value) => (
         <span style={{ color: '#94a3b8', fontSize: '12px' }}>{value || '-'}</span>
       ),
@@ -1152,6 +1271,7 @@ export default function AssetManagement() {
       width: '150px',
       sortable: true,
       className: 'cell-truncate',
+      hideable: true,
     },
     {
       key: 'DEVICE_IP',
@@ -1159,6 +1279,7 @@ export default function AssetManagement() {
       width: '130px',
       sortable: true,
       className: 'cell-ip',
+      hideable: true,
     },
     {
       key: 'MODEL_NAME',
@@ -1166,6 +1287,7 @@ export default function AssetManagement() {
       width: '120px',
       sortable: true,
       className: 'cell-truncate',
+      hideable: true,
     },
     {
       key: 'VENDOR_NAME',
@@ -1173,6 +1295,8 @@ export default function AssetManagement() {
       width: '100px',
       sortable: true,
       className: 'cell-truncate',
+      hideable: true,
+      defaultHidden: true,
     },
     {
       key: 'PORT_COUNT',
@@ -1180,6 +1304,7 @@ export default function AssetManagement() {
       width: '80px',
       sortable: true,
       align: 'center',
+      hideable: true,
       render: (value) => value != null ? <span className="port-badge">{value}</span> : '-',
     },
     {
@@ -1188,6 +1313,7 @@ export default function AssetManagement() {
       width: '100px',
       sortable: true,
       className: 'cell-date',
+      hideable: true,
       render: (value) => formatDate(value),
     },
     {
@@ -1195,6 +1321,7 @@ export default function AssetManagement() {
       label: 'SSH',
       width: '70px',
       align: 'center',
+      hideable: true,
       render: (_, row) => (
         <button
           className="action-btn"
@@ -1211,6 +1338,7 @@ export default function AssetManagement() {
       label: '상태',
       width: '60px',
       align: 'center',
+      hideable: true,
       render: (_, row) => {
         const errorLevel = deviceErrorMap?.get(row.DEVICE_ID);
         if (!errorLevel) {
@@ -1257,7 +1385,7 @@ export default function AssetManagement() {
         ) : isLoading ? (
           <p style={{ color: '#94a3b8' }}>로딩 중...</p>
         ) : (
-          <div id="device-list-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+          <div id="device-list-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
             {selectedDevices.length > 0 && (
               <div style={{ display: 'flex', marginBottom: '12px', gap: '8px' }}>
                 <button
@@ -1281,6 +1409,21 @@ export default function AssetManagement() {
             {/* 검색 필터 바 + 테이블 통합 */}
             <div className="table-panel">
               <div className="filter-bar">
+                <div className="filter-group">
+                  <label>장비코드</label>
+                  <select
+                    className="filter-select"
+                    value={searchDevCode}
+                    onChange={(e) => setSearchDevCode(e.target.value)}
+                  >
+                    <option value="">전체</option>
+                    {devCodes.map((code) => (
+                      <option key={code.DEV_CODE_ID} value={code.DEV_CODE_ID}>
+                        {code.CODE_NM}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div className="filter-group">
                   <label>장비명</label>
                   <input
@@ -1355,13 +1498,12 @@ export default function AssetManagement() {
 
       {/* 장비 상세 보기 모달 */}
       {detailDevice && (
-        <div id="device-detail-modal" className="modal" style={{ display: 'flex' }}>
-          <div className="modal-content device-detail-modal" style={{ position: 'relative', overflow: 'hidden' }}>
+        <div id="device-detail-modal" className="modal" style={{ display: 'flex' }} onClick={() => setDetailDevice(null)}>
+          <div className="modal-content device-detail-modal" style={{ position: 'relative', overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
             <span className="close-btn" onClick={() => setDetailDevice(null)}>&times;</span>
 
             {/* 장비 설정 사이드바 (모달 내부 오버레이) */}
-            {showSettingsSidebar && (
-              <div className="settings-sidebar-overlay" onClick={() => setShowSettingsSidebar(false)}>
+              <div className={`settings-sidebar-overlay${showSettingsSidebar ? ' open' : ''}`} onClick={() => setShowSettingsSidebar(false)}>
                 <div className="settings-sidebar" onClick={(e) => e.stopPropagation()}>
                   <div className="settings-sidebar-header">
                     <div className="settings-sidebar-title">
@@ -1528,7 +1670,6 @@ export default function AssetManagement() {
                   </div>
                 </div>
               </div>
-            )}
 
             {/* 탭 헤더 */}
             <div className="detail-tabs-row">
@@ -1884,7 +2025,7 @@ export default function AssetManagement() {
                   }}
                   exportConfig={{
                     fileName: `장애조회_${detailDevice?.DEVICE_NAME || ''}`,
-                    excludeColumns: ['_isActive'],
+                    excludeColumns: ['_isActive', 'actions'],
                     fetchAllData: async () => {
                       const [errRes, histRes] = await Promise.all([
                         faultApi.getErrors({ deviceId: detailDevice.DEVICE_ID }),
@@ -1897,6 +2038,43 @@ export default function AssetManagement() {
                     },
                   }}
                 />
+
+                {/* 장애 인지 처리 모달 */}
+                {showFaultAckModal && (
+                  <div className="modal-overlay" onClick={() => setShowFaultAckModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                      <div className="modal-header">
+                        <h3>장애 인지 처리</h3>
+                        <button className="modal-close" onClick={() => setShowFaultAckModal(false)}>
+                          <i className="bi bi-x-lg"></i>
+                        </button>
+                      </div>
+                      <div className="modal-body">
+                        <div className="ack-info">
+                          <p><strong>장비:</strong> {detailDevice?.DEVICE_NAME} ({detailDevice?.DEVICE_IP})</p>
+                          <p><strong>장애:</strong> {selectedFaultError?.ERROR_MESSAGE}</p>
+                        </div>
+                        <div className="form-group">
+                          <label>인지 메시지</label>
+                          <textarea
+                            value={faultAckMessage}
+                            onChange={(e) => setFaultAckMessage(e.target.value)}
+                            placeholder="인지 처리 메시지를 입력하세요..."
+                            rows={3}
+                          />
+                        </div>
+                      </div>
+                      <div className="modal-footer">
+                        <button className="btn btn-secondary" onClick={() => setShowFaultAckModal(false)}>
+                          취소
+                        </button>
+                        <button className="btn btn-primary" onClick={handleFaultAcknowledge}>
+                          인지 처리
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1917,7 +2095,7 @@ export default function AssetManagement() {
           zIndex: 9999,
           alignItems: 'center',
           justifyContent: 'center'
-        }}>
+        }} onClick={() => { setShowMoveGroupModal(false); setTargetGroup(null); }}>
           <div className="modal-content" style={{
             maxWidth: '450px',
             width: '90%',
@@ -1927,7 +2105,7 @@ export default function AssetManagement() {
             border: '1px solid rgba(255, 255, 255, 0.1)',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
             position: 'relative'
-          }}>
+          }} onClick={(e) => e.stopPropagation()}>
             <span
               onClick={() => { setShowMoveGroupModal(false); setTargetGroup(null); }}
               style={{
@@ -2007,8 +2185,8 @@ export default function AssetManagement() {
 
       {/* SNMP 설정 모달 */}
       {showSnmpModal && (
-        <div className="modal" style={{ display: 'flex' }}>
-          <div className="modal-content" style={{ maxWidth: '500px' }}>
+        <div className="modal" style={{ display: 'flex' }} onClick={() => setShowSnmpModal(false)}>
+          <div className="modal-content" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
             <span className="close-btn" onClick={() => setShowSnmpModal(false)}>&times;</span>
             <h2 id="modal-title">SNMP 설정</h2>
 

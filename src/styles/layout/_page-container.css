@@ -17,14 +17,17 @@
     gap: var(--spacing-4);
     height: calc(100vh - 80px - var(--spacing-3));
     animation: fadeInUp 0.6s ease;
+    overflow: hidden;
 }
 
 /* 패널 래퍼 - 사이드바와 메인 컨텐츠를 감싸는 컨테이너 */
 .page-panels-wrapper {
-    display: flex;
+    display: grid;
+    grid-template-columns: var(--page-sidebar-width) minmax(0, 1fr);
     gap: var(--spacing-4);
     flex: 1;
     min-height: 0;
+    min-width: 0;
     position: relative;
     padding: 10px;
     border-radius: calc(var(--radius-3xl) + 10px);
@@ -206,10 +209,11 @@
     box-shadow: var(--theme-shadow-sm);
     transition: all var(--transition-normal);
     position: relative;
-    overflow: visible;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     flex: 1;
+    min-width: 0;
 }
 
 /* 상단 하이라이트 */
@@ -392,11 +396,10 @@
     }
 
     .page-panels-wrapper {
-        flex-direction: column;
+        grid-template-columns: 1fr;
     }
 
     .page-sidebar {
-        flex: none;
         max-height: 400px;
     }
 }
