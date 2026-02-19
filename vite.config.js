@@ -25,6 +25,7 @@ export default defineConfig({
     global: 'globalThis',
   },
   server: {
+    host: '0.0.0.0',
     port: 3000,
     proxy: {
       // Go Middleware SSE 스트림 (직접 연결)
@@ -37,9 +38,14 @@ export default defineConfig({
         target: 'ws://localhost:8082',
         ws: true,
       },
+      // SFTP API (SSH 서버와 같은 포트)
+      '/api/sftp': {
+        target: 'http://localhost:8082',
+        changeOrigin: true,
+      },
       // Spring Boot API (기존)
       '/api': {
-        target: 'http://192.168.3.114:8080',
+        target: 'http://localhost:8080',
         changeOrigin: true,
       },
     },

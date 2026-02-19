@@ -299,6 +299,14 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
   const [backgroundImage, setBackgroundImage] = useState(null);
   const backgroundImageRef = useRef(null);
 
+  // 주기적 갱신 시 줌/팬 리셋 방지용 ref
+  const zoomedForGroupRef = useRef(null);
+
+  // 그룹 호버 툴팁
+  const [hoveredGroup, setHoveredGroup] = useState(null);
+  const tooltipHideTimer = useRef(null);
+  const isTooltipHovered = useRef(false);
+
   // 장애 데이터 (장비/그룹별 최고 등급)
   const { deviceErrorMap, groupErrorMap, errors: activeErrors } = useDeviceErrorLevels();
   const deviceErrorMapRef = useRef(deviceErrorMap);
@@ -471,18 +479,29 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
     }
   }, [graphData.nodes.length]);
 
+  // 그룹 변경 시 줌 추적 리셋
+  useEffect(() => {
+    zoomedForGroupRef.current = null;
+  }, [displayGroupId]);
+
   useEffect(() => {
     if (graphRef.current && (graphData.nodes.length > 0 || backgroundImage)) {
+      // 이미 현재 그룹에서 줌 완료 → 주기적 갱신이므로 줌 리셋 안 함
+      if (zoomedForGroupRef.current === displayGroupId) return;
+
       const timer1 = setTimeout(adjustZoom, 100);
       const timer2 = setTimeout(adjustZoom, 300);
-      const timer3 = setTimeout(adjustZoom, 500);
+      const timer3 = setTimeout(() => {
+        adjustZoom();
+        zoomedForGroupRef.current = displayGroupId;
+      }, 500);
       return () => {
         clearTimeout(timer1);
         clearTimeout(timer2);
         clearTimeout(timer3);
       };
     }
-  }, [graphData.nodes.length, dimensions, backgroundImage, adjustZoom]);
+  }, [graphData.nodes.length, dimensions, backgroundImage, adjustZoom, displayGroupId]);
 
   const NODE_SIZE = 36;
 
@@ -694,7 +713,13 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
   // 장애 존재 시 펄스 애니메이션을 위한 주기적 re-render (~20fps)
   const hasFaults = deviceErrorMap.size > 0 || groupErrorMap.size > 0;
   useEffect(() => {
-    if (!hasFaults) return;
+    if (!hasFaults) {
+      // 장애가 해제되었을 때 마지막 repaint (색상 복원)
+      if (graphRef.current) {
+        graphRef.current.d3ReheatSimulation?.();
+      }
+      return;
+    }
     const timer = setInterval(() => {
       if (graphRef.current) {
         graphRef.current.d3ReheatSimulation?.();
@@ -704,6 +729,8 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
   }, [hasFaults]);
 
   const handleNodeClick = useCallback((node) => {
+    setHoveredGroup(null);
+    setExpandedLevel(null);
     if (node.nodeType === 'group' || node.type === 'group') {
       // 그룹 클릭 시 위젯 내에서 해당 그룹으로 이동
       let groupId = node.groupId || node.id;
@@ -726,6 +753,80 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
       }
     }
   }, [displayGroupId, onDeviceClick]);
+
+  // 그룹 호버 시 장애 건수 툴팁
+  const getGroupFaultInfo = useCallback((groupName) => {
+    if (!groupName || !activeErrors?.length) return null;
+
+    // 해당 그룹 + 하위 그룹명 수집
+    const targetNames = new Set([groupName]);
+    const findDescendants = (nodes) => {
+      for (const node of nodes) {
+        if (targetNames.has(node.GROUP_NAME)) {
+          if (node.children?.length > 0) {
+            node.children.forEach(child => {
+              targetNames.add(child.GROUP_NAME);
+            });
+            findDescendants(node.children);
+          }
+        } else if (node.children?.length > 0) {
+          findDescendants(node.children);
+        }
+      }
+    };
+    if (groupTree) findDescendants(groupTree);
+
+    const counts = { C: 0, M: 0, N: 0, W: 0, total: 0 };
+    const details = { C: [], M: [], N: [], W: [] };
+    activeErrors.forEach(err => {
+      if (targetNames.has(err.GROUP_NAME) && counts.hasOwnProperty(err.ERROR_LEVEL)) {
+        counts[err.ERROR_LEVEL]++;
+        counts.total++;
+        details[err.ERROR_LEVEL].push(err);
+      }
+    });
+    return counts.total > 0 ? { counts, details } : null;
+  }, [activeErrors, groupTree]);
+
+  const [expandedLevel, setExpandedLevel] = useState(null);
+
+  const hideTooltip = useCallback(() => {
+    setHoveredGroup(null);
+    setExpandedLevel(null);
+    isTooltipHovered.current = false;
+  }, []);
+
+  const handleNodeHover = useCallback((node) => {
+    clearTimeout(tooltipHideTimer.current);
+
+    if (!node || !(node.nodeType === 'group' || node.type === 'group')) {
+      // 노드를 벗어남 → 잠시 대기 후 숨김 (툴팁으로 이동 가능)
+      tooltipHideTimer.current = setTimeout(() => {
+        if (!isTooltipHovered.current) hideTooltip();
+      }, 250);
+      return;
+    }
+    const gName = node.name || node.groupName;
+    const info = getGroupFaultInfo(gName);
+    if (!info) { hideTooltip(); return; }
+
+    // 노드 좌표 → 화면 좌표 변환
+    if (graphRef.current) {
+      const { x, y } = graphRef.current.graph2ScreenCoords(node.x, node.y);
+      setHoveredGroup({ name: gName, ...info, x, y });
+      setExpandedLevel(null);
+    }
+  }, [getGroupFaultInfo, hideTooltip]);
+
+  const handleTooltipEnter = useCallback(() => {
+    clearTimeout(tooltipHideTimer.current);
+    isTooltipHovered.current = true;
+  }, []);
+
+  const handleTooltipLeave = useCallback(() => {
+    isTooltipHovered.current = false;
+    hideTooltip();
+  }, [hideTooltip]);
 
   const handleBackClick = useCallback(() => {
     if (groupHistory.length > 0) {
@@ -808,6 +909,7 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
           linkColor={() => '#475569'}
           linkWidth={2}
           onNodeClick={handleNodeClick}
+          onNodeHover={handleNodeHover}
           enableZoomInteraction={true}
           enablePanInteraction={true}
           enableNodeDrag={false}
@@ -830,6 +932,60 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
           }}
         />
       )}
+      {/* 그룹 장애 현황 툴팁 */}
+      {hoveredGroup && (
+        <div
+          className="topology-fault-tooltip"
+          style={{ left: hoveredGroup.x + 20, top: hoveredGroup.y - 10 }}
+          onMouseEnter={handleTooltipEnter}
+          onMouseLeave={handleTooltipLeave}
+        >
+          <div className="topology-fault-tooltip-title">{hoveredGroup.name}</div>
+          <div className="topology-fault-tooltip-body">
+            {[
+              { level: 'C', label: 'Critical', color: '#ef4444' },
+              { level: 'M', label: 'Major',    color: '#f97316' },
+              { level: 'N', label: 'Minor',    color: '#eab308' },
+              { level: 'W', label: 'Warning',  color: '#3b82f6' },
+            ].map(({ level, label, color }) => hoveredGroup.counts[level] > 0 && (
+              <div key={level}>
+                <div
+                  className={`topology-fault-row ${expandedLevel === level ? 'expanded' : ''}`}
+                  onClick={() => setExpandedLevel(prev => prev === level ? null : level)}
+                >
+                  <span className="topology-fault-dot" style={{ background: color }} />
+                  <span>{label}</span>
+                  <strong>{hoveredGroup.counts[level]}</strong>
+                  <i className={`bi bi-chevron-${expandedLevel === level ? 'up' : 'down'} topology-fault-chevron`} />
+                </div>
+                {expandedLevel === level && (
+                  <div className="topology-fault-detail">
+                    {hoveredGroup.details[level].slice(0, 10).map((err, i) => (
+                      <div key={err.ERROR_ID || i} className="topology-fault-detail-item">
+                        <span className="topology-fault-detail-name" title={err.DEVICE_NAME}>
+                          {err.DEVICE_NAME || '-'}
+                        </span>
+                        <span className="topology-fault-detail-ip">{err.DEVICE_IP || ''}</span>
+                        <span className="topology-fault-detail-msg" title={err.ERROR_MESSAGE}>
+                          {err.ERROR_MESSAGE || '-'}
+                        </span>
+                      </div>
+                    ))}
+                    {hoveredGroup.details[level].length > 10 && (
+                      <div className="topology-fault-detail-more">
+                        외 {hoveredGroup.details[level].length - 10}건
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+            <div className="topology-fault-total">
+              총 <strong>{hoveredGroup.counts.total}</strong>건
+            </div>
+          </div>
+        </div>
+      )}
       {/* 뒤로 가기 버튼 (하위 그룹에 있을 때만 표시) */}
       {currentGroupId && groupHistory.length > 0 && (
         <button className="topology-back-btn" onClick={handleBackClick} title="뒤로 가기">
@@ -849,7 +1005,7 @@ const DEVICE_COLOR_PALETTE = [
 ];
 
 // 사용자 정의 위젯 차트 컨텐츠 (백엔드 데이터 사용)
-function CustomWidgetContent({ widget, isEditMode }) {
+function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
   const containerRef = useRef(null);
   const [tooltipOnLeft, setTooltipOnLeft] = useState(false);
 
@@ -1241,6 +1397,14 @@ function CustomWidgetContent({ widget, isEditMode }) {
     : [];
 
   // ECharts 옵션 생성
+  const CHART_ANIMATION = {
+    animation: true,
+    animationDuration: 600,
+    animationDurationUpdate: 800,
+    animationEasing: 'cubicOut',
+    animationEasingUpdate: 'cubicInOut',
+  };
+
   const getChartOption = (tooltipOnLeft = false) => {
     const elementMeta = elements.length > 0 ? MONITORING_ELEMENTS[elements[0]] : null;
     const elementName = elementMeta?.name || '모니터링';
@@ -1333,6 +1497,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
             .map((item, idx) => ({
               name: item.deviceName,
               value: item.piePct,
+              deviceId: item.deviceId,
               itemStyle: {
                 color: DEVICE_COLOR_PALETTE[idx % DEVICE_COLOR_PALETTE.length]
               }
@@ -1466,18 +1631,21 @@ function CustomWidgetContent({ widget, isEditMode }) {
         });
 
         return {
+          ...CHART_ANIMATION,
           backgroundColor: 'transparent',
           title: titles,
           tooltip: {
             trigger: 'item',
+            confine: true,
             formatter: (params) => {
-              // 빈 데이터 시리즈는 툴팁 표시 안함
               if (params.data.name === '데이터 없음') return '';
-              return `${params.seriesName}<br/>${params.name}: ${params.percent}%`;
+              return `<span style="font-size:11px">${params.seriesName}<br/>${params.name}: ${params.percent}%</span>`;
             },
             backgroundColor: '#1e293b',
             borderColor: '#334155',
-            textStyle: { color: '#f1f5f9' }
+            padding: [4, 8],
+            textStyle: { color: '#f1f5f9', fontSize: 11 },
+            extraCssText: 'max-width:200px; box-shadow:0 2px 8px rgba(0,0,0,0.3);'
           },
           series: [...series, ...emptySeries]
         };
@@ -1489,6 +1657,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
         .map(item => ({
           name: item.deviceName,
           value: item.value,
+          deviceId: item.deviceId,
           itemStyle: { color: item.color }
         }));
 
@@ -1532,13 +1701,17 @@ function CustomWidgetContent({ widget, isEditMode }) {
       }
 
       return {
+        ...CHART_ANIMATION,
         backgroundColor: 'transparent',
         tooltip: {
           trigger: 'item',
+          confine: true,
           formatter: '{b}: {d}%',
           backgroundColor: '#1e293b',
           borderColor: '#334155',
-          textStyle: { color: '#f1f5f9' }
+          padding: [4, 8],
+          textStyle: { color: '#f1f5f9', fontSize: 11 },
+          extraCssText: 'max-width:200px; box-shadow:0 2px 8px rgba(0,0,0,0.3);'
         },
         legend: {
           orient: 'vertical',
@@ -1632,7 +1805,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
             const found = rawChartData.find(
               item => item.metric === metric && item.deviceName === deviceName
             );
-            return found ? found.barPct : 0;
+            return found ? { value: found.barPct, deviceId: found.deviceId } : 0;
           });
 
           return {
@@ -1647,19 +1820,22 @@ function CustomWidgetContent({ widget, isEditMode }) {
         });
 
         return {
+          ...CHART_ANIMATION,
           backgroundColor: 'transparent',
           tooltip: {
             trigger: 'axis',
+            confine: true,
             axisPointer: { type: 'shadow' },
             backgroundColor: '#1e293b',
             borderColor: '#334155',
-            textStyle: { color: '#f1f5f9' },
+            padding: [4, 8],
+            textStyle: { color: '#f1f5f9', fontSize: 11 },
+            extraCssText: 'max-width:220px; box-shadow:0 2px 8px rgba(0,0,0,0.3);',
             formatter: (params) => {
               if (!params || params.length === 0) return '';
-              let result = `<div style="font-weight: bold; margin-bottom: 4px;">${params[0].name}</div>`;
+              let result = `<div style="font-weight:bold; margin-bottom:2px; font-size:11px">${params[0].name}</div>`;
               params.forEach(param => {
                 if (param.value == null) return;
-                // 메트릭별 단위 결정
                 let unit = '';
                 if (param.seriesName.includes('BPS')) unit = 'bps';
                 else if (param.seriesName.includes('BYTE')) unit = 'byte';
@@ -1668,8 +1844,8 @@ function CustomWidgetContent({ widget, isEditMode }) {
                 else if (param.seriesName.includes('LOSS')) unit = '%';
                 else unit = 'ms';
                 const displayValue = formatLargeValue(param.value, unit);
-                const marker = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${param.color};margin-right:6px;"></span>`;
-                result += `<div style="margin-top: 2px;">${marker}${param.seriesName}: <strong>${displayValue}${unit}</strong></div>`;
+                const marker = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${param.color};margin-right:4px;"></span>`;
+                result += `<div style="margin-top:1px; font-size:11px">${marker}${param.seriesName}: <b>${displayValue}${unit}</b></div>`;
               });
               return result;
             }
@@ -1722,18 +1898,22 @@ function CustomWidgetContent({ widget, isEditMode }) {
       // 기본 Bar Chart: 단일 메트릭
       const barUnit = elementMeta?.unit || '%';
       return {
+        ...CHART_ANIMATION,
         backgroundColor: 'transparent',
         tooltip: {
           trigger: 'axis',
+          confine: true,
           axisPointer: { type: 'shadow' },
           backgroundColor: '#1e293b',
           borderColor: '#334155',
-          textStyle: { color: '#f1f5f9' },
+          padding: [4, 8],
+          textStyle: { color: '#f1f5f9', fontSize: 11 },
+          extraCssText: 'max-width:200px; box-shadow:0 2px 8px rgba(0,0,0,0.3);',
           formatter: (params) => {
             const param = params[0];
             if (!param) return '';
             const displayValue = formatLargeValue(param.value, barUnit);
-            return `${param.name}<br/>${param.seriesName}: <strong>${displayValue}${barUnit}</strong>`;
+            return `<span style="font-size:11px">${param.name}<br/>${param.seriesName}: <b>${displayValue}${barUnit}</b></span>`;
           }
         },
         grid: {
@@ -1773,6 +1953,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
           type: 'bar',
           data: chartData.map(item => ({
             value: item.value,
+            deviceId: item.deviceId,
             itemStyle: { color: item.color }
           })),
           barWidth: '60%',
@@ -1784,6 +1965,7 @@ function CustomWidgetContent({ widget, isEditMode }) {
     // 선 차트
     if (chartType === 'line') {
       return {
+        ...CHART_ANIMATION,
         backgroundColor: 'transparent',
         tooltip: {
           trigger: 'axis',
@@ -1965,68 +2147,16 @@ function CustomWidgetContent({ widget, isEditMode }) {
             return color;
           };
 
-          // 전체 차트에서 최대값 찾기
-          let globalMax = { value: -Infinity, seriesIndex: -1, dataIndex: -1, unit: '%' };
-          chartData.forEach((item, seriesIdx) => {
-            const values = item.value || item.values || [];
-            values.forEach((val, dataIdx) => {
-              const numVal = typeof val === 'number' ? val : parseFloat(val);
-              if (!isNaN(numVal) && numVal > globalMax.value) {
-                globalMax = { value: numVal, seriesIndex: seriesIdx, dataIndex: dataIdx, unit: item.unit || '%' };
-              }
-            });
-          });
-
           const isTraffic = selectedGroup === 'TRAFFIC';
-
-          // TRAFFIC: IN/OUT 각각의 최대값 시리즈 찾기
-          let trafficInMax = { value: -Infinity, seriesIndex: -1, dataIndex: -1 };
-          let trafficOutMax = { value: -Infinity, seriesIndex: -1, dataIndex: -1 };
-          if (isTraffic) {
-            chartData.forEach((item, seriesIdx) => {
-              const isOut = item.metric && item.metric.includes('OUT');
-              const values = item.value || item.values || [];
-              values.forEach((val, dataIdx) => {
-                const numVal = typeof val === 'number' ? val : parseFloat(val);
-                if (!isNaN(numVal)) {
-                  if (isOut && numVal > trafficOutMax.value) {
-                    trafficOutMax = { value: numVal, seriesIndex: seriesIdx, dataIndex: dataIdx };
-                  } else if (!isOut && numVal > trafficInMax.value) {
-                    trafficInMax = { value: numVal, seriesIndex: seriesIdx, dataIndex: dataIdx };
-                  }
-                }
-              });
-            });
-          }
 
           return chartData.map((item, seriesIdx) => {
             const rawValues = item.value || item.values || [];
-            const isMaxSeries = seriesIdx === globalMax.seriesIndex;
 
             // TRAFFIC 미러 차트: OUT 데이터는 음수로 변환
             const isOutMetric = isTraffic && item.metric && item.metric.includes('OUT');
             const dataValues = isOutMetric
               ? rawValues.map(v => (v != null ? -Math.abs(v) : v))
               : rawValues;
-
-            // markPoint 결정: TRAFFIC은 IN/OUT 각각 최대값 1개, 그 외는 전체 최대값
-            let showMark, markValue, markIndex;
-            if (isTraffic) {
-              if (isOutMetric) {
-                showMark = seriesIdx === trafficOutMax.seriesIndex && trafficOutMax.value > 0;
-                markValue = trafficOutMax.value;
-                markIndex = trafficOutMax.dataIndex;
-              } else {
-                showMark = seriesIdx === trafficInMax.seriesIndex && trafficInMax.value > 0;
-                markValue = trafficInMax.value;
-                markIndex = trafficInMax.dataIndex;
-              }
-            } else {
-              showMark = isMaxSeries && globalMax.value !== -Infinity;
-              markValue = globalMax.value;
-              markIndex = globalMax.dataIndex;
-            }
-            const markUnit = item.unit || globalMax.unit;
 
             return {
               name: item.displayName || item.deviceName,
@@ -2052,39 +2182,6 @@ function CustomWidgetContent({ widget, isEditMode }) {
                       ]
                 }
               },
-              ...(showMark ? {
-                markPoint: {
-                  data: [{
-                    coord: [markIndex, isOutMetric ? -Math.abs(markValue) : markValue],
-                    value: markValue,
-                    symbol: 'circle',
-                    symbolSize: 12,
-                    itemStyle: {
-                      color: '#fff',
-                      borderColor: item.color,
-                      borderWidth: 3,
-                      shadowColor: item.color,
-                      shadowBlur: 8
-                    },
-                    label: {
-                      show: true,
-                      position: isOutMetric ? 'bottom' : 'top',
-                      distance: 8,
-                      formatter: `{value|${formatLargeValue(markValue, markUnit)}${markUnit}}`,
-                      rich: {
-                        value: {
-                          fontSize: 12,
-                          fontWeight: 'bold',
-                          color: '#f1f5f9',
-                          backgroundColor: 'rgba(30, 41, 59, 0.9)',
-                          padding: [4, 8],
-                          borderRadius: 4
-                        }
-                      }
-                    }
-                  }]
-                }
-              } : {})
             };
           });
         })()
@@ -2100,8 +2197,17 @@ function CustomWidgetContent({ widget, isEditMode }) {
         {chartData.length > 0 ? (
           <ReactECharts
             option={getChartOption(tooltipOnLeft)}
+            notMerge={false}
+            lazyUpdate={true}
             style={{ height: '100%', width: '100%' }}
             opts={{ renderer: 'canvas' }}
+            onEvents={{
+              click: (params) => {
+                if (isEditMode || !onDeviceClick) return;
+                const deviceId = params.data?.deviceId;
+                if (deviceId) onDeviceClick(deviceId);
+              }
+            }}
             onChartReady={(chart) => {
               if (chartType === 'line') {
                 chart.dispatchAction({ type: 'takeGlobalCursor', key: 'dataZoomSelect', dataZoomSelectActive: true });
@@ -2414,6 +2520,7 @@ const MemoizedCustomWidgetContent = memo(CustomWidgetContent, (prevProps, nextPr
   if (prevProps.widget.id !== nextProps.widget.id) return false;
   if (prevProps.widget.config !== nextProps.widget.config) return false;
   if (prevProps.isEditMode !== nextProps.isEditMode) return false;
+  if (prevProps.onDeviceClick !== nextProps.onDeviceClick) return false;
   return true;
 });
 
@@ -2586,7 +2693,7 @@ function CustomWidgetModal({ onClose, onSave, initialData = null }) {
 }
 
 // 일반 위젯 컨텐츠 렌더링
-function WidgetContent({ widget, widgetTypes, isEditMode }) {
+function WidgetContent({ widget, widgetTypes, isEditMode, onDeviceClick }) {
   const type = widgetTypes[widget.type];
 
   switch (widget.type) {
@@ -2595,7 +2702,7 @@ function WidgetContent({ widget, widgetTypes, isEditMode }) {
     case 'FILESYSTEM_TOPN':
     case 'TRAFFIC_TREND':
       // 차트 위젯은 CustomWidgetContent로 통합
-      return <CustomWidgetContent widget={widget} isEditMode={isEditMode} />;
+      return <CustomWidgetContent widget={widget} isEditMode={isEditMode} onDeviceClick={onDeviceClick} />;
 
     case 'ALERT_LIST':
       return (
@@ -3565,6 +3672,19 @@ export default function Dashboard() {
     return () => clearTimeout(timer);
   }, [alerts, isInitialized, isEditMode, widgets, refreshWidget]);
 
+  // 전체 위젯 주기적 자동 갱신 (60초)
+  useEffect(() => {
+    if (!isInitialized || isEditMode || widgets.length === 0) return;
+
+    const interval = setInterval(() => {
+      widgets.forEach(widget => {
+        refreshWidget(widget);
+      });
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [isInitialized, isEditMode, widgets, refreshWidget]);
+
   // 레이아웃 변경 핸들러
   const handleLayoutChange = useCallback((newLayout) => {
     console.log('=== onLayoutChange ===', newLayout.slice(0, 3).map(l => ({
@@ -3967,21 +4087,35 @@ export default function Dashboard() {
           freshData.forEach((item, index) => {
             const id = `w${item.userDashboardWidgetId || index}`;
 
-            // 초기화 데이터는 기본 대시보드 (12칸 기준) → GRID_SCALE 변환 + 자동 배치
             const rawW = item.width ?? item.w ?? 6;
             const rawH = item.height ?? item.h ?? 4;
+            const rawX = item.posX ?? item.pos_x ?? item.x;
+            const rawY = item.posY ?? item.pos_y ?? item.y;
             let width, height, posX, posY;
-            width = Math.min(rawW * GRID_SCALE, GRID_COLS);
-            height = rawH * GRID_SCALE;
-            if (rAutoX + width > GRID_COLS) {
-              rAutoX = 0;
-              rAutoY += rRowMaxH;
-              rRowMaxH = 0;
+
+            // 이미 96칸 기준 데이터인지 판별 (width > 12이면 96칸)
+            const isAlready96 = rawW > 12;
+
+            if (isAlready96 && rawX != null && rawY != null) {
+              // 96칸 값 직접 사용
+              width = Math.min(rawW, GRID_COLS);
+              height = rawH;
+              posX = Math.min(rawX, GRID_COLS - width);
+              posY = rawY;
+            } else {
+              // 12칸 기준 → GRID_SCALE 변환 + 자동 배치
+              width = Math.min(rawW * GRID_SCALE, GRID_COLS);
+              height = rawH * GRID_SCALE;
+              if (rAutoX + width > GRID_COLS) {
+                rAutoX = 0;
+                rAutoY += rRowMaxH;
+                rRowMaxH = 0;
+              }
+              posX = rAutoX;
+              posY = rAutoY;
+              rAutoX += width;
+              rRowMaxH = Math.max(rRowMaxH, height);
             }
-            posX = rAutoX;
-            posY = rAutoY;
-            rAutoX += width;
-            rRowMaxH = Math.max(rRowMaxH, height);
 
             let parsedConfig = item.config ? (typeof item.config === 'string' ? JSON.parse(item.config) : item.config) : {};
             const widgetType = WIDGET_TYPES[item.widgetCode];
@@ -4215,13 +4349,13 @@ export default function Dashboard() {
                       <MemoizedTopologyWidget onExpand={handleExpandTopology} onDeviceClick={handleTopoDeviceClick} />
                     )
                   ) : widget.type === 'CUSTOM' ? (
-                    <MemoizedCustomWidgetContent widget={widget} isEditMode={isEditMode} />
+                    <MemoizedCustomWidgetContent widget={widget} isEditMode={isEditMode} onDeviceClick={handleTopoDeviceClick} />
                   ) : widget.type === 'REALTIME_ALERT' ? (
                     <RealtimeAlertWidget isEditMode={isEditMode} initialData={widget.chartData} />
                   ) : widget.type === 'ALERT_SUMMARY' ? (
                     <AlertSummaryWidget cntData={widget.cntData} isEditMode={isEditMode} />
                   ) : (
-                    <WidgetContent widget={widget} widgetTypes={WIDGET_TYPES} isEditMode={isEditMode} />
+                    <WidgetContent widget={widget} widgetTypes={WIDGET_TYPES} isEditMode={isEditMode} onDeviceClick={handleTopoDeviceClick} />
                   )}
                 </div>
               </div>

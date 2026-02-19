@@ -305,7 +305,7 @@
   flex-direction: column;
   height: 100%;
   transition: all 0.2s ease;
-  container-type: inline-size;
+  container-type: size;
   container-name: widget;
 }
 
@@ -648,6 +648,156 @@
 .topology-graph-container .topology-current-group i {
   color: var(--theme-accent-primary);
   font-size: 14px;
+}
+
+/* 토폴로지 그룹 장애 툴팁 */
+.topology-fault-tooltip {
+  position: absolute;
+  z-index: 20;
+  pointer-events: auto;
+  min-width: 140px;
+  max-width: 320px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(71, 85, 105, 0.6);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.topology-fault-tooltip-title {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #e2e8f0;
+  border-bottom: 1px solid rgba(71, 85, 105, 0.4);
+  white-space: nowrap;
+}
+
+.topology-fault-tooltip-body {
+  padding: 5px 10px 6px;
+}
+
+.topology-fault-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #cbd5e1;
+  line-height: 1.8;
+  padding: 1px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.topology-fault-row:hover,
+.topology-fault-row.expanded {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.topology-fault-row span:nth-child(2) {
+  flex: 1;
+}
+
+.topology-fault-row strong {
+  color: #f1f5f9;
+  font-size: 12px;
+}
+
+.topology-fault-chevron {
+  font-size: 9px;
+  color: #64748b;
+  margin-left: 2px;
+  transition: color 0.15s;
+}
+
+.topology-fault-row:hover .topology-fault-chevron {
+  color: #94a3b8;
+}
+
+.topology-fault-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 등급별 상세 목록 */
+.topology-fault-detail {
+  margin: 2px 0 4px 13px;
+  padding: 3px 0;
+  border-left: 2px solid rgba(71, 85, 105, 0.4);
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.topology-fault-detail::-webkit-scrollbar {
+  width: 3px;
+}
+
+.topology-fault-detail::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+  border-radius: 3px;
+}
+
+.topology-fault-detail-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 6px;
+  padding: 2px 8px;
+  font-size: 10px;
+  line-height: 1.5;
+  border-bottom: 1px solid rgba(71, 85, 105, 0.15);
+}
+
+.topology-fault-detail-item:last-child {
+  border-bottom: none;
+}
+
+.topology-fault-detail-name {
+  color: #e2e8f0;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+.topology-fault-detail-ip {
+  color: #64748b;
+  font-size: 10px;
+  text-align: right;
+}
+
+.topology-fault-detail-msg {
+  grid-column: 1 / -1;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.topology-fault-detail-more {
+  padding: 2px 8px;
+  font-size: 10px;
+  color: #64748b;
+  font-style: italic;
+}
+
+.topology-fault-total {
+  margin-top: 3px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(71, 85, 105, 0.4);
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: right;
+}
+
+.topology-fault-total strong {
+  color: #f1f5f9;
 }
 
 .topology-loading {
@@ -1210,6 +1360,7 @@
   width: 100%;
   height: 100%;
   min-height: 0;
+  cursor: pointer;
 }
 
 .custom-widget-elements {
@@ -3672,6 +3823,115 @@
 .device-summary-grid {
   min-height: 0;
   overflow: auto;
+}
+
+/* ========== 높이 작을 때 반응형 (종합 현황 / 장애 현황) ========== */
+
+/* 높이 중간 (~180px 이하): 2x2 → 4x1 가로 배치, 아이콘 축소 */
+@container widget (max-height: 180px) {
+  .alert-summary-grid,
+  .device-summary-grid {
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: 1fr;
+    gap: clamp(2px, 1cqi, 6px);
+    padding: clamp(2px, 1cqi, 6px);
+  }
+
+  .summary-card,
+  .device-card {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: clamp(2px, 1.5cqi, 8px);
+    text-align: center;
+  }
+
+  .summary-card .summary-icon,
+  .device-card .device-icon {
+    width: clamp(18px, 8cqi, 32px);
+    height: clamp(18px, 8cqi, 32px);
+    font-size: clamp(9px, 4cqi, 16px);
+  }
+
+  .summary-card .summary-icon i,
+  .device-card .device-icon i {
+    font-size: clamp(9px, 4cqi, 16px);
+  }
+
+  .summary-card .summary-count,
+  .device-card .device-count {
+    font-size: clamp(13px, 6cqi, 22px);
+  }
+
+  .summary-card .summary-label,
+  .device-card .device-label {
+    font-size: clamp(7px, 2.5cqi, 11px);
+  }
+}
+
+/* 높이 작음 (~120px 이하): 아이콘 숨기고 숫자+라벨만 */
+@container widget (max-height: 120px) {
+  .summary-card .summary-icon,
+  .device-card .device-icon {
+    display: none;
+  }
+
+  .summary-card,
+  .device-card {
+    padding: clamp(1px, 1cqi, 6px);
+    gap: 1px;
+  }
+
+  .summary-card .summary-count,
+  .device-card .device-count {
+    font-size: clamp(12px, 5cqi, 18px);
+  }
+
+  .summary-card .summary-label,
+  .device-card .device-label {
+    font-size: clamp(6px, 2cqi, 10px);
+  }
+}
+
+/* 높이 매우 작음 (~80px 이하): 한줄 인라인 */
+@container widget (max-height: 80px) {
+  .alert-summary-grid,
+  .device-summary-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: clamp(2px, 1cqi, 4px);
+    padding: 2px;
+  }
+
+  .summary-card,
+  .device-card {
+    flex: 1;
+    flex-direction: row;
+    padding: 2px 4px;
+    gap: 4px;
+    border-radius: 4px;
+    min-width: 0;
+  }
+
+  .summary-card .summary-content,
+  .device-card .device-content {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+
+  .summary-card .summary-count,
+  .device-card .device-count {
+    font-size: clamp(11px, 4cqi, 16px);
+    margin-bottom: 0;
+  }
+
+  .summary-card .summary-label,
+  .device-card .device-label {
+    font-size: clamp(6px, 1.8cqi, 9px);
+  }
 }
 
 /* 차트가 부모 크기에 맞게 축소 */
