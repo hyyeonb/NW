@@ -7,3 +7,4 @@ export * from './useAlertWebSocket';
 export * from './useFaults';
 export * from './useWatch';
 export * from './useBoard';
+export * from './useSshSession';

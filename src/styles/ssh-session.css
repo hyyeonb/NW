@@ -1,0 +1,260 @@
+.ssh-session-page {
+  padding: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--theme-bg-primary);
+  overflow: hidden;
+}
+
+.ssh-session-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.ssh-session-page .page-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ssh-session-page .page-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--theme-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ssh-session-page .page-title i {
+  color: var(--theme-accent-primary);
+}
+
+.ssh-session-page .page-subtitle {
+  color: var(--theme-text-muted);
+  font-size: 13px;
+}
+
+.ssh-session-page .btn-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--theme-border-panel);
+  border-radius: 8px;
+  background: var(--theme-bg-secondary);
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 16px;
+}
+
+.ssh-session-page .btn-back:hover {
+  background: var(--theme-accent-primary);
+  border-color: var(--theme-accent-primary);
+  color: white;
+}
+
+.ssh-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ssh-content > .table-panel {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 상태 뱃지 */
+.ssh-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ssh-status-badge.active {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.ssh-status-badge.closed {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+/* 세션 정보 카드 */
+.ssh-session-info-card {
+  margin-bottom: 16px;
+  padding: 16px 20px;
+  background: var(--theme-bg-secondary);
+  border: 1px solid var(--theme-border-panel);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.ssh-info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px 24px;
+}
+
+.ssh-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ssh-info-item label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--theme-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ssh-info-item span {
+  font-size: 13px;
+  color: var(--theme-text-primary);
+}
+
+.ssh-info-item .mono {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  color: var(--theme-accent-primary);
+}
+
+/* 명령어 섹션 */
+.ssh-commands-section {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ssh-commands-section > .table-panel {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 명령어 텍스트 */
+.ssh-command-text {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  color: #22c55e;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 2px 6px;
+  border-radius: 3px;
+  word-break: break-all;
+}
+
+/* 상세 탭 */
+.ssh-detail-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--theme-border-panel);
+  padding-bottom: 0;
+}
+
+.ssh-detail-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--theme-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: -1px;
+}
+
+.ssh-detail-tab:hover {
+  color: var(--theme-text-primary);
+}
+
+.ssh-detail-tab.active {
+  color: var(--theme-accent-primary);
+  border-bottom-color: var(--theme-accent-primary);
+}
+
+.ssh-detail-tab i {
+  font-size: 14px;
+}
+
+.ssh-detail-tab .tab-count {
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--theme-text-muted);
+  padding: 1px 6px;
+  border-radius: 8px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.ssh-detail-tab.active .tab-count {
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--theme-accent-primary);
+}
+
+/* SFTP 작업 뱃지 */
+.sftp-op-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sftp-op-badge.op-upload {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+}
+
+.sftp-op-badge.op-download {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
+.sftp-op-badge.op-mkdir {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+}
+
+.sftp-op-badge.op-delete {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+/* 반응형 */
+@media (max-width: 1024px) {
+  .ssh-info-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .ssh-info-grid {
+    grid-template-columns: 1fr;
+  }
+}

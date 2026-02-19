@@ -50,6 +50,7 @@ export const useTopologyView = (id, type = 'group') => {
     },
     enabled: !!id,
     staleTime: 30000, // 30초간 캐시 유지
+    refetchInterval: 60000, // 60초마다 자동 갱신
   });
 };
 

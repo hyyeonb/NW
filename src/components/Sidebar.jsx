@@ -64,6 +64,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         { label: '자산 Config 관리', path: '/mgmt/asset-config', icon: 'bi-sliders' },
         { label: '신규 자산 관리', path: '/mgmt/new-assets', icon: 'bi-plus-circle' },
         { label: '모델 관리', path: '/mgmt/models', icon: 'bi-cpu' },
+        { label: 'SSH 접속 이력', path: '/mgmt/ssh-sessions', icon: 'bi-terminal' },
       ],
     },
     {

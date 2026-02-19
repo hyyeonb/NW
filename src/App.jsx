@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores';
 import MainLayout from './layouts/MainLayout';
-import { Login, Signup, Dashboard, SignupSuccess, FindAccount, SocialLoginLanding, Main, GroupManagement, AssetManagement, AssetConfig, AssetConfigDetail, NewAssetManagement, ModelManagement, NetworkTopology, RealtimeFault, FaultHistory, RealtimePerformance, FileBoard, NoticeBoard } from './pages';
+import { Login, Signup, Dashboard, SignupSuccess, FindAccount, SocialLoginLanding, Main, GroupManagement, AssetManagement, AssetConfig, AssetConfigDetail, NewAssetManagement, ModelManagement, NetworkTopology, RealtimeFault, FaultHistory, RealtimePerformance, FileBoard, NoticeBoard, SshSessionHistory } from './pages';
 import AlertToast from './components/AlertToast';
 import GlobalTooltip from './components/GlobalTooltip';
 import { useAlertWebSocket } from './hooks';
@@ -195,6 +195,7 @@ export default function App() {
               <Route path="mgmt/asset-config/:deviceId" element={<AssetConfigDetail />} />
               <Route path="mgmt/new-assets" element={<NewAssetManagement />} />
               <Route path="mgmt/models" element={<ModelManagement />} />
+              <Route path="mgmt/ssh-sessions" element={<SshSessionHistory />} />
               <Route path="fault/realtime" element={<RealtimeFault />} />
               <Route path="fault/history" element={<FaultHistory />} />
               <Route path="watch/realtime" element={<RealtimePerformance />} />
