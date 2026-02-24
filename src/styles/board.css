@@ -121,7 +121,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .board-toolbar-right {
@@ -140,6 +141,8 @@
   outline: none;
   cursor: pointer;
   transition: border-color 0.2s;
+  width: 100px;
+  flex-shrink: 0;
 }
 
 .board-category-filter:focus {
@@ -156,6 +159,8 @@
   background: var(--theme-input-bg);
   padding: 0 10px;
   transition: border-color 0.2s, box-shadow 0.2s;
+  flex: 1;
+  min-width: 0;
 }
 
 .board-search-box:focus-within {
@@ -176,7 +181,8 @@
   color: var(--theme-text-primary);
   font-size: 0.85rem;
   outline: none;
-  width: 200px;
+  width: 100%;
+  min-width: 0;
 }
 
 .board-search-box input::placeholder {
@@ -374,6 +380,7 @@
 /* 본문 카드 */
 .board-detail-body-card {
   min-height: 180px;
+  flex: 1;
 }
 
 .board-detail-content {
@@ -472,6 +479,7 @@
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+  margin-top: auto;
 }
 
 .board-detail-actions-right {
@@ -864,6 +872,7 @@
   justify-content: flex-end;
   gap: 8px;
   flex-shrink: 0;
+  margin-top: auto;
 }
 
 /* ===== 빈 상태 ===== */
@@ -1136,9 +1145,26 @@
 }
 
 /* ===== 반응형 ===== */
+@media (max-width: 1200px) {
+  .board-container {
+    padding: 20px;
+    gap: 16px;
+  }
+
+  .board-main-panel {
+    padding: 20px;
+  }
+
+  .board-detail-info {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+}
+
 @media (max-width: 768px) {
   .board-container {
-    padding: 16px;
+    padding: 12px;
+    gap: 12px;
     height: auto;
     min-height: calc(100vh - 80px);
   }
@@ -1149,22 +1175,31 @@
   }
 
   .board-main-panel {
-    padding: 16px;
+    padding: 14px;
     border-radius: 14px;
   }
 
   .board-toolbar {
     flex-direction: column;
     align-items: stretch;
+    gap: 8px;
   }
 
-  .board-toolbar-left,
+  .board-toolbar-left {
+    flex-wrap: wrap;
+  }
+
   .board-toolbar-right {
-    justify-content: stretch;
+    justify-content: flex-end;
   }
 
-  .board-search-box input {
-    width: 100%;
+  .board-category-filter {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  .board-search-box {
+    flex: 1 1 150px;
   }
 
   .board-form-row {
@@ -1172,10 +1207,90 @@
     align-items: stretch;
   }
 
+  .board-detail-card {
+    padding: 16px;
+    border-radius: 10px;
+  }
+
+  .board-detail-title {
+    font-size: 1.15rem;
+  }
+
+  .board-detail-info {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .board-detail-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .board-detail-actions-right {
+    justify-content: flex-end;
+  }
+
+  .board-attach-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .attach-download-btn {
+    align-self: flex-end;
+  }
+
+  .board-form-card {
+    padding: 16px;
+  }
+
+  .board-form-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
   .board-modal-dialog {
     min-width: auto;
     width: 90%;
     padding: 24px 20px 20px;
     border-radius: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .board-container {
+    padding: 8px;
+  }
+
+  .board-main-panel {
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  .board-toolbar-left {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .board-category-filter {
+    width: 100%;
+  }
+
+  .board-reset-btn {
+    align-self: flex-start;
+  }
+
+  .board-write-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .board-file-drop {
+    padding: 20px;
+  }
+
+  .board-modal-dialog {
+    width: 95%;
+    padding: 20px 16px 16px;
   }
 }

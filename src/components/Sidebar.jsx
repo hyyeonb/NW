@@ -37,7 +37,8 @@ export default function Sidebar({ collapsed, onToggle }) {
       label: '대시보드',
       children: [
         { label: '통합 대시보드', path: '/dashboard', icon: 'bi-grid-1x2' },
-        { label: '네트워크 토폴로지', path: '/topology', icon: 'bi-diagram-3' },
+        { label: '토폴로지', path: '/topology', icon: 'bi-diagram-3' },
+        { label: '사용자 토폴로지', path: '/user-topology', icon: 'bi-person-workspace' },
       ],
     },
     {

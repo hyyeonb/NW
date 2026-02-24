@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores';
 import MainLayout from './layouts/MainLayout';
-import { Login, Signup, Dashboard, SignupSuccess, FindAccount, SocialLoginLanding, Main, GroupManagement, AssetManagement, AssetConfig, AssetConfigDetail, NewAssetManagement, ModelManagement, NetworkTopology, RealtimeFault, FaultHistory, RealtimePerformance, FileBoard, NoticeBoard, SshSessionHistory } from './pages';
+import { Login, Signup, Dashboard, SignupSuccess, FindAccount, SocialLoginLanding, Main, GroupManagement, AssetManagement, AssetConfig, AssetConfigDetail, NewAssetManagement, ModelManagement, NetworkTopology, RealtimeFault, FaultHistory, RealtimePerformance, FileBoard, NoticeBoard, SshSessionHistory, UserTopology } from './pages';
 import AlertToast from './components/AlertToast';
 import GlobalTooltip from './components/GlobalTooltip';
 import { useAlertWebSocket } from './hooks';
@@ -189,6 +189,7 @@ export default function App() {
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="topology" element={<NetworkTopology />} />
+              <Route path="user-topology" element={<UserTopology />} />
               <Route path="mgmt/groups" element={<GroupManagement />} />
               <Route path="mgmt/assets" element={<AssetManagement />} />
               <Route path="mgmt/asset-config" element={<AssetConfig />} />

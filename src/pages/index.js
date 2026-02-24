@@ -20,3 +20,4 @@ export { default as RealtimePerformance } from './RealtimePerformance';
 export { default as FileBoard } from './FileBoard';
 export { default as NoticeBoard } from './NoticeBoard';
 export { default as SshSessionHistory } from './SshSessionHistory';
+export { default as UserTopology } from './UserTopology';
