@@ -35,3 +35,30 @@ export const topologyApi = {
       imgSrc
     }),
 };
+
+// 사용자 토폴로지 API
+export const userTopologyApi = {
+  // 메인 토폴로지 조회 (groupId=0)
+  get: (userId) =>
+    apiClient.get(`/user-topo/${userId}`),
+
+  // 메인 토폴로지 저장
+  save: (userId, data) =>
+    apiClient.put(`/user-topo/${userId}`, data),
+
+  // 그룹 하위 토폴로지 조회
+  getGroup: (userId, groupId) =>
+    apiClient.get(`/user-topo/${userId}/group/${groupId}`),
+
+  // 그룹 하위 토폴로지 저장
+  saveGroup: (userId, groupId, data) =>
+    apiClient.put(`/user-topo/${userId}/group/${groupId}`, data),
+
+  // 배경 이미지 저장 (groupId가 있으면 그룹 하위, 없으면 루트)
+  saveBackgroundImage: (userId, imgSrc, groupId) =>
+    apiClient.put('/user-topo/back-img', { userId, imgSrc, groupId: groupId || 0 }),
+
+  // 노드 아이콘 변경 (groupId가 있으면 그룹 하위, 없으면 루트)
+  saveNodeImage: (userId, nodeKey, imgSrc, groupId) =>
+    apiClient.put('/user-topo/node-img', { userId, nodeKey, imgSrc, groupId: groupId || 0 }),
+};

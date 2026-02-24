@@ -238,6 +238,23 @@ export default function NetworkTopology() {
   const { data: sourcePorts, isLoading: sourcePortsLoading } = useDevicePorts(sourceDeviceId);
   const { data: targetPorts, isLoading: targetPortsLoading } = useDevicePorts(targetDeviceId);
 
+  // 선택된 링크의 양쪽 장비 포트 조회 (IF_INDEX → IF_NAME 변환용)
+  const _getLinkEndId = (end) => typeof end === 'object' && end !== null ? end.id : end;
+  const _selectedLinkSrcNode = selectedLink ? data.nodes.find(n => n.id === _getLinkEndId(selectedLink.source)) : null;
+  const _selectedLinkDstNode = selectedLink ? data.nodes.find(n => n.id === _getLinkEndId(selectedLink.target)) : null;
+  const _linkSrcDeviceId = _selectedLinkSrcNode?.nodeType === 'device' ? (_selectedLinkSrcNode.deviceId || _selectedLinkSrcNode.id?.replace?.('device_', '')) : null;
+  const _linkDstDeviceId = _selectedLinkDstNode?.nodeType === 'device' ? (_selectedLinkDstNode.deviceId || _selectedLinkDstNode.id?.replace?.('device_', '')) : null;
+  const { data: linkSrcPorts } = useDevicePorts(_linkSrcDeviceId);
+  const { data: linkDstPorts } = useDevicePorts(_linkDstDeviceId);
+
+  const resolveIfName = (ifIndex, ifName, ports) => {
+    if (ifName) return ifName;
+    if (!ifIndex) return '-';
+    const portList = ports?.content || ports || [];
+    const port = portList.find(p => String(p.IF_INDEX) === String(ifIndex));
+    return port?.IF_NAME || port?.IF_DESCR || `IF:${ifIndex}`;
+  };
+
   // 링크 end(source/target)가 문자열일 수도, 객체일 수도 있어서 id만 뽑는 함수
   const getLinkEndId = (end) =>
     typeof end === "object" && end !== null ? end.id : end;
@@ -2261,7 +2278,7 @@ export default function NetworkTopology() {
                 링크 ID: {target?.id || ""}
               </div>
               {/* 인터페이스 정보가 있으면 인터페이스명 표시 */}
-              {(target?.srcIfName || target?.dstIfName) ? (
+              {(target?.srcIfName || target?.dstIfName || target?.srcIfIndex || target?.dstIfIndex) ? (
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -2379,8 +2396,8 @@ export default function NetworkTopology() {
     const targetIsDevice = targetNode?.nodeType === 'device';
     const showInterfaceInfo = sourceIsDevice && targetIsDevice;
 
-    const srcIfName = selectedLink.srcIfName || (selectedLink.srcIfIndex ? `IF:${selectedLink.srcIfIndex}` : '-');
-    const dstIfName = selectedLink.dstIfName || (selectedLink.dstIfIndex ? `IF:${selectedLink.dstIfIndex}` : '-');
+    const srcIfName = resolveIfName(selectedLink.srcIfIndex, selectedLink.srcIfName, linkSrcPorts);
+    const dstIfName = resolveIfName(selectedLink.dstIfIndex, selectedLink.dstIfName, linkDstPorts);
 
     return (
       <div
