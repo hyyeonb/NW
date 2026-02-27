@@ -172,8 +172,13 @@ function SftpPanel({ sessionId, connected, externalPath, sshUser }) {
     }
   }, [sessionId, currentPath, mkdirName, fetchFiles]);
 
-  // 파일 업로드
+  // 파일 업로드 (최대 100MB)
+  const MAX_UPLOAD_SIZE = 100 * 1024 * 1024; // 100MB
   const uploadFile = useCallback(async (file) => {
+    if (file.size > MAX_UPLOAD_SIZE) {
+      setError(`파일 크기 초과: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB) - 최대 100MB까지 업로드 가능합니다.`);
+      return;
+    }
     setUploading(true);
     setUploadName(file.name);
     try {
@@ -388,6 +393,7 @@ function SftpPanel({ sessionId, connected, externalPath, sshUser }) {
       {/* 상태바 */}
       <div className="sftp-status-bar">
         <span>{dirCount}개 폴더, {fileCount}개 파일</span>
+        <span style={{ color: '#64748b', fontSize: '9px' }}>업로드 최대 100MB</span>
         <span>{currentPath}</span>
       </div>
     </div>
@@ -452,6 +458,7 @@ export default function SshTerminalModal({ device, sshInfo, onClose }) {
     setTimeout(() => {
       if (disposed) return;
       try { fit.fit(); } catch {}
+      term.focus();
     }, 150);
 
     termRef.current = term;
@@ -510,6 +517,7 @@ export default function SshTerminalModal({ device, sshInfo, onClose }) {
             term.writeln(`\r\n[CLOSED] ${msg.data}\r\n`);
             setStatus('disconnected');
             setSessionId(null);
+            setTimeout(() => onClose(), 500);
           } else if (msg.type === 'info') {
             term.writeln(`\r\n[INFO] ${msg.data}\r\n`);
           }
@@ -520,6 +528,11 @@ export default function SshTerminalModal({ device, sshInfo, onClose }) {
       }
 
       const text = new TextDecoder().decode(new Uint8Array(ev.data));
+
+      // logout 감지 → 모달 자동 닫기
+      if (/logout|connection.*closed/i.test(text)) {
+        setTimeout(() => { if (!disposed) onClose(); }, 300);
+      }
 
       // pwd 결과 캡처 (경로 동기화)
       if (waitingPwdRef.current) {
@@ -544,9 +557,11 @@ export default function SshTerminalModal({ device, sshInfo, onClose }) {
     };
 
     ws.onclose = () => {
+      if (disposed) return;
       term.writeln('\r\n[Disconnected]\r\n');
       setStatus('disconnected');
       setSessionId(null);
+      setTimeout(() => { if (!disposed) onClose(); }, 500);
     };
 
     // 복사/붙여넣기
@@ -580,9 +595,14 @@ export default function SshTerminalModal({ device, sshInfo, onClose }) {
       const sock = wsRef.current;
       if (!sock || sock.readyState !== WebSocket.OPEN) return;
 
-      // cd 명령어 감지 (경로 동기화용)
+      // 명령어 감지
       if (data === '\r' || data === '\n') {
         const cmd = inputBufRef.current.trim();
+        // exit/logout 명령어 → 모달 자동 닫기
+        if (cmd === 'exit' || cmd === 'logout') {
+          setTimeout(() => { if (!disposed) onClose(); }, 1500);
+        }
+        // cd 명령어 감지 (경로 동기화용)
         if (syncPathRef.current && (cmd.startsWith('cd') || cmd === 'cd')) {
           // cd 실행 후 pwd로 실제 경로 확인
           setTimeout(() => {

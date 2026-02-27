@@ -5,6 +5,7 @@ import { useAuthStore } from './stores';
 import MainLayout from './layouts/MainLayout';
 import { Login, Signup, Dashboard, SignupSuccess, FindAccount, SocialLoginLanding, Main, GroupManagement, AssetManagement, AssetConfig, AssetConfigDetail, NewAssetManagement, ModelManagement, NetworkTopology, RealtimeFault, FaultHistory, RealtimePerformance, FileBoard, NoticeBoard, SshSessionHistory, UserTopology } from './pages';
 import AlertToast from './components/AlertToast';
+import UrgentNoticePopup from './components/UrgentNoticePopup';
 import GlobalTooltip from './components/GlobalTooltip';
 import { useAlertWebSocket } from './hooks';
 
@@ -132,6 +133,8 @@ export default function App() {
           <AlertWebSocketProvider>
             {/* 전역 Toast 알림 */}
             <AlertToast />
+            {/* 긴급 공지사항 팝업 */}
+            <UrgentNoticePopup />
             {/* 전역 말줄임 툴팁 */}
             <GlobalTooltip />
             <Routes>
