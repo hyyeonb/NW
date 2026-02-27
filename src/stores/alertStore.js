@@ -111,6 +111,15 @@ export const useAlertStore = create((set, get) => ({
       toasts: [],
       summary: { total: 0, critical: 0, major: 0, minor: 0, warning: 0 },
     }),
+
+  // 긴급 공지사항
+  urgentNotice: null,
+
+  // 긴급 공지 설정
+  setUrgentNotice: (notice) => set({ urgentNotice: notice }),
+
+  // 긴급 공지 닫기
+  clearUrgentNotice: () => set({ urgentNotice: null }),
 }));
 
 // Toast 추가 헬퍼 (최대 개수 제한)

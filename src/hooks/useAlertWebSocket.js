@@ -23,7 +23,7 @@ export function useAlertWebSocket(options = {}) {
   const isConnectingRef = useRef(false);
   const isMountedRef = useRef(true);
 
-  const { addAlert, setConnected, setSummary, isMuted } = useAlertStore();
+  const { addAlert, setConnected, setSummary, setUrgentNotice, isMuted } = useAlertStore();
 
   // 알림 처리
   const handleMessage = useCallback(
@@ -121,6 +121,17 @@ export function useAlertWebSocket(options = {}) {
               console.error('[WebSocket] Failed to parse summary:', error);
             }
           });
+
+          // 긴급 공지사항 토픽 구독
+          client.subscribe('/topic/notice/urgent', (message) => {
+            try {
+              const notice = JSON.parse(message.body);
+              console.log('[WebSocket] Urgent notice received:', notice);
+              setUrgentNotice(notice);
+            } catch (error) {
+              console.error('[WebSocket] Failed to parse urgent notice:', error);
+            }
+          });
         },
         onDisconnect: () => {
           console.log('[WebSocket] Disconnected');
@@ -155,7 +166,7 @@ export function useAlertWebSocket(options = {}) {
         }, delay);
       }
     }
-  }, [topics, handleMessage, setConnected, setSummary]);
+  }, [topics, handleMessage, setConnected, setSummary, setUrgentNotice]);
 
   // 자동 연결 / 정리
   useEffect(() => {

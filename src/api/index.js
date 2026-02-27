@@ -7,4 +7,5 @@ export { dashboardApi } from './dashboard';
 export { snmpApi } from './snmp';
 export { faultApi } from './fault';
 export { boardApi } from './board';
+export { noticeApi } from './notice';
 export { sshSessionApi, sftpApi } from './sshSession';

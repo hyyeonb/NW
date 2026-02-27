@@ -1,0 +1,132 @@
+● 공지사항 API
+
+  1. 목록 조회
+
+  GET /api/notice/posts
+
+  파라미터:
+
+  ┌──────────┬────────┬────────┬──────────────────┐
+  │ 파라미터 │  타입  │ 기본값 │       설명       │
+  ├──────────┼────────┼────────┼──────────────────┤
+  │ page     │ int    │ 1      │ 페이지 번호      │
+  ├──────────┼────────┼────────┼──────────────────┤
+  │ size     │ int    │ 10     │ 페이지 크기      │
+  ├──────────┼────────┼────────┼──────────────────┤
+  │ search   │ String │ null   │ 제목/본문 검색어 │
+  └──────────┴────────┴────────┴──────────────────┘
+
+  응답:
+  {
+    "code": 200,
+    "message": "조회 성공",
+    "data": {
+      "content": [
+        {
+          "noticeId": 5,
+          "title": "[긴급] 서버 점검 안내",
+          "isUrgent": "Y",
+          "isPinned": "Y",
+          "viewCnt": 120,
+          "userId": 1,
+          "userName": "관리자",
+          "createdAt": "2026-02-27 10:00:00"
+        },
+        {
+          "noticeId": 3,
+          "title": "시스템 업데이트 안내",
+          "isUrgent": "N",
+          "isPinned": "N",
+          "viewCnt": 45,
+          "userId": 1,
+          "userName": "관리자",
+          "createdAt": "2026-02-25 14:30:00"
+        }
+      ],
+      "page": 1,
+      "size": 10,
+      "totalElements": 15,
+      "totalPages": 2
+    }
+  }
+  정렬: 상단고정(isPinned: "Y") 우선 → 최신순
+
+  ---
+  2. 상세 조회
+
+  GET /api/notice/posts/{noticeId}
+
+  응답:
+  {
+    "code": 200,
+    "message": "조회 성공",
+    "data": {
+      "noticeId": 5,
+      "title": "[긴급] 서버 점검 안내",
+      "content": "2월 28일 02:00~06:00 서버 점검이 진행됩니다.",
+      "isUrgent": "Y",
+      "isPinned": "Y",
+      "viewCnt": 121,
+      "userId": 1,
+      "userName": "관리자",
+      "createdAt": "2026-02-27 10:00:00",
+      "updatedAt": "2026-02-27 11:00:00"
+    }
+  }
+  조회 시 자동으로 조회수 +1. 없으면 code: 404
+
+  ---
+  3. 등록
+
+  POST /api/notice/posts
+
+  요청:
+  {
+    "title": "서버 점검 안내",
+    "content": "2월 28일 02:00~06:00 서버 점검이 진행됩니다.",
+    "isUrgent": "Y",
+    "isPinned": "Y",
+    "userId": 1
+  }
+  isUrgent: "Y"이면 등록 즉시 WebSocket으로 전체 사용자에게 브로드캐스트
+
+  응답: 상세 조회와 동일한 구조
+
+  ---
+  4. 수정
+
+  PUT /api/notice/posts/{noticeId}
+
+  요청:
+  {
+    "title": "서버 점검 안내 (수정)",
+    "content": "점검 시간이 변경되었습니다. 03:00~05:00",
+    "isUrgent": "N",
+    "isPinned": "Y"
+  }
+
+  응답: 상세 조회와 동일한 구조
+
+  ---
+  5. 삭제
+
+  DELETE /api/notice/posts/{noticeId}
+
+  응답:
+  {
+    "code": 200,
+    "message": "삭제 성공",
+    "data": null
+  }
+
+  ---
+    "title": "[긴급] 서버 점검 안내",
+    "content": "2월 28일 02:00~06:00 서버 점검이 진행됩니다.",
+    "userName": "관리자",
+    "createdAt": "2026-02-27 10:00:00"
+  }
+
+  프론트 구현 포인트:
+  - 기존 /ws/alerts SockJS 연결에 /topic/notice/urgent 구독 추가
+  - 메시지 수신 시 모달/팝업으로 긴급공지 표출
+  - 관리자가 isUrgent: "Y"로 등록하는 순간 전체 접속 사용자에게 자동 전송
