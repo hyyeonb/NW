@@ -529,11 +529,6 @@ export default function SshTerminalModal({ device, sshInfo, onClose }) {
 
       const text = new TextDecoder().decode(new Uint8Array(ev.data));
 
-      // logout 감지 → 모달 자동 닫기
-      if (/logout|connection.*closed/i.test(text)) {
-        setTimeout(() => { if (!disposed) onClose(); }, 300);
-      }
-
       // pwd 결과 캡처 (경로 동기화)
       if (waitingPwdRef.current) {
         const lines = text.split(/[\r\n]+/).map(l => l.trim()).filter(Boolean);
@@ -561,7 +556,6 @@ export default function SshTerminalModal({ device, sshInfo, onClose }) {
       term.writeln('\r\n[Disconnected]\r\n');
       setStatus('disconnected');
       setSessionId(null);
-      setTimeout(() => { if (!disposed) onClose(); }, 500);
     };
 
     // 복사/붙여넣기

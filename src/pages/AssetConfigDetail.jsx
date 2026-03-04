@@ -7,7 +7,7 @@ export default function AssetConfigDetail() {
   const { deviceId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { deviceName, deviceIp } = location.state || {};
+  const { deviceName, deviceIp, deviceConfigDate } = location.state || {};
 
   const [yesterdayConfig, setYesterdayConfig] = useState('');
   const [todayConfig, setTodayConfig] = useState('');
@@ -15,8 +15,15 @@ export default function AssetConfigDetail() {
   const [error, setError] = useState(null);
   const [showOnlyChanges, setShowOnlyChanges] = useState(false);
 
-  // 날짜 선택 상태
+  // 날짜 선택 상태 (오늘 수집이 없고 최근 수집일이 있으면 해당 날짜, 아니면 어제)
   const [leftDate, setLeftDate] = useState(() => {
+    const today = new Date().toISOString().split('T')[0];
+    if (deviceConfigDate) {
+      const configDate = new Date(deviceConfigDate).toISOString().split('T')[0];
+      if (configDate !== today) {
+        return configDate;
+      }
+    }
     const date = new Date();
     date.setDate(date.getDate() - 1);
     return date.toISOString().split('T')[0];
