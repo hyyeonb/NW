@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import GridLayout, { getCompactor } from 'react-grid-layout';
 import ForceGraph2D from 'react-force-graph-2d';
 import ReactECharts from 'echarts-for-react';
-import { useTopologyView, useGroupTree, useWidgets, useDefaultDashboard, useUserDashboard, useSaveUserDashboard, useResetUserDashboard, useDeviceErrorLevels, useUserTopology, useUserTopologyGroup } from '../hooks';
+import { useTopologyView, useGroupTree, useWidgets, useDefaultDashboard, useUserDashboard, useSaveUserDashboard, useResetUserDashboard, useDeviceErrorLevels, useUserTopology, useUserTopologyGroup, useDevicePorts } from '../hooks';
 import { useAuthStore } from '../stores/authStore';
 import { useAlertStore } from '../stores/alertStore';
 import { faultApi, dashboardApi } from '../api';
@@ -38,6 +38,7 @@ const formatLargeValue = (value, unit = '') => {
     return (value / 1000).toFixed(1) + 'K';
   }
 
+  if (absValue > 0 && absValue < 0.1) return value.toFixed(2);
   return value.toFixed(1);
 };
 
@@ -315,6 +316,9 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
   const [hoveredGroup, setHoveredGroup] = useState(null);
   const tooltipHideTimer = useRef(null);
   const isTooltipHovered = useRef(false);
+
+  // 링크 클릭 정보
+  const [selectedLink, setSelectedLink] = useState(null);
 
   // 장애 데이터 (장비/그룹별 최고 등급)
   const { deviceErrorMap, groupErrorMap, errors: activeErrors } = useDeviceErrorLevels();
@@ -744,6 +748,7 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
   const handleNodeClick = useCallback((node) => {
     setHoveredGroup(null);
     setExpandedLevel(null);
+    setSelectedLink(null);
     if (node.nodeType === 'group' || node.type === 'group') {
       // 그룹 클릭 시 위젯 내에서 해당 그룹으로 이동
       let groupId = node.groupId || node.id;
@@ -766,6 +771,53 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
       }
     }
   }, [displayGroupId, onDeviceClick]);
+
+  // 링크 클릭 → 링크 정보 표시
+  // 노드에서 장비 ID 추출
+  const getDeviceIdFromNode = useCallback((node) => {
+    if (!node) return null;
+    const id = String(node.id || '');
+    return node.deviceId || node.DEVICE_ID || node.originalId || (id.startsWith('device_') ? id.replace('device_', '') : null);
+  }, []);
+
+  const handleLinkClick = useCallback((link) => {
+    setHoveredGroup(null);
+    setExpandedLevel(null);
+    const srcNode = typeof link.source === 'object' ? link.source : graphData.nodes.find(n => String(n.id) === String(link.source));
+    const tgtNode = typeof link.target === 'object' ? link.target : graphData.nodes.find(n => String(n.id) === String(link.target));
+    const srcIsDevice = srcNode?.nodeType === 'device' || (srcNode?.type && srcNode.type !== 'group');
+    const tgtIsDevice = tgtNode?.nodeType === 'device' || (tgtNode?.type && tgtNode.type !== 'group');
+    setSelectedLink({
+      ...link,
+      sourceName: srcNode?.name || srcNode?.label || String(link.source),
+      targetName: tgtNode?.name || tgtNode?.label || String(link.target),
+      sourceIp: srcNode?.ip || '',
+      targetIp: tgtNode?.ip || '',
+      srcIsDevice,
+      tgtIsDevice,
+      srcDeviceId: srcIsDevice ? getDeviceIdFromNode(srcNode) : null,
+      tgtDeviceId: tgtIsDevice ? getDeviceIdFromNode(tgtNode) : null,
+      srcIfName: link.srcIfName || link.SRC_IF_NAME || link.srcIfname || '',
+      dstIfName: link.dstIfName || link.DST_IF_NAME || link.dstIfname || '',
+      srcIfIndex: link.srcIfIndex ?? link.SRC_IF_INDEX ?? link.srcIfindex ?? '',
+      dstIfIndex: link.dstIfIndex ?? link.DST_IF_INDEX ?? link.dstIfindex ?? '',
+      status: link.status || link.STATUS || '',
+    });
+  }, [graphData.nodes, getDeviceIdFromNode]);
+
+  // 선택된 링크의 장비 포트 조회 (IF_INDEX → IF_NAME 변환)
+  const linkSrcDeviceId = selectedLink?.srcIsDevice ? selectedLink.srcDeviceId : null;
+  const linkTgtDeviceId = selectedLink?.tgtIsDevice ? selectedLink.tgtDeviceId : null;
+  const { data: linkSrcPorts } = useDevicePorts(linkSrcDeviceId);
+  const { data: linkTgtPorts } = useDevicePorts(linkTgtDeviceId);
+
+  const resolveIfName = useCallback((ifIndex, ifName, ports) => {
+    if (ifName) return ifName;
+    if (!ifIndex) return '';
+    if (!ports?.length) return `IF:${ifIndex}`;
+    const port = ports.find(p => String(p.IF_INDEX) === String(ifIndex));
+    return port?.IF_NAME || `IF:${ifIndex}`;
+  }, []);
 
   // 그룹 호버 시 장애 건수 툴팁
   const getGroupFaultInfo = useCallback((groupName) => {
@@ -842,6 +894,7 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
   }, [hideTooltip]);
 
   const handleBackClick = useCallback(() => {
+    setSelectedLink(null);
     if (groupHistory.length > 0) {
       // 히스토리에서 이전 그룹 ID 가져오기
       const previousGroupId = groupHistory[groupHistory.length - 1];
@@ -923,6 +976,8 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
           linkWidth={2}
           onNodeClick={handleNodeClick}
           onNodeHover={handleNodeHover}
+          onLinkClick={handleLinkClick}
+          onBackgroundClick={() => setSelectedLink(null)}
           enableZoomInteraction={true}
           enablePanInteraction={true}
           enableNodeDrag={false}
@@ -999,6 +1054,64 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
           </div>
         </div>
       )}
+      {/* 링크 정보 패널 */}
+      {selectedLink && (() => {
+        const resolvedSrc = resolveIfName(selectedLink.srcIfIndex, selectedLink.srcIfName, linkSrcPorts);
+        const resolvedDst = resolveIfName(selectedLink.dstIfIndex, selectedLink.dstIfName, linkTgtPorts);
+        const showInterface = selectedLink.srcIsDevice && selectedLink.tgtIsDevice;
+        return (
+        <div style={{
+          position: 'absolute', top: 10, right: 10, zIndex: 12, width: 260,
+          backgroundColor: '#1f2937', borderRadius: 8, padding: '10px 12px',
+          color: 'white', fontSize: 12, boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span><i className="bi bi-link-45deg" style={{ marginRight: 6 }}></i>링크 정보</span>
+            <button onClick={() => setSelectedLink(null)}
+              style={{ border: 'none', background: 'transparent', color: '#9ca3af', cursor: 'pointer', fontSize: 11 }}>X</button>
+          </div>
+          <div style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8, padding: 10, marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <div style={{ width: 28, height: 28, borderRadius: 6, background: selectedLink.srcIsDevice ? '#3b82f6' : '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className={`bi ${selectedLink.srcIsDevice ? 'bi-hdd-network' : 'bi-folder2'}`} style={{ fontSize: 12 }}></i>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, color: selectedLink.srcIsDevice ? '#60a5fa' : '#a78bfa', fontSize: 11 }}>{selectedLink.sourceName}</div>
+                {selectedLink.srcIsDevice && selectedLink.sourceIp && <div style={{ fontSize: 10, color: '#9ca3af' }}>{selectedLink.sourceIp}</div>}
+              </div>
+            </div>
+            {showInterface && (resolvedSrc || resolvedDst) && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '4px 0', borderTop: '1px dashed rgba(255,255,255,0.1)', borderBottom: '1px dashed rgba(255,255,255,0.1)', margin: '6px 0' }}>
+              {resolvedSrc ? (
+                <span style={{ background: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 500 }}>{resolvedSrc}</span>
+              ) : null}
+              <i className="bi bi-arrow-down" style={{ fontSize: 14, color: '#6b7280' }}></i>
+              {resolvedDst ? (
+                <span style={{ background: '#f59e0b', color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 500 }}>{resolvedDst}</span>
+              ) : null}
+            </div>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+              <div style={{ width: 28, height: 28, borderRadius: 6, background: selectedLink.tgtIsDevice ? '#f59e0b' : '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className={`bi ${selectedLink.tgtIsDevice ? 'bi-hdd-network' : 'bi-folder2'}`} style={{ fontSize: 12 }}></i>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, color: selectedLink.tgtIsDevice ? '#fbbf24' : '#a78bfa', fontSize: 11 }}>{selectedLink.targetName}</div>
+                {selectedLink.tgtIsDevice && selectedLink.targetIp && <div style={{ fontSize: 10, color: '#9ca3af' }}>{selectedLink.targetIp}</div>}
+              </div>
+            </div>
+          </div>
+          {selectedLink.status && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#9ca3af' }}>
+              <span>상태</span>
+              <span style={{ color: selectedLink.status === 'up' ? '#22c55e' : selectedLink.status === 'down' ? '#ef4444' : '#f59e0b' }}>
+                {selectedLink.status === 'up' ? 'UP' : selectedLink.status === 'down' ? 'DOWN' : selectedLink.status || '-'}
+              </span>
+            </div>
+          )}
+        </div>
+        );
+      })()}
       {/* 뒤로 가기 버튼 (하위 그룹에 있을 때만 표시) */}
       {currentGroupId && groupHistory.length > 0 && (
         <button className="topology-back-btn" onClick={handleBackClick} title="뒤로 가기">
@@ -1045,6 +1158,9 @@ function UserTopologyWidget({ onExpand, onDeviceClick }) {
   const tooltipHideTimer = useRef(null);
   const isTooltipHovered = useRef(false);
   const [expandedLevel, setExpandedLevel] = useState(null);
+
+  // 링크 클릭 정보
+  const [selectedLink, setSelectedLink] = useState(null);
 
   // 그룹트리 기반 장애 전파
   useEffect(() => {
@@ -1443,6 +1559,9 @@ function UserTopologyWidget({ onExpand, onDeviceClick }) {
 
   // 그룹 클릭 → 드릴다운
   const handleNodeClick = useCallback((node) => {
+    setHoveredGroup(null);
+    setExpandedLevel(null);
+    setSelectedLink(null);
     const nodeId = String(node.id);
     if (node.nodeType === 'GROUP' || nodeId.startsWith('G')) {
       // 그룹 ID 추출: "G5" → 5
@@ -1462,8 +1581,59 @@ function UserTopologyWidget({ onExpand, onDeviceClick }) {
     }
   }, [currentGroupId, currentGroupName, onDeviceClick]);
 
+  // 노드에서 장비 ID 추출
+  const getDeviceIdFromNode = useCallback((node) => {
+    if (!node) return null;
+    const id = String(node.id || '');
+    return node.deviceId || node.DEVICE_ID || (id.startsWith('D') ? Number(id.substring(1)) : null);
+  }, []);
+
+  // 링크 클릭 → 링크 정보 표시
+  const handleLinkClick = useCallback((link) => {
+    setHoveredGroup(null);
+    setExpandedLevel(null);
+    const srcNode = typeof link.source === 'object' ? link.source : graphData.nodes.find(n => String(n.id) === String(link.source));
+    const tgtNode = typeof link.target === 'object' ? link.target : graphData.nodes.find(n => String(n.id) === String(link.target));
+    const srcId = String(srcNode?.id || link.source);
+    const tgtId = String(tgtNode?.id || link.target);
+    const srcIsDevice = srcNode?.nodeType !== 'GROUP' && !srcId.startsWith('G');
+    const tgtIsDevice = tgtNode?.nodeType !== 'GROUP' && !tgtId.startsWith('G');
+    setSelectedLink({
+      ...link,
+      sourceName: srcNode?.label || srcNode?.name || srcId,
+      targetName: tgtNode?.label || tgtNode?.name || tgtId,
+      sourceIp: srcNode?.ip || '',
+      targetIp: tgtNode?.ip || '',
+      srcIsDevice,
+      tgtIsDevice,
+      srcDeviceId: srcIsDevice ? getDeviceIdFromNode(srcNode) : null,
+      tgtDeviceId: tgtIsDevice ? getDeviceIdFromNode(tgtNode) : null,
+      srcIfName: link.srcIfName || link.SRC_IF_NAME || link.srcIfname || '',
+      dstIfName: link.dstIfName || link.DST_IF_NAME || link.dstIfname || '',
+      srcIfIndex: link.srcIfIndex ?? link.SRC_IF_INDEX ?? link.srcIfindex ?? '',
+      dstIfIndex: link.dstIfIndex ?? link.DST_IF_INDEX ?? link.dstIfindex ?? '',
+      status: link.status || link.STATUS || '',
+    });
+  }, [graphData.nodes, getDeviceIdFromNode]);
+
+  // 선택된 링크의 장비 포트 조회 (IF_INDEX → IF_NAME 변환)
+  const linkSrcDeviceId = selectedLink?.srcIsDevice ? selectedLink.srcDeviceId : null;
+  const linkTgtDeviceId = selectedLink?.tgtIsDevice ? selectedLink.tgtDeviceId : null;
+  const { data: linkSrcPorts } = useDevicePorts(linkSrcDeviceId);
+  const { data: linkTgtPorts } = useDevicePorts(linkTgtDeviceId);
+
+  // IF_INDEX → IF_NAME 변환
+  const resolveIfName = useCallback((ifIndex, ifName, ports) => {
+    if (ifName) return ifName;
+    if (!ifIndex) return '';
+    if (!ports?.length) return `IF:${ifIndex}`;
+    const port = ports.find(p => String(p.IF_INDEX) === String(ifIndex));
+    return port?.IF_NAME || `IF:${ifIndex}`;
+  }, []);
+
   // 뒤로 가기
   const handleBackClick = useCallback(() => {
+    setSelectedLink(null);
     if (groupHistory.length > 0) {
       const prev = groupHistory[groupHistory.length - 1];
       setGroupHistory(h => h.slice(0, -1));
@@ -1604,6 +1774,8 @@ function UserTopologyWidget({ onExpand, onDeviceClick }) {
           linkWidth={2}
           onNodeClick={handleNodeClick}
           onNodeHover={handleNodeHover}
+          onLinkClick={handleLinkClick}
+          onBackgroundClick={() => setSelectedLink(null)}
           enableZoomInteraction={true}
           enablePanInteraction={true}
           enableNodeDrag={false}
@@ -1680,6 +1852,64 @@ function UserTopologyWidget({ onExpand, onDeviceClick }) {
           </div>
         </div>
       )}
+      {/* 링크 정보 패널 */}
+      {selectedLink && (() => {
+        const resolvedSrc = resolveIfName(selectedLink.srcIfIndex, selectedLink.srcIfName, linkSrcPorts);
+        const resolvedDst = resolveIfName(selectedLink.dstIfIndex, selectedLink.dstIfName, linkTgtPorts);
+        const showInterface = selectedLink.srcIsDevice && selectedLink.tgtIsDevice;
+        return (
+        <div style={{
+          position: 'absolute', top: 10, right: 10, zIndex: 12, width: 260,
+          backgroundColor: '#1f2937', borderRadius: 8, padding: '10px 12px',
+          color: 'white', fontSize: 12, boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span><i className="bi bi-link-45deg" style={{ marginRight: 6 }}></i>링크 정보</span>
+            <button onClick={() => setSelectedLink(null)}
+              style={{ border: 'none', background: 'transparent', color: '#9ca3af', cursor: 'pointer', fontSize: 11 }}>X</button>
+          </div>
+          <div style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8, padding: 10, marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <div style={{ width: 28, height: 28, borderRadius: 6, background: selectedLink.srcIsDevice ? '#3b82f6' : '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className={`bi ${selectedLink.srcIsDevice ? 'bi-hdd-network' : 'bi-folder2'}`} style={{ fontSize: 12 }}></i>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, color: selectedLink.srcIsDevice ? '#60a5fa' : '#a78bfa', fontSize: 11 }}>{selectedLink.sourceName}</div>
+                {selectedLink.srcIsDevice && selectedLink.sourceIp && <div style={{ fontSize: 10, color: '#9ca3af' }}>{selectedLink.sourceIp}</div>}
+              </div>
+            </div>
+            {showInterface && (resolvedSrc || resolvedDst) && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '4px 0', borderTop: '1px dashed rgba(255,255,255,0.1)', borderBottom: '1px dashed rgba(255,255,255,0.1)', margin: '6px 0' }}>
+              {resolvedSrc ? (
+                <span style={{ background: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 500 }}>{resolvedSrc}</span>
+              ) : null}
+              <i className="bi bi-arrow-down" style={{ fontSize: 14, color: '#6b7280' }}></i>
+              {resolvedDst ? (
+                <span style={{ background: '#f59e0b', color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 500 }}>{resolvedDst}</span>
+              ) : null}
+            </div>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+              <div style={{ width: 28, height: 28, borderRadius: 6, background: selectedLink.tgtIsDevice ? '#f59e0b' : '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className={`bi ${selectedLink.tgtIsDevice ? 'bi-hdd-network' : 'bi-folder2'}`} style={{ fontSize: 12 }}></i>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, color: selectedLink.tgtIsDevice ? '#fbbf24' : '#a78bfa', fontSize: 11 }}>{selectedLink.targetName}</div>
+                {selectedLink.tgtIsDevice && selectedLink.targetIp && <div style={{ fontSize: 10, color: '#9ca3af' }}>{selectedLink.targetIp}</div>}
+              </div>
+            </div>
+          </div>
+          {selectedLink.status && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#9ca3af' }}>
+              <span>상태</span>
+              <span style={{ color: selectedLink.status === 'up' ? '#22c55e' : selectedLink.status === 'down' ? '#ef4444' : '#f59e0b' }}>
+                {selectedLink.status === 'up' ? 'UP' : selectedLink.status === 'down' ? 'DOWN' : selectedLink.status || '-'}
+              </span>
+            </div>
+          )}
+        </div>
+        );
+      })()}
       {/* 뒤로 가기 버튼 (하위 그룹에 있을 때만 표시) */}
       {!isRoot && (
         <button className="topology-back-btn" onClick={handleBackClick} title="뒤로 가기">
@@ -1825,8 +2055,9 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
               if (!metricGroups.has(data.metric)) {
                 metricGroups.set(data.metric, []);
               }
-              // 평균값 계산
-              const avg = data.values.reduce((sum, v) => sum + v, 0) / data.values.length;
+              // 평균값 계산 (null 값 제외)
+              const validValues = data.values.filter(v => v != null);
+              const avg = validValues.length > 0 ? validValues.reduce((sum, v) => sum + v, 0) / validValues.length : 0;
               metricGroups.get(data.metric).push({ ...data, avgValue: avg });
             });
 
@@ -1963,7 +2194,22 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
               'MEMORY_USAGE': '%',
             };
 
-            // 10. 색상 및 짧은 라벨 추가 후 반환
+            // 10. 모든 시리즈의 타임스탬프를 합쳐 통일된 시간축 생성
+            const allTimestamps = new Set();
+            selectedData.forEach(data => {
+              data.timestamps.forEach(ts => allTimestamps.add(ts));
+            });
+            const unifiedTimestamps = [...allTimestamps].sort();
+
+            // 11. 각 시리즈의 데이터를 통일된 시간축에 맞춰 정렬
+            selectedData.forEach(data => {
+              const tsMap = new Map();
+              data.timestamps.forEach((ts, i) => tsMap.set(ts, data.values[i]));
+              data.timestamps = unifiedTimestamps;
+              data.values = unifiedTimestamps.map(ts => tsMap.has(ts) ? tsMap.get(ts) : null);
+            });
+
+            // 12. 색상 및 짧은 라벨 추가 후 반환
             let result = [];
             metricColorMap.forEach((devices, metric) => {
               const baseColor = metricColors[metric] || '#14b8a6';
@@ -1972,10 +2218,6 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
               const metricUnit = metricUnits[metric] || '%';
 
               devices.forEach((data, index) => {
-                // 디바이스 이름도 10자로 제한
-                const shortDeviceName = data.deviceName.length > 10
-                  ? data.deviceName.substring(0, 10)
-                  : data.deviceName;
 
                 // 같은 메트릭 내에서 디바이스별로 색상 톤 변화
                 const deviceColor = deviceCount > 1
@@ -1987,7 +2229,7 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
                   value: data.values,
                   color: deviceColor,
                   unit: metricUnit,
-                  displayName: `${shortMetric}-${shortDeviceName}`,
+                  displayName: `${shortMetric}-${data.deviceName}`,
                   fullDisplayName: `${data.metric} - ${data.deviceName}`, // 툴팁용
                   _key: `${data.metric}-${data.deviceId}-line`
                 });
@@ -2048,6 +2290,18 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
             }));
           }
 
+          // 모든 장비의 타임스탬프를 합쳐 통일된 시간축 생성
+          const allTs = new Set();
+          deviceArray.forEach(d => d.timestamps.forEach(ts => allTs.add(ts)));
+          const unifiedTs = [...allTs].sort();
+
+          deviceArray.forEach(device => {
+            const tsMap = new Map();
+            device.timestamps.forEach((ts, i) => tsMap.set(ts, device.values[i]));
+            device.timestamps = unifiedTs;
+            device.values = unifiedTs.map(ts => tsMap.has(ts) ? tsMap.get(ts) : null);
+          });
+
           // 색상 추가
           return deviceArray.map((device, index) => ({
             ...device,
@@ -2091,10 +2345,16 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
     : [];
 
   // ECharts 옵션 생성
+  // 초기 로드 후에는 update 애니메이션만 사용 (데이터 갱신 시 처음부터 다시 그리는 현상 방지)
+  const hasRenderedRef = useRef(false);
+  useEffect(() => {
+    if (rawChartData.length > 0) hasRenderedRef.current = true;
+  }, [rawChartData]);
+
   const CHART_ANIMATION = {
     animation: true,
-    animationDuration: 600,
-    animationDurationUpdate: 800,
+    animationDuration: hasRenderedRef.current ? 0 : 600,
+    animationDurationUpdate: 500,
     animationEasing: 'cubicOut',
     animationEasingUpdate: 'cubicInOut',
   };
@@ -2700,25 +2960,24 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
             // 툴팁 아이템들 (스크롤 가능) - 모든 chartData 항목 표시
             let items = '';
 
-            // params에서 값 맵 생성 (seriesName -> value, color)
-            const paramsMap = new Map();
+            // params에서 값 맵 생성 (seriesIndex -> value, color) - 이름 중복 방지를 위해 인덱스 사용
+            const paramsByIndex = new Map();
             params.forEach(param => {
-              paramsMap.set(param.seriesName, {
+              paramsByIndex.set(param.seriesIndex, {
                 value: param.value,
                 color: param.color
               });
             });
 
             // 모든 chartData 항목을 순회하며 툴팁 생성
-            chartData.forEach((dataItem) => {
-              const seriesName = dataItem.displayName || dataItem.deviceName;
+            chartData.forEach((dataItem, chartIdx) => {
               const color = dataItem.color || '#3b82f6';
               const unit = dataItem?.unit || '%';
 
-              // params에서 값 찾기, 없으면 values 배열에서 직접 가져오기
+              // seriesIndex로 값 찾기, 없으면 values 배열에서 직접 가져오기
               let value;
-              if (paramsMap.has(seriesName)) {
-                value = paramsMap.get(seriesName).value;
+              if (paramsByIndex.has(chartIdx)) {
+                value = paramsByIndex.get(chartIdx).value;
               } else if (Array.isArray(dataItem.value) && dataIndex < dataItem.value.length) {
                 value = dataItem.value[dataIndex];
               } else if (Array.isArray(dataItem.values) && dataIndex < dataItem.values.length) {
@@ -2726,14 +2985,16 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
               }
 
               const marker = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:6px;"></span>`;
+              // 툴팁에는 전체 이름 표시 (장비 구분을 위해)
+              const tooltipName = dataItem.fullDisplayName || dataItem.displayName || dataItem.deviceName;
 
               // 값이 없으면 '-' 표시
               if (value == null || isNaN(value)) {
-                items += `<div style="margin-top: 4px; white-space: nowrap; font-size: 12px; opacity: 0.5;">${marker}${seriesName}: <strong>-</strong></div>`;
+                items += `<div style="margin-top: 4px; white-space: nowrap; font-size: 12px; opacity: 0.5;">${marker}${tooltipName}: <strong>-</strong></div>`;
               } else {
                 // 절대값으로 표시 + K/M/G 단위 적용
                 const displayValue = formatLargeValue(Math.abs(value), unit);
-                items += `<div style="margin-top: 4px; white-space: nowrap; font-size: 12px;">${marker}${seriesName}: <strong>${displayValue}${unit}</strong></div>`;
+                items += `<div style="margin-top: 4px; white-space: nowrap; font-size: 12px;">${marker}${tooltipName}: <strong>${displayValue}${unit}</strong></div>`;
               }
             });
 
@@ -2861,6 +3122,9 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
               symbolSize: 4,
               lineStyle: { color: item.color, width: 2 },
               itemStyle: { color: item.color },
+              animationDuration: hasRenderedRef.current ? 0 : 600,
+              animationDurationUpdate: 500,
+              animationEasingUpdate: 'cubicInOut',
               areaStyle: {
                 color: {
                   type: 'linear',
@@ -3468,42 +3732,7 @@ function WidgetContent({ widget, widgetTypes, isEditMode, onDeviceClick }) {
       return null;
 
     case 'DEVICE_SUMMARY':
-      // cntData에서 장비 수 데이터 추출
-      const deviceCntData = widget.cntData || {};
-      return (
-        <div className="widget-content-inner">
-          <div className="device-summary-grid">
-            <div className="device-card">
-              <div className="device-icon network"><i className="bi bi-diagram-3-fill"></i></div>
-              <div className="device-content">
-                <div className="device-count">{deviceCntData.networkCnt ?? 0}</div>
-                <div className="device-label">네트워크</div>
-              </div>
-            </div>
-            <div className="device-card">
-              <div className="device-icon server"><i className="bi bi-hdd-stack-fill"></i></div>
-              <div className="device-content">
-                <div className="device-count">{deviceCntData.serverCnt ?? 0}</div>
-                <div className="device-label">서버</div>
-              </div>
-            </div>
-            <div className="device-card">
-              <div className="device-icon transfer"><i className="bi bi-arrow-left-right"></i></div>
-              <div className="device-content">
-                <div className="device-count">{deviceCntData.tranCnt ?? 0}</div>
-                <div className="device-label">전송</div>
-              </div>
-            </div>
-            <div className="device-card">
-              <div className="device-icon fms"><i className="bi bi-building-fill"></i></div>
-              <div className="device-content">
-                <div className="device-count">{deviceCntData.fmsCnt ?? 0}</div>
-                <div className="device-label">FMS</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
+      return null; // 별도 컴포넌트로 처리
 
     default:
       return (
@@ -3515,6 +3744,40 @@ function WidgetContent({ widget, widgetTypes, isEditMode, onDeviceClick }) {
         </div>
       );
   }
+}
+
+// 종합 현황 위젯 컴포넌트
+function DeviceSummaryWidget({ cntData, isEditMode }) {
+  const navigate = useNavigate();
+  const deviceCntData = cntData || {};
+
+  const categories = [
+    { key: 'networkCnt', label: '네트워크', category: '네트워크', icon: 'bi-diagram-3-fill', cls: 'network' },
+    { key: 'serverCnt',  label: '서버',     category: '서버',     icon: 'bi-hdd-stack-fill', cls: 'server' },
+    { key: 'tranCnt',    label: '전송',     category: '전송',     icon: 'bi-arrow-left-right', cls: 'transfer' },
+    { key: 'fmsCnt',     label: 'FMS',      category: 'FMS',      icon: 'bi-building-fill', cls: 'fms' },
+  ];
+
+  return (
+    <div className="widget-content-inner">
+      <div className="device-summary-grid">
+        {categories.map(({ key, label, category, icon, cls }) => (
+          <div
+            key={key}
+            className="device-card"
+            style={{ cursor: isEditMode ? 'default' : 'pointer' }}
+            onClick={() => !isEditMode && navigate(`/mgmt/assets?category=${encodeURIComponent(category)}`)}
+          >
+            <div className={`device-icon ${cls}`}><i className={`bi ${icon}`}></i></div>
+            <div className="device-content">
+              <div className="device-count">{deviceCntData[key] ?? 0}</div>
+              <div className="device-label">{label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // 장애 현황 위젯 컴포넌트
@@ -3637,6 +3900,32 @@ function RealtimeAlertWidget({ isEditMode, initialData }) {
   });
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
 
+  // 위젯 크기 감지 → 넓으면 검색 필드 자동 표시 + 페이지 사이즈 동적 계산
+  const widgetRef = useRef(null);
+  const tableContainerRef = useRef(null);
+  const [isWide, setIsWide] = useState(false);
+  const [dynamicPageSize, setDynamicPageSize] = useState(20);
+  const [alertPage, setAlertPage] = useState(1);
+
+  useEffect(() => {
+    const el = widgetRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0]?.contentRect || {};
+      setIsWide((width || 0) >= 700);
+      // 필터바(~40px) + 페이지네이션(~36px) 제외, 행 높이 ~30px, thead ~28px
+      const availableHeight = (height || 300) - 40 - 36 - 28;
+      const rowH = 30;
+      const rows = Math.max(5, Math.floor(availableHeight / rowH));
+      setDynamicPageSize(rows);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // 필터 변경 시 페이지 리셋
+  useEffect(() => { setAlertPage(1); }, [selectedLevels, searchFilters]);
+
   // initialData가 변경되면 apiErrors 업데이트
   useEffect(() => {
     if (Array.isArray(initialData)) {
@@ -3736,11 +4025,12 @@ function RealtimeAlertWidget({ isEditMode, initialData }) {
     }
   }, [isEditMode, hasFetched]);
 
-  // WebSocket 알림 수신 시 목록 새로고침
+  // WebSocket 알림 수신 시 목록 새로고침 (장애 발생/해소 모두 감지)
+  const latestAlert = alerts[0];
   useEffect(() => {
-    if (isEditMode || !hasFetched || alerts.length === 0) return;
+    if (isEditMode || !hasFetched || !latestAlert) return;
     fetchErrors();
-  }, [alerts.length]);
+  }, [latestAlert]);
 
   // 등급 토글
   const toggleLevel = (levelId) => {
@@ -3838,8 +4128,10 @@ function RealtimeAlertWidget({ isEditMode, initialData }) {
     );
   }
 
+  const showFilters = isWide || showAdvancedSearch;
+
   return (
-    <div className="realtime-alert-widget">
+    <div className="realtime-alert-widget" ref={widgetRef}>
       {/* 필터 영역 */}
       <div className="widget-filter-bar">
         <div className="widget-level-filters">
@@ -3856,67 +4148,69 @@ function RealtimeAlertWidget({ isEditMode, initialData }) {
           ))}
         </div>
         <div className="widget-search-box">
-          <i className="bi bi-search"></i>
+          <label>장비명</label>
           <input
             type="text"
-            placeholder="장비명..."
+            placeholder="장비명"
             value={searchFilters.deviceName}
             onChange={(e) => handleFilterChange('deviceName', e.target.value)}
           />
         </div>
-        <button
-          className={`widget-filter-toggle ${showAdvancedSearch ? 'active' : ''} ${hasActiveFilters ? 'has-filters' : ''}`}
-          onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
-          title="상세 검색"
-        >
-          <i className="bi bi-filter"></i>
-        </button>
-        {hasActiveFilters && (
-          <button
-            className="widget-filter-reset"
-            onClick={handleResetFilters}
-            title="검색 초기화"
-          >
-            <i className="bi bi-x-circle"></i>
-          </button>
+        {showFilters && (
+          <>
+            <div className="widget-search-field">
+              <label>IP</label>
+              <input
+                type="text"
+                placeholder="IP 주소"
+                value={searchFilters.deviceIp}
+                onChange={(e) => handleFilterChange('deviceIp', e.target.value)}
+              />
+            </div>
+            <div className="widget-search-field">
+              <label>그룹</label>
+              <input
+                type="text"
+                placeholder="그룹명"
+                value={searchFilters.groupName}
+                onChange={(e) => handleFilterChange('groupName', e.target.value)}
+              />
+            </div>
+            <div className="widget-search-field">
+              <label>내용</label>
+              <input
+                type="text"
+                placeholder="장애 내용"
+                value={searchFilters.errorMessage}
+                onChange={(e) => handleFilterChange('errorMessage', e.target.value)}
+              />
+            </div>
+          </>
         )}
+        <div className="widget-filter-actions">
+          {!isWide && (
+            <button
+              className={`widget-filter-toggle ${showAdvancedSearch ? 'active' : ''} ${hasActiveFilters ? 'has-filters' : ''}`}
+              onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+              title="상세 검색"
+            >
+              <i className="bi bi-filter"></i>
+            </button>
+          )}
+          {hasActiveFilters && (
+            <button
+              className="widget-filter-reset"
+              onClick={handleResetFilters}
+              title="검색 초기화"
+            >
+              <i className="bi bi-x-circle"></i>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* 상세 검색 영역 */}
-      {showAdvancedSearch && (
-        <div className="widget-advanced-search">
-          <div className="search-field">
-            <label>IP</label>
-            <input
-              type="text"
-              placeholder="IP 주소"
-              value={searchFilters.deviceIp}
-              onChange={(e) => handleFilterChange('deviceIp', e.target.value)}
-            />
-          </div>
-          <div className="search-field">
-            <label>그룹</label>
-            <input
-              type="text"
-              placeholder="그룹명"
-              value={searchFilters.groupName}
-              onChange={(e) => handleFilterChange('groupName', e.target.value)}
-            />
-          </div>
-          <div className="search-field">
-            <label>내용</label>
-            <input
-              type="text"
-              placeholder="장애 내용"
-              value={searchFilters.errorMessage}
-              onChange={(e) => handleFilterChange('errorMessage', e.target.value)}
-            />
-          </div>
-        </div>
-      )}
-
       {/* 장애 테이블 */}
-      <div className="widget-alert-table-container">
+      <div className="widget-alert-table-container" ref={tableContainerRef}>
         {isLoading && combinedErrors.length === 0 ? (
           <div className="widget-loading">
             <div className="loading-spinner"></div>
@@ -3941,7 +4235,7 @@ function RealtimeAlertWidget({ isEditMode, initialData }) {
               </tr>
             </thead>
             <tbody>
-              {combinedErrors.slice(0, 50).map((error, index) => (
+              {combinedErrors.slice((alertPage - 1) * dynamicPageSize, alertPage * dynamicPageSize).map((error, index) => (
                 <tr
                   key={error.ERROR_ID || `error-${index}`}
                   className={`${getLevelClass(error.ERROR_LEVEL)}${highlightedIds.has(error.ERROR_ID) ? ' row-highlight' : ''}`}
@@ -3978,12 +4272,32 @@ function RealtimeAlertWidget({ isEditMode, initialData }) {
         )}
       </div>
 
-      {/* 더보기 */}
-      {combinedErrors.length > 50 && (
-        <div className="widget-more">
-          <span>+{combinedErrors.length - 50}건 더 있음</span>
-        </div>
-      )}
+      {/* 페이지네이션 */}
+      {combinedErrors.length > 0 && (() => {
+        const totalPages = Math.ceil(combinedErrors.length / dynamicPageSize);
+        return (
+          <div className="widget-pagination">
+            <span className="widget-pagination-info">
+              {combinedErrors.length}건 중 {(alertPage - 1) * dynamicPageSize + 1}-{Math.min(alertPage * dynamicPageSize, combinedErrors.length)}
+            </span>
+            <div className="widget-pagination-controls">
+              <button disabled={alertPage <= 1} onClick={() => setAlertPage(1)} title="처음">
+                <i className="bi bi-chevron-double-left"></i>
+              </button>
+              <button disabled={alertPage <= 1} onClick={() => setAlertPage(p => p - 1)} title="이전">
+                <i className="bi bi-chevron-left"></i>
+              </button>
+              <span className="widget-pagination-page">{alertPage} / {totalPages}</span>
+              <button disabled={alertPage >= totalPages} onClick={() => setAlertPage(p => p + 1)} title="다음">
+                <i className="bi bi-chevron-right"></i>
+              </button>
+              <button disabled={alertPage >= totalPages} onClick={() => setAlertPage(totalPages)} title="마지막">
+                <i className="bi bi-chevron-double-right"></i>
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -4003,6 +4317,7 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [containerWidth, setContainerWidth] = useState(1200);
+  const [gridAreaHeight, setGridAreaHeight] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
   const [initialWidgetCount, setInitialWidgetCount] = useState(0); // 편집 시작 시 위젯 개수
   const [showResetConfirm, setShowResetConfirm] = useState(false); // 초기화 확인 모달
@@ -4241,42 +4556,49 @@ export default function Dashboard() {
     setIsReloadingAfterSave(false); // 리로딩 완료
   }, [defaultDashboard, userDashboard, widgetsLoading, defaultDashboardLoading, userDashboardLoading, userDashboardFetching, isInitialized, isSaving, isResetting, isEditMode, WIDGET_TYPES]);
 
-  // 컨테이너 너비 감지
+  // 컨테이너 너비 감지 + 그리드 영역 높이 계산 (window 기준, 순환 의존 방지)
+  const headerRef = useRef(null);
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     let lastWidth = 0;
 
-    const updateWidth = () => {
+    const updateSize = () => {
       const width = container.clientWidth;
-      // 이전 값과 비교해서 실제로 변경되었을 때만 업데이트 (무한 루프 방지)
       if (width > 0 && Math.abs(width - lastWidth) > 1) {
         lastWidth = width;
         setContainerWidth(width);
       }
+      // 높이는 window.innerHeight 기준으로 계산 (순환 의존 방지)
+      const headerH = headerRef.current?.offsetHeight || 0;
+      const headerMargin = 20; // dashboard-header margin-bottom
+      const availableH = window.innerHeight - headerH - headerMargin;
+      setGridAreaHeight(Math.max(200, availableH));
     };
 
-    // 초기 너비 설정
-    updateWidth();
+    updateSize();
+    const timer1 = setTimeout(updateSize, 50);
+    const timer2 = setTimeout(updateSize, 200);
 
-    // DOM이 완전히 렌더링된 후 다시 측정
-    const timer1 = setTimeout(updateWidth, 50);
-    const timer2 = setTimeout(updateWidth, 200);
-
-    const resizeObserver = new ResizeObserver(() => {
-      updateWidth();
-    });
+    const resizeObserver = new ResizeObserver(() => { updateSize(); });
     resizeObserver.observe(container);
 
-    // window resize도 감지
-    window.addEventListener('resize', updateWidth);
+    window.addEventListener('resize', updateSize);
+
+    const onFullscreenChange = () => {
+      updateSize();
+      setTimeout(updateSize, 100);
+      setTimeout(updateSize, 300);
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
 
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
       resizeObserver.disconnect();
-      window.removeEventListener('resize', updateWidth);
+      window.removeEventListener('resize', updateSize);
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
     };
   }, [isInitialized]);
 
@@ -4905,7 +5227,15 @@ export default function Dashboard() {
   const cols = GRID_COLS; // 96칸 세밀 그리드
   const margin = 2; // 위젯 간 간격
   const containerPaddingVal = 4;
-  const rowHeight = 20; // 고정 행 높이 (20px 단위 세밀 조절)
+  // 레이아웃 총 행 수 기준으로 rowHeight를 계산하여 화면에 꽉 채움
+  const rowHeight = useMemo(() => {
+    if (!gridAreaHeight || gridAreaHeight < 200 || layout.length === 0) return 20;
+    const maxRow = layout.reduce((max, item) => Math.max(max, (item.y || 0) + (item.h || 1)), 0);
+    if (maxRow <= 0) return 20;
+    const available = gridAreaHeight - (containerPaddingVal * 2) - ((maxRow - 1) * margin);
+    const calc = Math.floor(available / maxRow);
+    return Math.max(10, calc);
+  }, [gridAreaHeight, layout]);
 
   // static 속성은 사용하지 않음 (correctBounds가 static 위젯을 밀어내는 문제 방지)
   // 대신 dragConfig.enabled, resizeConfig.enabled로 편집 모드 제어
@@ -4947,7 +5277,7 @@ export default function Dashboard() {
       )}
 
       {/* 헤더 */}
-      <div className="dashboard-header">
+      <div className="dashboard-header" ref={headerRef}>
         <div className="dashboard-title">
           <h1>대시보드</h1>
           <span className="widget-count">{widgets.length}개 위젯</span>
@@ -5083,6 +5413,8 @@ export default function Dashboard() {
                     <RealtimeAlertWidget isEditMode={isEditMode} initialData={widget.chartData} />
                   ) : widget.type === 'ALERT_SUMMARY' ? (
                     <AlertSummaryWidget cntData={widget.cntData} isEditMode={isEditMode} />
+                  ) : widget.type === 'DEVICE_SUMMARY' ? (
+                    <DeviceSummaryWidget cntData={widget.cntData} isEditMode={isEditMode} />
                   ) : (
                     <WidgetContent widget={widget} widgetTypes={WIDGET_TYPES} isEditMode={isEditMode} onDeviceClick={handleTopoDeviceClick} />
                   )}

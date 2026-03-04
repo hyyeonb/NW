@@ -705,6 +705,14 @@
   background: linear-gradient(135deg, var(--theme-accent-primary) 0%, #8b5cf6 100%);
 }
 
+.board-toggle.active.urgent .board-toggle-slider {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.board-toggle.active.pinned .board-toggle-slider {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
 .board-toggle.active .board-toggle-slider::after {
   transform: translateX(16px);
 }
@@ -713,6 +721,14 @@
   font-size: 0.82rem;
   color: var(--theme-text-tertiary);
   font-weight: 500;
+}
+
+.board-toggle.active.urgent span {
+  color: #ef4444;
+}
+
+.board-toggle.active.pinned span {
+  color: #f59e0b;
 }
 
 /* 기존 첨부파일 (수정 모드) */

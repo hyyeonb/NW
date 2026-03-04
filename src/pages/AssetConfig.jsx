@@ -98,7 +98,7 @@ export default function AssetConfig() {
   // 행 클릭 시 상세 페이지로 이동
   const handleRowClick = (device) => {
     navigate(`/mgmt/asset-config/${device.deviceId}`, {
-      state: { deviceName: device.deviceNm, deviceIp: device.deviceIp }
+      state: { deviceName: device.deviceNm, deviceIp: device.deviceIp, deviceConfigDate: device.deviceConfigDate }
     });
   };
 
@@ -112,7 +112,6 @@ export default function AssetConfig() {
     {
       key: 'deviceNm',
       label: '장비명',
-      width: '25%',
       minWidth: '180px',
       sortable: true,
       className: 'cell-truncate',
@@ -120,8 +119,7 @@ export default function AssetConfig() {
     {
       key: 'groupNm',
       label: '그룹',
-      width: '20%',
-      minWidth: '120px',
+      width: '150px',
       sortable: true,
       className: 'cell-truncate',
       hideable: true,
@@ -132,8 +130,7 @@ export default function AssetConfig() {
     {
       key: 'deviceIp',
       label: 'IP 주소',
-      width: '15%',
-      minWidth: '130px',
+      width: '140px',
       sortable: true,
       className: 'cell-ip',
       hideable: true,
@@ -141,8 +138,7 @@ export default function AssetConfig() {
     {
       key: 'modelNm',
       label: '모델',
-      width: '20%',
-      minWidth: '120px',
+      width: '150px',
       sortable: true,
       className: 'cell-truncate',
       hideable: true,
@@ -151,8 +147,7 @@ export default function AssetConfig() {
     {
       key: 'deviceConfigDate',
       label: '최근 수집일',
-      width: '15%',
-      minWidth: '120px',
+      width: '130px',
       sortable: true,
       className: 'cell-date',
       hideable: true,
@@ -164,26 +159,6 @@ export default function AssetConfig() {
           </span>
         );
       },
-    },
-    {
-      key: 'actions',
-      label: '',
-      width: '60px',
-      hideable: true,
-      render: (_, row) => (
-        <button
-          className="btn btn-icon-only btn-sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/mgmt/asset-config/${row.deviceId}`, {
-              state: { deviceName: row.deviceNm, deviceIp: row.deviceIp }
-            });
-          }}
-          title="설정 비교"
-        >
-          <i className="bi bi-file-diff"></i>
-        </button>
-      ),
     },
   ], [navigate]);
 

@@ -1018,8 +1018,12 @@ export default function NetworkTopology() {
 
     setSelectedNode(node);
 
-    // 편집 모드에서는 선택만 하고 이동/모달 안함
-    if (isEditMode) return;
+    // 편집 모드에서는 선택 + 초록원 표시, 이동/모달 안함
+    if (isEditMode) {
+      setSelectedLink(null);
+      setSelectedNodes(new Set([getNodeKey(node)]));
+      return;
+    }
 
     // 노드 ID 추출 (그룹 또는 장비)
     const isGroupNode = node.nodeType === 'group' || node.type === 'group';

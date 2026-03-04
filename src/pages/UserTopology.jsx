@@ -483,7 +483,7 @@ export default function UserTopology() {
     img.onload = () => { backgroundImageRef.current = img; };
   }, [backgroundImage]);
 
-  // 리사이즈 (사이드바 토글 시에도 재계산)
+  // 리사이즈 (사이드바 토글, 로딩 완료 시에도 재계산)
   useEffect(() => {
     const updateDimensions = () => {
       if (containerRef.current) {
@@ -494,7 +494,7 @@ export default function UserTopology() {
       }
     };
 
-    // 사이드바 토글 후 크기 재계산
+    // 사이드바 토글 또는 로딩 완료 후 크기 재계산
     const timer = setTimeout(() => {
       updateDimensions();
     }, 150);
@@ -508,7 +508,7 @@ export default function UserTopology() {
       ro.disconnect();
       window.removeEventListener('resize', updateDimensions);
     };
-  }, [sidebarCollapsed]);
+  }, [sidebarCollapsed, isLoading]);
 
   const getLinkEndId = (end) => typeof end === 'object' && end !== null ? end.id : end;
 
@@ -840,25 +840,22 @@ export default function UserTopology() {
 
   const handleRightClick = useCallback((node, event) => {
     event.preventDefault();
+    event.stopPropagation();
     lastNodeClickTimeRef.current = Date.now();
-    // 비편집 모드에서 그룹 노드는 메뉴 표시할 항목 없음
-    if (!isEditMode && node.nodeType !== 'device') return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    setContextMenu({ visible: true, x: event.clientX - (rect?.left || 0), y: event.clientY - (rect?.top || 0), type: 'node', target: node });
+    if (!isEditMode) return;
+    setContextMenu({ visible: true, x: event.clientX, y: event.clientY, type: 'node', target: node });
   }, [isEditMode]);
 
   const handleLinkRightClick = useCallback((link, event) => {
     event.preventDefault();
+    event.stopPropagation();
     lastNodeClickTimeRef.current = Date.now();
-    const rect = containerRef.current?.getBoundingClientRect();
-    setContextMenu({ visible: true, x: event.clientX - (rect?.left || 0), y: event.clientY - (rect?.top || 0), type: 'link', target: link });
-  }, []);
+    if (!isEditMode) return;
+    setContextMenu({ visible: true, x: event.clientX, y: event.clientY, type: 'link', target: link });
+  }, [isEditMode]);
 
   const handleBgRightClick = useCallback((event) => {
     event.preventDefault();
-    if (Date.now() - lastNodeClickTimeRef.current < 100) return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    setContextMenu({ visible: true, x: event.clientX - (rect?.left || 0), y: event.clientY - (rect?.top || 0), type: 'background', target: null });
   }, []);
 
   // ===== 삭제 (편집 모드 전용) =====
@@ -909,7 +906,16 @@ export default function UserTopology() {
       const nodeType = isGroup ? 'group' : 'device';
       const nodeId = isGroup ? dropped.GROUP_ID : dropped.DEVICE_ID;
       const uniqueId = isGroup ? `G${nodeId}` : `D${nodeId}`;
-      if (data.nodes.some(n => n.id === uniqueId)) return;
+      const nodeName = isGroup ? dropped.GROUP_NAME : (dropped.DEVICE_NAME || dropped.MODEL_NAME || `장비 ${nodeId}`);
+      if (data.nodes.some(n => n.id === uniqueId)) {
+        showAlert(
+          isGroup
+            ? `이미 토폴로지에 존재하는 그룹입니다.\n${nodeName}`
+            : `이미 토폴로지에 존재하는 장비입니다.\n${nodeName}`,
+          'warning'
+        );
+        return;
+      }
 
       const newNode = {
         id: uniqueId, nodeType,
@@ -925,7 +931,7 @@ export default function UserTopology() {
     } catch (err) {
       console.error('Drop 처리 실패:', err);
     }
-  }, [isEditMode, data.nodes]);
+  }, [isEditMode, data.nodes, showAlert]);
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
@@ -1605,39 +1611,82 @@ export default function UserTopology() {
             }}
           />}
 
-          {/* 컨텍스트 메뉴 */}
-          {contextMenu.visible && (
-            <div className="ut-context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}
-              onClick={() => setContextMenu(prev => ({ ...prev, visible: false }))}>
+          {/* 컨텍스트 메뉴 (NetworkTopology 동일 스타일) */}
+          {contextMenu.visible && (() => {
+            const menuStyle = {
+              position: 'fixed', top: contextMenu.y, left: contextMenu.x,
+              backgroundColor: '#1f2937', color: 'white', borderRadius: 4,
+              padding: '4px 0', fontSize: 12, zIndex: 1000,
+              boxShadow: '0 4px 10px rgba(0,0,0,0.4)', minWidth: 180,
+            };
+            const itemStyle = {
+              width: '100%', padding: '6px 10px', textAlign: 'left',
+              border: 'none', background: 'transparent', color: 'inherit',
+              cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6,
+            };
+            const headerStyle = {
+              padding: '4px 10px', fontSize: 11, opacity: 0.8,
+              borderBottom: '1px solid #374151',
+            };
+            const closeMenu = () => setContextMenu(prev => ({ ...prev, visible: false }));
 
-              {/* 노드 우클릭 */}
-              {contextMenu.type === 'node' && contextMenu.target && (() => {
-                const target = contextMenu.target;
-                return (
-                  <>
-                    {/* 장비 상세 (항상 표시) */}
-                    {target.nodeType === 'device' && (
-                      <button onClick={() => { setDeviceModalId(getDeviceIdFromNode(target)); setDeviceModalOpen(true); setContextMenu(prev => ({ ...prev, visible: false })); }}>
-                        <i className="bi bi-info-circle"></i> 장비 상세정보
-                      </button>
-                    )}
-                    {/* 그룹 → 하위 토폴로지 이동 (항상 표시) */}
-                    {target.nodeType === 'group' && (
-                      <button onClick={() => {
-                        const groupId = target.groupId || (target.id?.startsWith('G') ? Number(target.id.substring(1)) : target.id);
-                        navigateToGroup(groupId, target.name || `그룹 ${groupId}`);
-                      }}>
-                        <i className="bi bi-box-arrow-in-right"></i> 그룹 토폴로지 이동
-                      </button>
-                    )}
+            return (
+              <div style={menuStyle} onClick={(e) => e.stopPropagation()} onContextMenu={(e) => e.preventDefault()}>
+                {/* 노드 우클릭 */}
+                {contextMenu.type === 'node' && contextMenu.target && (() => {
+                  const target = contextMenu.target;
+                  const nodeKey = `${target.nodeType === 'group' ? 'G' : 'D'}${target.deviceId || target.groupId || target.id}`;
+                  return (
+                    <>
+                      <div style={headerStyle}>
+                        노드: {target.name || target.id}
+                        {isEditMode && selectedNodes.size > 1 && selectedNodes.has(nodeKey) && (
+                          <span style={{ marginLeft: 8, color: '#22c55e' }}>(+{selectedNodes.size - 1}개 선택됨)</span>
+                        )}
+                      </div>
 
-                    {/* 편집 모드 전용 */}
-                    {isEditMode && (
-                      <>
-                        {linkDraftSource ? (
-                          <>
-                            {linkDraftSource.id !== target.id && !hasDuplicateLink(linkDraftSource.id, target.id) && (
-                              <button onClick={() => {
+                      {/* 편집 모드 전용 */}
+                      {isEditMode && (
+                        <>
+                          {selectedNodes.size > 1 && selectedNodes.has(nodeKey) ? (
+                            <button style={{ ...itemStyle, color: '#ef4444' }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                              onClick={() => { showConfirm(`선택된 ${selectedNodes.size}개 노드를 삭제하시겠습니까?`, '노드 삭제').then(ok => ok && handleDeleteSelected()); }}>
+                              선택된 {selectedNodes.size}개 노드 삭제
+                            </button>
+                          ) : (
+                            <button style={itemStyle}
+                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                              onClick={() => { handleDeleteNode(target.id); closeMenu(); }}>
+                              노드 삭제
+                            </button>
+                          )}
+
+                          {!linkDraftSource && (
+                            <button style={itemStyle}
+                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                              onClick={() => { setLinkDraftSource(target); closeMenu(); }}>
+                              이 노드에서 링크 시작
+                            </button>
+                          )}
+
+                          {linkDraftSource && linkDraftSource.id === target.id && (
+                            <button style={itemStyle}
+                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                              onClick={() => { setLinkDraftSource(null); closeMenu(); }}>
+                              링크 시작 취소
+                            </button>
+                          )}
+
+                          {linkDraftSource && linkDraftSource.id !== target.id && !hasDuplicateLink(linkDraftSource.id, target.id) && (
+                            <button style={itemStyle}
+                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                              onClick={() => {
                                 if (linkDraftSource.nodeType === 'device' && target.nodeType === 'device') {
                                   setPendingLinkSource({ node: linkDraftSource }); setPendingLinkTarget({ node: target });
                                   setInterfaceModalStep(1); setInterfaceModalOpen(true);
@@ -1647,106 +1696,60 @@ export default function UserTopology() {
                                     srcType: (linkDraftSource.nodeType || 'device').toUpperCase(), dstType: (target.nodeType || 'device').toUpperCase(),
                                   }] }));
                                 }
-                                setLinkDraftSource(null);
+                                setLinkDraftSource(null); closeMenu();
                               }}>
-                                <i className="bi bi-link-45deg"></i> {linkDraftSource.name} → {target.name} 링크 생성
-                              </button>
-                            )}
-                            <button onClick={() => setLinkDraftSource(null)}>
-                              <i className="bi bi-x-circle"></i> 링크 시작 취소
+                              {linkDraftSource.name || linkDraftSource.id} → {target.name || target.id} 링크 생성
                             </button>
-                          </>
-                        ) : (
-                          <button onClick={() => { setLinkDraftSource(target); setContextMenu(prev => ({ ...prev, visible: false })); }}>
-                            <i className="bi bi-link-45deg"></i> 이 노드에서 링크 시작
-                          </button>
-                        )}
-                        <button onClick={() => handleOpenNodeImageModal(target)}>
-                          <i className="bi bi-image"></i> 이미지 변경
-                        </button>
-                        {selectedNodes.size > 1 ? (
-                          <button className="danger" onClick={() => { showConfirm(`선택된 ${selectedNodes.size}개 노드를 삭제하시겠습니까?`, '노드 삭제').then(ok => ok && handleDeleteSelected()); }}>
-                            <i className="bi bi-trash3"></i> 선택된 {selectedNodes.size}개 삭제
-                          </button>
-                        ) : (
-                          <button className="danger" onClick={() => handleDeleteNode(target.id)}>
-                            <i className="bi bi-trash3"></i> 노드 삭제
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </>
-                );
-              })()}
+                          )}
 
-              {/* 링크 우클릭 */}
-              {contextMenu.type === 'link' && contextMenu.target && (() => {
-                const link = contextMenu.target;
-                const srcNode = typeof link.source === 'object' ? link.source : data.nodes.find(n => n.id === link.source);
-                const tgtNode = typeof link.target === 'object' ? link.target : data.nodes.find(n => n.id === link.target);
-                const ifInfo = [link.srcIfName, link.dstIfName].filter(Boolean).join(' → ');
-                return (
-                  <>
-                    <div className="ut-context-info" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
-                      <span>{srcNode?.name || '?'} → {tgtNode?.name || '?'}</span>
-                      {ifInfo && <span style={{ fontSize: 11 }}>{ifInfo}</span>}
-                    </div>
-                    {isEditMode && (
-                      <button className="danger" onClick={() => handleDeleteLink(link.id)}>
-                        <i className="bi bi-trash3"></i> 링크 삭제
-                      </button>
-                    )}
-                  </>
-                );
-              })()}
+                          <button style={itemStyle}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            onClick={() => { handleOpenNodeImageModal(target); }}>
+                            <i className="bi bi-image" style={{ marginRight: 2 }}></i>
+                            이미지 변경
+                          </button>
+                        </>
+                      )}
 
-              {/* 배경 우클릭 */}
-              {contextMenu.type === 'background' && (
-                <>
-                  <button onClick={handleZoomToFit} disabled={data.nodes.length === 0}>
-                    <i className="bi bi-fullscreen"></i> 전체 보기
-                  </button>
-                  {isEditMode && (
+                    </>
+                  );
+                })()}
+
+                {/* 링크 우클릭 */}
+                {contextMenu.type === 'link' && contextMenu.target && (() => {
+                  const link = contextMenu.target;
+                  const srcNode = typeof link.source === 'object' ? link.source : data.nodes.find(n => n.id === link.source);
+                  const tgtNode = typeof link.target === 'object' ? link.target : data.nodes.find(n => n.id === link.target);
+                  return (
                     <>
-                      <button onClick={handleOpenBgImageModal}><i className="bi bi-image"></i> 배경 이미지</button>
-                      <button onClick={() => { setSidebarCollapsed(false); setContextMenu(prev => ({ ...prev, visible: false })); }}>
-                        <i className="bi bi-layout-sidebar"></i> 장비 목록 열기
+                      <div style={{ padding: '8px 10px', fontSize: 11, opacity: 0.8, borderBottom: '1px solid #374151' }}>
+                        <div style={{ marginBottom: 4 }}>링크 ID: {link.id || ''}</div>
+                        {(link.srcIfName || link.dstIfName || link.srcIfIndex || link.dstIfIndex) ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, padding: '4px 6px', background: 'rgba(59,130,246,0.1)', borderRadius: 4 }}>
+                            <span style={{ color: '#60a5fa' }}>{link.srcIfName || `IF:${link.srcIfIndex}`}</span>
+                            <i className="bi bi-arrow-right" style={{ fontSize: 10 }}></i>
+                            <span style={{ color: '#60a5fa' }}>{link.dstIfName || `IF:${link.dstIfIndex}`}</span>
+                          </div>
+                        ) : (
+                          <div style={{ opacity: 0.6 }}>
+                            {srcNode?.name || '?'} → {tgtNode?.name || '?'}
+                          </div>
+                        )}
+                      </div>
+                      <button style={itemStyle}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        onClick={() => { handleDeleteLink(link.id); closeMenu(); }}>
+                        링크 삭제
                       </button>
                     </>
-                  )}
-                  {!isEditMode && data.nodes.length === 0 && (
-                    <button onClick={() => { toggleEditMode(); setContextMenu(prev => ({ ...prev, visible: false })); }}>
-                      <i className="bi bi-pencil"></i> 편집 모드 시작
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          )}
+                  );
+                })()}
+              </div>
+            );
+          })()}
 
-          {/* 노드 상세 정보 패널 (우측 상단) */}
-          {selectedNode && !selectedLink && (
-            <div style={{
-              position: 'absolute', top: 10, right: 10, zIndex: 11, width: 260,
-              backgroundColor: '#1f2937', borderRadius: 8, padding: '10px 12px',
-              color: 'white', fontSize: 12, boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
-            }}>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>노드 상세 정보</span>
-                <button onClick={() => { setSelectedNode(null); setSelectedNodes(new Set()); }}
-                  style={{ border: 'none', background: 'transparent', color: '#9ca3af', cursor: 'pointer', fontSize: 11 }}>X</button>
-              </div>
-              <div style={{ marginBottom: 4 }}><strong>이름</strong> : {selectedNode.name || selectedNode.id}</div>
-              <div style={{ marginBottom: 4 }}><strong>ID</strong> : {selectedNode.id}</div>
-              <div style={{ marginBottom: 4 }}><strong>타입</strong> : {selectedNode.type || '-'}</div>
-              <div style={{ marginBottom: 4 }}><strong>IP</strong> : {selectedNode.ip || '-'}</div>
-              <div style={{ marginBottom: 4 }}><strong>위치</strong> : {selectedNode.location || '-'}</div>
-              <div style={{ marginBottom: 4 }}><strong>설명</strong> : {selectedNode.note || '-'}</div>
-              <div style={{ marginTop: 6, fontSize: 11, opacity: 0.7 }}>
-                {isEditMode ? '편집 모드: 우클릭으로 노드/링크 편집 가능' : '조회 모드: 노드 클릭 시 상세 정보만 표시'}
-              </div>
-            </div>
-          )}
 
           {/* 링크 상세 정보 패널 (우측 상단) */}
           {selectedLink && (() => {
