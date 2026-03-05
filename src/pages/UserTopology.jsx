@@ -1080,7 +1080,8 @@ export default function UserTopology() {
     try {
       const currentGroupId = isUserRoot ? null : currentView.groupId;
       await nodeImageMutation.mutateAsync({ userId, nodeKey, imgSrc, groupId: currentGroupId });
-      delete nodeIconCache.current[nodeKey];
+      delete nodeIconCache.current[`device_${nodeKey}`];
+      delete nodeIconCache.current[`group_${nodeKey}`];
       setData(prev => ({ ...prev, nodes: prev.nodes.map(n => n.id === nodeKey ? { ...n, iconData: imgSrc } : n) }));
       setNodeImageModalOpen(false);
       setNodeImageTarget(null);
@@ -1765,6 +1766,20 @@ export default function UserTopology() {
             const srcIfName = resolveIfName(selectedLink.srcIfIndex, selectedLink.srcIfName, linkSrcPorts, linkSrcPortsLoading);
             const dstIfName = resolveIfName(selectedLink.dstIfIndex, selectedLink.dstIfName, linkDstPorts, linkDstPortsLoading);
 
+            // 포트 데이터에서 링크 상태 판단 (API에 status가 없을 경우)
+            let linkStatus = selectedLink.status;
+            if (!linkStatus && showInterfaceInfo && !linkPortsLoading) {
+              const srcPortList = linkSrcPorts?.content || linkSrcPorts || [];
+              const dstPortList = linkDstPorts?.content || linkDstPorts || [];
+              const srcPort = srcPortList.find(p => String(p.IF_INDEX) === String(selectedLink.srcIfIndex));
+              const dstPort = dstPortList.find(p => String(p.IF_INDEX) === String(selectedLink.dstIfIndex));
+              if (srcPort || dstPort) {
+                const srcUp = srcPort ? srcPort.IF_OPER_STATUS === 1 || srcPort.IF_OPER_STATUS === '1' || String(srcPort.IF_OPER_STATUS).toLowerCase() === 'up' : true;
+                const dstUp = dstPort ? dstPort.IF_OPER_STATUS === 1 || dstPort.IF_OPER_STATUS === '1' || String(dstPort.IF_OPER_STATUS).toLowerCase() === 'up' : true;
+                linkStatus = (srcUp && dstUp) ? 'up' : 'down';
+              }
+            }
+
             return (
               <div style={{
                 position: 'absolute', top: 10, right: 10, zIndex: 11, width: 320,
@@ -1822,12 +1837,18 @@ export default function UserTopology() {
 
                 {/* 상세 정보 */}
                 <div style={{ fontSize: 11, color: '#9ca3af' }}>
+                  {(sourceIsDevice || targetIsDevice) && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span>상태</span>
-                    <span style={{ color: selectedLink.status === 'up' ? '#22c55e' : selectedLink.status === 'down' ? '#ef4444' : '#f59e0b' }}>
-                      {selectedLink.status === 'up' ? 'UP' : selectedLink.status === 'down' ? 'DOWN' : selectedLink.status || '-'}
-                    </span>
+                    {linkPortsLoading ? (
+                      <span style={{ color: '#64748b' }}>조회 중...</span>
+                    ) : (
+                      <span style={{ color: linkStatus === 'up' ? '#22c55e' : linkStatus === 'down' ? '#ef4444' : '#f59e0b' }}>
+                        {linkStatus === 'up' ? 'UP' : linkStatus === 'down' ? 'DOWN' : linkStatus || '-'}
+                      </span>
+                    )}
                   </div>
+                  )}
                   {showInterfaceInfo && !linkPortsLoading && srcIfName && srcIfName !== '-' && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                       <span>출발지 인터페이스</span>

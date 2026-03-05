@@ -160,11 +160,14 @@
 /* react-grid-layout 그리드 컨테이너 */
 .widget-grid-container {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   min-height: 0;
   width: 100%;
   box-sizing: border-box;
+}
+
+.widget-grid-container.edit-mode {
+  overflow-y: auto;
 }
 
 /* 편집 모드가 아닐 때: 드래그 불가 + F11 전환 시 부드러운 애니메이션 */
@@ -3173,8 +3176,7 @@
 /* 실시간 장애 현황 위젯 - 테이블 스타일 */
 .widget-alert-table-container {
   flex: 1;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: auto;
   min-height: 0;
 }
 

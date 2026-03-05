@@ -1059,6 +1059,18 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
         const resolvedSrc = resolveIfName(selectedLink.srcIfIndex, selectedLink.srcIfName, linkSrcPorts);
         const resolvedDst = resolveIfName(selectedLink.dstIfIndex, selectedLink.dstIfName, linkTgtPorts);
         const showInterface = selectedLink.srcIsDevice && selectedLink.tgtIsDevice;
+        let linkStatus = selectedLink.status;
+        if (!linkStatus && showInterface) {
+          const srcPortList = linkSrcPorts?.content || linkSrcPorts || [];
+          const dstPortList = linkTgtPorts?.content || linkTgtPorts || [];
+          const srcPort = srcPortList.find(p => String(p.IF_INDEX) === String(selectedLink.srcIfIndex));
+          const dstPort = dstPortList.find(p => String(p.IF_INDEX) === String(selectedLink.dstIfIndex));
+          if (srcPort || dstPort) {
+            const srcUp = srcPort ? srcPort.IF_OPER_STATUS === 1 || srcPort.IF_OPER_STATUS === '1' || String(srcPort.IF_OPER_STATUS).toLowerCase() === 'up' : true;
+            const dstUp = dstPort ? dstPort.IF_OPER_STATUS === 1 || dstPort.IF_OPER_STATUS === '1' || String(dstPort.IF_OPER_STATUS).toLowerCase() === 'up' : true;
+            linkStatus = (srcUp && dstUp) ? 'up' : 'down';
+          }
+        }
         return (
         <div style={{
           position: 'absolute', top: 10, right: 10, zIndex: 12, width: 260,
@@ -1101,11 +1113,11 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
               </div>
             </div>
           </div>
-          {selectedLink.status && (
+          {(selectedLink.srcIsDevice || selectedLink.tgtIsDevice) && linkStatus && (
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#9ca3af' }}>
               <span>상태</span>
-              <span style={{ color: selectedLink.status === 'up' ? '#22c55e' : selectedLink.status === 'down' ? '#ef4444' : '#f59e0b' }}>
-                {selectedLink.status === 'up' ? 'UP' : selectedLink.status === 'down' ? 'DOWN' : selectedLink.status || '-'}
+              <span style={{ color: linkStatus === 'up' ? '#22c55e' : linkStatus === 'down' ? '#ef4444' : '#f59e0b' }}>
+                {linkStatus === 'up' ? 'UP' : linkStatus === 'down' ? 'DOWN' : linkStatus || '-'}
               </span>
             </div>
           )}
@@ -1857,6 +1869,18 @@ function UserTopologyWidget({ onExpand, onDeviceClick }) {
         const resolvedSrc = resolveIfName(selectedLink.srcIfIndex, selectedLink.srcIfName, linkSrcPorts);
         const resolvedDst = resolveIfName(selectedLink.dstIfIndex, selectedLink.dstIfName, linkTgtPorts);
         const showInterface = selectedLink.srcIsDevice && selectedLink.tgtIsDevice;
+        let linkStatus = selectedLink.status;
+        if (!linkStatus && showInterface) {
+          const srcPortList = linkSrcPorts?.content || linkSrcPorts || [];
+          const dstPortList = linkTgtPorts?.content || linkTgtPorts || [];
+          const srcPort = srcPortList.find(p => String(p.IF_INDEX) === String(selectedLink.srcIfIndex));
+          const dstPort = dstPortList.find(p => String(p.IF_INDEX) === String(selectedLink.dstIfIndex));
+          if (srcPort || dstPort) {
+            const srcUp = srcPort ? srcPort.IF_OPER_STATUS === 1 || srcPort.IF_OPER_STATUS === '1' || String(srcPort.IF_OPER_STATUS).toLowerCase() === 'up' : true;
+            const dstUp = dstPort ? dstPort.IF_OPER_STATUS === 1 || dstPort.IF_OPER_STATUS === '1' || String(dstPort.IF_OPER_STATUS).toLowerCase() === 'up' : true;
+            linkStatus = (srcUp && dstUp) ? 'up' : 'down';
+          }
+        }
         return (
         <div style={{
           position: 'absolute', top: 10, right: 10, zIndex: 12, width: 260,
@@ -1899,11 +1923,11 @@ function UserTopologyWidget({ onExpand, onDeviceClick }) {
               </div>
             </div>
           </div>
-          {selectedLink.status && (
+          {(selectedLink.srcIsDevice || selectedLink.tgtIsDevice) && linkStatus && (
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#9ca3af' }}>
               <span>상태</span>
-              <span style={{ color: selectedLink.status === 'up' ? '#22c55e' : selectedLink.status === 'down' ? '#ef4444' : '#f59e0b' }}>
-                {selectedLink.status === 'up' ? 'UP' : selectedLink.status === 'down' ? 'DOWN' : selectedLink.status || '-'}
+              <span style={{ color: linkStatus === 'up' ? '#22c55e' : linkStatus === 'down' ? '#ef4444' : '#f59e0b' }}>
+                {linkStatus === 'up' ? 'UP' : linkStatus === 'down' ? 'DOWN' : linkStatus || '-'}
               </span>
             </div>
           )}
@@ -2352,11 +2376,10 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
   }, [rawChartData]);
 
   const CHART_ANIMATION = {
-    animation: true,
-    animationDuration: hasRenderedRef.current ? 0 : 600,
-    animationDurationUpdate: 500,
+    animation: !hasRenderedRef.current,
+    animationDuration: 600,
+    animationDurationUpdate: 0,
     animationEasing: 'cubicOut',
-    animationEasingUpdate: 'cubicInOut',
   };
 
   const getChartOption = (tooltipOnLeft = false) => {
@@ -3123,8 +3146,7 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
               lineStyle: { color: item.color, width: 2 },
               itemStyle: { color: item.color },
               animationDuration: hasRenderedRef.current ? 0 : 600,
-              animationDurationUpdate: 500,
-              animationEasingUpdate: 'cubicInOut',
+              animationDurationUpdate: 0,
               areaStyle: {
                 color: {
                   type: 'linear',
@@ -4570,10 +4592,11 @@ export default function Dashboard() {
         lastWidth = width;
         setContainerWidth(width);
       }
-      // 높이는 window.innerHeight 기준으로 계산 (순환 의존 방지)
+      // window.innerHeight 기준으로 계산 (순환 의존 방지)
       const headerH = headerRef.current?.offsetHeight || 0;
       const headerMargin = 20; // dashboard-header margin-bottom
-      const availableH = window.innerHeight - headerH - headerMargin;
+      const appMainPadding = 40; // .app-main padding top(20) + bottom(20)
+      const availableH = window.innerHeight - appMainPadding - headerH - headerMargin;
       setGridAreaHeight(Math.max(200, availableH));
     };
 
@@ -4587,9 +4610,9 @@ export default function Dashboard() {
     window.addEventListener('resize', updateSize);
 
     const onFullscreenChange = () => {
-      updateSize();
-      setTimeout(updateSize, 100);
-      setTimeout(updateSize, 300);
+      setTimeout(updateSize, 50);
+      setTimeout(updateSize, 200);
+      setTimeout(updateSize, 500);
     };
     document.addEventListener('fullscreenchange', onFullscreenChange);
 
@@ -5233,7 +5256,7 @@ export default function Dashboard() {
     const maxRow = layout.reduce((max, item) => Math.max(max, (item.y || 0) + (item.h || 1)), 0);
     if (maxRow <= 0) return 20;
     const available = gridAreaHeight - (containerPaddingVal * 2) - ((maxRow - 1) * margin);
-    const calc = Math.floor(available / maxRow);
+    const calc = available / maxRow;
     return Math.max(10, calc);
   }, [gridAreaHeight, layout]);
 
