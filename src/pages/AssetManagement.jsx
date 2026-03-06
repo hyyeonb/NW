@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { GroupTree, DataTable, PortTrafficChart } from '../components';
 import SshTerminalModal from '../components/SshTerminalModal';
 import { useGroupStore } from '../stores';
@@ -18,6 +19,7 @@ import { devicesApi } from '../api/devices';
 import { faultApi } from '../api/fault';
 
 export default function AssetManagement() {
+  const [urlParams, setUrlParams] = useSearchParams();
   const { selectedGroup } = useGroupStore();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -142,12 +144,25 @@ export default function AssetManagement() {
     return () => document.removeEventListener('keydown', handleEsc);
   }, [showFaultAckModal, sshAlertDevice, showSnmpModal, showMoveGroupModal, showSettingsSidebar, detailDevice]);
 
-  // 장비 코드 목록 로드
+  // 장비 코드 목록 로드 + URL category 파라미터 처리
   useEffect(() => {
     const loadDevCodes = async () => {
       try {
         const response = await devicesApi.getDevCodeTree();
-        setDevCodes(response.data?.data || []);
+        const codes = response.data?.data || [];
+        setDevCodes(codes);
+
+        // URL에 category 파라미터가 있으면 해당 장비코드로 필터 설정
+        const categoryParam = urlParams.get('category');
+        if (categoryParam && codes.length > 0) {
+          const matched = codes.find(c => c.CODE_NM === categoryParam);
+          if (matched) {
+            setSearchDevCode(String(matched.DEV_CODE_ID));
+          }
+          // 파라미터 소비 후 URL에서 제거
+          urlParams.delete('category');
+          setUrlParams(urlParams, { replace: true });
+        }
       } catch (error) {
         console.error('장비 코드 조회 실패:', error);
       }

@@ -1018,8 +1018,12 @@ export default function NetworkTopology() {
 
     setSelectedNode(node);
 
-    // 편집 모드에서는 선택만 하고 이동/모달 안함
-    if (isEditMode) return;
+    // 편집 모드에서는 선택 + 초록원 표시, 이동/모달 안함
+    if (isEditMode) {
+      setSelectedLink(null);
+      setSelectedNodes(new Set([getNodeKey(node)]));
+      return;
+    }
 
     // 노드 ID 추출 (그룹 또는 장비)
     const isGroupNode = node.nodeType === 'group' || node.type === 'group';
@@ -2557,6 +2561,7 @@ export default function NetworkTopology() {
 
         {/* 상세 정보 */}
         <div style={{ fontSize: 11, color: "#9ca3af" }}>
+          {(sourceIsDevice || targetIsDevice) && (
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
             <span>상태</span>
             <span style={{
@@ -2567,6 +2572,7 @@ export default function NetworkTopology() {
                selectedLink.status === 'down' ? 'DOWN' : selectedLink.status || '-'}
             </span>
           </div>
+          )}
           {showInterfaceInfo && srcIfName && srcIfName !== '-' && (
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
               <span>출발지 인터페이스</span>

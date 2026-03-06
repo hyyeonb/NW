@@ -160,25 +160,30 @@
 /* react-grid-layout 그리드 컨테이너 */
 .widget-grid-container {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   min-height: 0;
   width: 100%;
   box-sizing: border-box;
 }
 
-/* 편집 모드가 아닐 때: 드래그 불가 */
+.widget-grid-container.edit-mode {
+  overflow-y: auto;
+}
+
+/* 편집 모드가 아닐 때: 드래그 불가 + F11 전환 시 부드러운 애니메이션 */
 .widget-grid-container:not(.edit-mode) .react-grid-item {
   cursor: default !important;
+  transition: transform 0.4s ease, width 0.4s ease, height 0.4s ease !important;
 }
 
 .widget-grid-container:not(.edit-mode) .react-grid-item > .react-resizable-handle {
   display: none !important;
 }
 
-/* 편집 모드일 때: 드래그 가능 표시 */
+/* 편집 모드일 때: 드래그 가능 표시 (transition 제거로 즉각 반응) */
 .widget-grid-container.edit-mode .react-grid-item {
   cursor: move;
+  transition: none !important;
 }
 
 .widget-grid-container.edit-mode .widget-card {
@@ -187,6 +192,7 @@
 
 .widget-grid-container .layout {
   min-height: 100%;
+  transition: height 0.4s ease;
 }
 
 .widget-grid-container::-webkit-scrollbar {
@@ -2787,6 +2793,7 @@
   background: rgba(15, 23, 42, 0.6);
   border-bottom: 1px solid var(--theme-border-subtle);
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .widget-level-filters {
@@ -2818,33 +2825,39 @@
 }
 
 .widget-search-box {
-  flex: 1;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  background: var(--theme-bg-primary);
-  border: 1px solid var(--theme-border-subtle);
-  border-radius: 4px;
+  gap: 4px;
+  flex: 1;
+  min-width: 80px;
+  max-width: 220px;
 }
 
-.widget-search-box i {
-  color: var(--theme-text-muted);
-  font-size: 12px;
+.widget-search-box label {
+  font-size: 10px;
+  color: #64748b;
+  white-space: nowrap;
+  min-width: 24px;
 }
 
 .widget-search-box input {
   flex: 1;
-  background: none;
-  border: none;
+  padding: 4px 8px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #f1f5f9;
+  font-size: 11px;
   outline: none;
-  color: var(--theme-text-primary);
-  font-size: 12px;
   min-width: 0;
 }
 
+.widget-search-box input:focus {
+  border-color: #3b82f6;
+}
+
 .widget-search-box input::placeholder {
-  color: var(--theme-text-muted);
+  color: #475569;
 }
 
 .widget-alert-list {
@@ -2999,13 +3012,61 @@
   color: var(--theme-text-muted);
 }
 
-.widget-more {
-  padding: 8px;
-  text-align: center;
-  font-size: 11px;
-  color: var(--theme-text-muted);
+/* 위젯 페이지네이션 */
+.widget-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px;
   background: rgba(15, 23, 42, 0.6);
   border-top: 1px solid var(--theme-border-subtle);
+  flex-shrink: 0;
+  min-height: 32px;
+}
+
+.widget-pagination-info {
+  font-size: 10px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.widget-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.widget-pagination-controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.widget-pagination-controls button:hover:not(:disabled) {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+.widget-pagination-controls button:disabled {
+  color: #334155;
+  cursor: default;
+}
+
+.widget-pagination-page {
+  font-size: 11px;
+  color: #e2e8f0;
+  padding: 0 6px;
+  white-space: nowrap;
+  font-weight: 500;
 }
 
 /* 실시간 장애 현황 위젯 - 필터 토글 & 상세 검색 */
@@ -3066,32 +3127,24 @@
   background: rgba(239, 68, 68, 0.15);
 }
 
-/* 상세 검색 영역 */
-.widget-advanced-search {
-  display: flex;
-  gap: 8px;
-  padding: 8px 12px;
-  background: rgba(15, 23, 42, 0.8);
-  border-bottom: 1px solid #334155;
-  flex-wrap: wrap;
-}
-
-.widget-advanced-search .search-field {
+/* 인라인 검색 필드 */
+.widget-search-field {
   display: flex;
   align-items: center;
   gap: 4px;
   flex: 1;
-  min-width: 100px;
+  min-width: 80px;
+  max-width: 220px;
 }
 
-.widget-advanced-search .search-field label {
+.widget-search-field label {
   font-size: 10px;
   color: #64748b;
   white-space: nowrap;
   min-width: 24px;
 }
 
-.widget-advanced-search .search-field input {
+.widget-search-field input {
   flex: 1;
   padding: 4px 8px;
   background: #0f172a;
@@ -3103,19 +3156,27 @@
   min-width: 0;
 }
 
-.widget-advanced-search .search-field input:focus {
+.widget-search-field input:focus {
   border-color: #3b82f6;
 }
 
-.widget-advanced-search .search-field input::placeholder {
+.widget-search-field input::placeholder {
   color: #475569;
+}
+
+/* 필터 액션 버튼 그룹 */
+.widget-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 /* 실시간 장애 현황 위젯 - 테이블 스타일 */
 .widget-alert-table-container {
   flex: 1;
-  overflow-x: auto;
-  overflow-y: auto;
+  overflow: auto;
   min-height: 0;
 }
 
@@ -3697,15 +3758,10 @@
     height: 22px;
     font-size: 10px;
   }
-  .realtime-alert-widget .widget-advanced-search {
-    padding: 4px 6px;
-    gap: 4px;
-    flex-wrap: wrap;
-  }
-  .realtime-alert-widget .widget-advanced-search .search-field label {
+  .realtime-alert-widget .widget-search-field label {
     font-size: 8px;
   }
-  .realtime-alert-widget .widget-advanced-search .search-field input {
+  .realtime-alert-widget .widget-search-field input {
     padding: 2px 4px;
     font-size: 9px;
   }
@@ -3791,12 +3847,7 @@
   .realtime-alert-widget .widget-search-box input {
     font-size: 11px;
   }
-  .realtime-alert-widget .widget-advanced-search {
-    padding: 6px 8px;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-  .realtime-alert-widget .widget-advanced-search .search-field input {
+  .realtime-alert-widget .widget-search-field input {
     padding: 3px 6px;
     font-size: 10px;
   }

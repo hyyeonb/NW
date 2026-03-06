@@ -116,6 +116,8 @@ export const useUserTopology = (userId) => {
       };
     },
     enabled: !!userId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
 
@@ -140,6 +142,8 @@ export const useUserTopologyGroup = (userId, groupId) => {
       };
     },
     enabled: !!userId && !!groupId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
 

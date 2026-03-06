@@ -441,9 +441,8 @@ export default function NoticeBoard() {
             <div className="board-form-group inline">
               <label>긴급</label>
               <div
-                className={`board-toggle ${formData.isUrgent === 'Y' ? 'active' : ''}`}
+                className={`board-toggle ${formData.isUrgent === 'Y' ? 'active urgent' : ''}`}
                 onClick={() => handleFormChange('isUrgent', formData.isUrgent === 'Y' ? 'N' : 'Y')}
-                style={formData.isUrgent === 'Y' ? { background: 'linear-gradient(135deg, #ef4444, #dc2626)' } : {}}
               >
                 <div className="board-toggle-slider"></div>
                 <span>{formData.isUrgent === 'Y' ? '긴급' : '일반'}</span>
@@ -452,9 +451,8 @@ export default function NoticeBoard() {
             <div className="board-form-group inline">
               <label>상단고정</label>
               <div
-                className={`board-toggle ${formData.isPinned === 'Y' ? 'active' : ''}`}
+                className={`board-toggle ${formData.isPinned === 'Y' ? 'active pinned' : ''}`}
                 onClick={() => handleFormChange('isPinned', formData.isPinned === 'Y' ? 'N' : 'Y')}
-                style={formData.isPinned === 'Y' ? { background: 'linear-gradient(135deg, #f59e0b, #d97706)' } : {}}
               >
                 <div className="board-toggle-slider"></div>
                 <span>{formData.isPinned === 'Y' ? '고정' : '해제'}</span>
