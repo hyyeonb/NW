@@ -2,7 +2,7 @@ import apiClient from './client';
 
 export const devicesApi = {
   getDevicesByGroup: (groupId, includeChildren = true) =>
-    apiClient.get(`/mgmt/devices/by-group/${groupId}?includeChildren=${includeChildren}`),
+    apiClient.get(`/mgmt/devices/by-group/${groupId}?includeChildren=${includeChildren}&size=9999`),
 
   getDevicesByGroupPaged: (groupId, page = 1, size = 10, sort = 'DEVICE_ID', order = 'asc', includeChildren = true, search = {}) => {
     const params = new URLSearchParams({
@@ -103,6 +103,14 @@ export const devicesApi = {
   collectSnmp: (deviceId, snmpConfig) =>
     apiClient.post(`/mgmt/devices/${deviceId}/snmp-collect`, snmpConfig),
 
+  // PING → SNMP → SSH 장비 점검
+  checkConnectivity: (deviceId) =>
+    apiClient.post(`/mgmt/devices/${deviceId}/connectivity-check`),
+
+  // 포트 상태 실시간 체크 (AdminStatus / OperStatus)
+  checkPortStatus: (deviceId, ifIndex) =>
+    apiClient.get(`/mgmt/devices/${deviceId}/ports/${ifIndex}/check`),
+
   // ==================== Device SSH (접속 정보) 관련 ====================
 
   // 장비 접속 정보 조회
@@ -124,8 +132,10 @@ export const devicesApi = {
     apiClient.get(`/mgmt/devices/${deviceId}/traffic`, { params: { minutes } }),
 
   // 장비 트래픽 원시 데이터 조회
-  getDeviceTrafficRaw: (deviceId, minutes = 60) =>
-    apiClient.get(`/mgmt/devices/${deviceId}/traffic/raw`, { params: { minutes } }),
+  getDeviceTrafficRaw: (deviceId, minutes = 60, startDate, endDate) =>
+    apiClient.get(`/mgmt/devices/${deviceId}/traffic/raw`, {
+      params: { minutes, ...(startDate && { startDate }), ...(endDate && { endDate }) }
+    }),
 
   // 포트별 트래픽 데이터 조회
   getPortTraffic: (deviceId, ifIndex, minutes = 60) =>
@@ -138,8 +148,10 @@ export const devicesApi = {
     apiClient.get(`/mgmt/devices/${deviceId}/cpu-mem`),
 
   // 장비 CPU/MEM 시계열 데이터 조회
-  getDeviceCpuMemHistory: (deviceId, minutes = 60) =>
-    apiClient.get(`/mgmt/devices/${deviceId}/cpu-mem/history`, { params: { minutes } }),
+  getDeviceCpuMemHistory: (deviceId, minutes = 60, startDate, endDate) =>
+    apiClient.get(`/mgmt/devices/${deviceId}/cpu-mem/history`, {
+      params: { minutes, ...(startDate && { startDate }), ...(endDate && { endDate }) }
+    }),
 
   // ==================== Vendor 관련 ====================
 
@@ -198,4 +210,19 @@ export const devicesApi = {
   // 장비군 삭제
   deleteDevCode: (devCodeId) =>
     apiClient.delete(`/mgmt/dev-codes/${devCodeId}`),
+
+  // ==================== 네트워크 도구 ====================
+
+  // SSH 정보가 등록된 장비 목록 (Traceroute 트리용)
+  getSshEnabledDevices: () =>
+    apiClient.get('/mgmt/devices/ssh-enabled'),
+
+  // Traceroute - 장비 간 경로 추적 (SSH 원격 실행)
+  traceroute: (sourceDeviceId, targetDeviceId, maxHops = 30, timeout = 1000, targetIp = null) => {
+    const body = { maxHops, timeout };
+    if (sourceDeviceId != null) body.sourceDeviceId = sourceDeviceId;
+    if (targetDeviceId != null) body.targetDeviceId = targetDeviceId;
+    if (targetIp != null) body.targetIp = targetIp;
+    return apiClient.post('/mgmt/tools/traceroute', body);
+  },
 };

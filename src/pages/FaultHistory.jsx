@@ -1,11 +1,16 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { ko } from 'date-fns/locale';
 import { format } from 'date-fns';
 import { faultApi, devicesApi } from '../api';
 import { DataTable } from '../components';
+import WatchSidebar from '../components/WatchSidebar';
+import { useWatchGroupDetail } from '../hooks/useWatch';
+import ConnectivityCheckModal from '../components/ConnectivityCheckModal';
 import 'react-datepicker/dist/react-datepicker.css';
 import '../styles/fault-monitoring.css';
+import '../styles/fault-stats.css';
 
 // 한국어 로케일 등록
 registerLocale('ko', ko);
@@ -24,6 +29,7 @@ export default function FaultHistory() {
   const [histories, setHistories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState(null);
+  const [checkDevice, setCheckDevice] = useState(null); // 장비 점검 대상 장비
 
   // 페이징
   const [page, setPage] = useState(1);
@@ -33,6 +39,25 @@ export default function FaultHistory() {
   // 필터 (Date 객체로 관리)
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+
+  // 관제 그룹 기반 필터링
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const { data: groupDetail } = useWatchGroupDetail(selectedGroup?.watchGroupId);
+  const { data: regularDevices } = useQuery({
+    queryKey: ['regularGroupDevices', selectedGroup?.groupId],
+    queryFn: () => devicesApi.getDevicesByGroup(selectedGroup.groupId).then(r => r.data?.data?.content || []),
+    enabled: !!selectedGroup?.groupId && selectedGroup?.type === 'regular',
+  });
+  const deviceIdsParam = useMemo(() => {
+    if (!selectedGroup) return undefined;
+    if (selectedGroup.type === 'regular') {
+      return regularDevices?.length ? regularDevices.map(d => d.DEVICE_ID) : undefined;
+    }
+    if (selectedGroup.watchGroupId && groupDetail?.devices?.length) {
+      return groupDetail.devices.map(d => d.deviceId);
+    }
+    return undefined;
+  }, [selectedGroup, groupDetail, regularDevices]);
 
   // 검색 필터
   const [searchDeviceName, setSearchDeviceName] = useState('');
@@ -99,6 +124,7 @@ export default function FaultHistory() {
       if (searchErrorMessage.trim()) params.errorMessage = searchErrorMessage.trim();
       if (searchIp.trim()) params.deviceIp = searchIp.trim();
       if (searchGroupName.trim()) params.groupName = searchGroupName.trim();
+      if (deviceIdsParam) params.deviceIds = deviceIdsParam;
 
       const response = await faultApi.getHistory(params);
       const data = response.data?.data || {};
@@ -113,15 +139,19 @@ export default function FaultHistory() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedLevels, page, pageSize, startDate, endDate, searchDevCode, searchDeviceName, searchErrorMessage, searchIp, searchGroupName, sortConfig]);
+  }, [selectedLevels, page, pageSize, startDate, endDate, searchDevCode, searchDeviceName, searchErrorMessage, searchIp, searchGroupName, sortConfig, deviceIdsParam]);
 
+  // 필터 변경 시 (300ms 디바운스 — 검색 입력 시 연속 API 호출 방지)
   useEffect(() => {
-    fetchHistory();
+    const timer = setTimeout(() => {
+      fetchHistory();
+    }, 300);
+    return () => clearTimeout(timer);
   }, [fetchHistory]);
 
   useEffect(() => {
     setPage(1);
-  }, [selectedLevels, startDate, endDate, searchDevCode, searchDeviceName, searchErrorMessage, searchIp, searchGroupName]);
+  }, [selectedLevels, startDate, endDate, searchDevCode, searchDeviceName, searchErrorMessage, searchIp, searchGroupName, deviceIdsParam]);
 
   // 등급 라벨
   const getLevelLabel = (level) => {
@@ -200,10 +230,11 @@ export default function FaultHistory() {
     {
       key: 'ERROR_LEVEL',
       label: '등급',
-      width: '80px',
+      width: '62px',
       sortable: true,
       align: 'center',
       hideable: true,
+      className: 'cell-level',
       render: (value) => (
         <span className={`severity-badge ${getLevelClass(value)}`}>
           {getLevelLabel(value)}
@@ -264,6 +295,25 @@ export default function FaultHistory() {
       hideable: true,
       render: (_, row) => calculateDuration(row.OCCUR_AT, row.CLEAR_AT),
     },
+    {
+      key: 'actions',
+      label: '작업',
+      width: '60px',
+      align: 'center',
+      className: 'cell-actions',
+      render: (_, row) => (
+        <button
+          className="action-btn"
+          title="장비 점검"
+          onClick={(e) => {
+            e.stopPropagation();
+            setCheckDevice({ DEVICE_ID: row.DEVICE_ID, DEVICE_NAME: row.DEVICE_NAME, DEVICE_IP: row.DEVICE_IP });
+          }}
+        >
+          <i className="bi bi-activity"></i>
+        </button>
+      ),
+    },
   ], []);
 
   // 필터 초기화
@@ -290,7 +340,13 @@ export default function FaultHistory() {
         </div>
       </div>
 
-      {/* 장애 이력 테이블 */}
+      {/* 사이드바 + 장애 이력 테이블 */}
+      <div className="fault-stats-panels-wrapper">
+        <WatchSidebar
+          onGroupSelect={setSelectedGroup}
+          title="관제 그룹"
+          titleIcon="bi bi-clock-history"
+        />
       <div className="fault-content">
         <div className="table-panel">
         {/* 필터 영역 */}
@@ -455,6 +511,15 @@ export default function FaultHistory() {
         />
         </div>
       </div>
+      </div>
+
+      {/* 장비 점검 모달 */}
+      {checkDevice && (
+        <ConnectivityCheckModal
+          device={checkDevice}
+          onClose={() => setCheckDevice(null)}
+        />
+      )}
     </div>
   );
 }

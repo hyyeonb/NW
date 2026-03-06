@@ -16,8 +16,7 @@ export const useBoardPosts = (page = 1, size = 10, sort = 'POST_ID', order = 'de
         totalPages: pageData.totalPages || 0,
       };
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 30000,
     placeholderData: (previousData) => previousData,
   });
 };

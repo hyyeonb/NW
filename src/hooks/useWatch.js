@@ -44,11 +44,14 @@ export const useWatchGroups = () => {
         iconName: g.ICON_NAME || g.iconName || null,
         linkedGroupId: g.LINKED_GROUP_ID || g.linkedGroupId || null,
       }));
+      // 일반 그룹에서 동기화된 연동 그룹은 커스텀 목록에서 제외
+      const customOnly = flatList.filter(g => !g.linkedGroupId);
       // 트리 구조로 변환
-      return buildTree(flatList);
+      return buildTree(customOnly);
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 30000,
+    gcTime: 300000,
+    refetchOnMount: false,
   });
 };
 
@@ -212,6 +215,8 @@ export const useWatchSSE = (groupId, enabled = false) => {
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState(null);
   const eventSourceRef = useRef(null);
+  const retryTimeoutRef = useRef(null);
+  const retryDelayRef = useRef(1000); // 초기 1초, 최대 30초
 
   // 히스토리 초기화
   const resetHistory = useCallback(() => {
@@ -225,89 +230,109 @@ export const useWatchSSE = (groupId, enabled = false) => {
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
-        setConnected(false);
       }
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+      retryDelayRef.current = 1000;
+      setConnected(false);
       return;
     }
 
-    // SSE 연결
-    const url = `/api/watch/stream/${groupId}`;
-    console.log('[SSE] 연결 시도:', url);
+    let cancelled = false;
 
-    const eventSource = new EventSource(url);
-    eventSourceRef.current = eventSource;
+    const connect = () => {
+      if (cancelled) return;
 
-    eventSource.onopen = () => {
-      console.log('[SSE] 연결 성공');
-      setConnected(true);
-      setError(null);
-    };
+      const url = `/api/watch/stream/${groupId}`;
+      const eventSource = new EventSource(url);
+      eventSourceRef.current = eventSource;
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
+      eventSource.onopen = () => {
+        setConnected(true);
+        setError(null);
+        retryDelayRef.current = 1000; // 성공 시 backoff 리셋
+      };
 
-        // [DEBUG] SSE 원본 수신
-        console.log('[DEBUG-SSE] 수신 data.devices:', Array.isArray(data.devices) ? data.devices.length + '개' : data.devices, data.devices?.map?.(d => d.deviceId));
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
 
-        // 장비 데이터가 없는 메시지(heartbeat/ping)는 무시
-        if (!Array.isArray(data.devices) || data.devices.length === 0) {
-          console.warn('[DEBUG-SSE] 빈 메시지 무시됨');
-          return;
-        }
-
-        // 이전 상태와 병합 — 부분 수신 시 기존 장비가 사라지지 않도록
-        setMetrics((prev) => {
-          if (!prev?.devices || prev.devices.length === 0) {
-            console.log('[DEBUG-SSE] setMetrics: prev 없음, data 그대로 사용. ids:', data.devices.map(d => d.deviceId));
-            return data;
+          // 장비 데이터가 없는 메시지(heartbeat/ping)는 무시
+          if (!Array.isArray(data.devices) || data.devices.length === 0) {
+            return;
           }
 
-          const merged = new Map(prev.devices.map(d => [d.deviceId, d]));
-          data.devices.forEach(d => merged.set(d.deviceId, d));
-          const result = { ...data, devices: Array.from(merged.values()) };
-          console.log('[DEBUG-SSE] setMetrics: merge 결과. prev:', prev.devices.length, 'new:', data.devices.length, '→ merged:', result.devices.length, 'ids:', result.devices.map(d => d.deviceId));
-          return result;
-        });
+          // 이전 상태와 병합 — 부분 수신 시 기존 장비가 사라지지 않도록
+          setMetrics((prev) => {
+            if (!prev?.devices || prev.devices.length === 0) {
+              return data;
+            }
 
-        // 히스토리 업데이트 (수신된 장비만 추가)
-        setHistory((prev) => {
-          const newHistory = { ...prev };
-          const currentTime = new Date().toISOString();
-
-          data.devices.forEach((device) => {
-            const deviceHistory = newHistory[device.deviceId] || [];
-            const historyEntry = {
-              time: currentTime,
-              cpu: device.cpu?.usage ?? null,
-              mem: device.mem?.usage ?? null,
-              interfaces: device.interfaces || [],
-            };
-
-            // 최근 60개만 유지 (앞에 추가)
-            newHistory[device.deviceId] = [historyEntry, ...deviceHistory].slice(0, 60);
+            const merged = new Map(prev.devices.map(d => [d.deviceId, d]));
+            data.devices.forEach(d => merged.set(d.deviceId, d));
+            return { ...data, devices: Array.from(merged.values()) };
           });
 
-          return newHistory;
-        });
-      } catch (err) {
-        console.error('[SSE] 메시지 파싱 오류:', err);
-      }
+          // 히스토리 업데이트 (실제 데이터가 있는 장비만 추가)
+          setHistory((prev) => {
+            const newHistory = { ...prev };
+            const currentTime = new Date().toISOString();
+
+            data.devices.forEach((device) => {
+              // disabled 장비 또는 실제 메트릭이 없는 장비는 히스토리에 누적하지 않음
+              if (device.disabled) return;
+              if (device.cpu == null && device.mem == null && (!device.interfaces || device.interfaces.length === 0)) return;
+
+              const deviceHistory = newHistory[device.deviceId] || [];
+              const historyEntry = {
+                time: currentTime,
+                cpu: device.cpu?.usage ?? null,
+                mem: device.mem?.usage ?? null,
+                interfaces: device.interfaces || [],
+              };
+
+              // 최근 60개만 유지 (앞에 추가)
+              newHistory[device.deviceId] = [historyEntry, ...deviceHistory].slice(0, 60);
+            });
+
+            return newHistory;
+          });
+        } catch (err) {
+          // 메시지 파싱 오류 무시
+        }
+      };
+
+      eventSource.onerror = () => {
+        setConnected(false);
+        setError('SSE 연결 오류');
+        eventSource.close();
+        eventSourceRef.current = null;
+
+        if (cancelled) return;
+
+        // 지수 backoff 재접속 (jitter 포함, 최대 30초)
+        const jitter = Math.random() * 500;
+        const delay = Math.min(retryDelayRef.current + jitter, 30000);
+        retryTimeoutRef.current = setTimeout(connect, delay);
+        retryDelayRef.current = Math.min(retryDelayRef.current * 2, 30000);
+      };
     };
 
-    eventSource.onerror = (err) => {
-      console.error('[DEBUG-SSE] 연결 오류 (readyState:', eventSource.readyState, '):', err);
-      setConnected(false);
-      setError('SSE 연결 오류');
-
-      // 자동 재연결 시도 (EventSource 기본 동작)
-    };
+    connect();
 
     // 클린업
     return () => {
-      console.log('[SSE] 연결 해제');
-      eventSource.close();
-      eventSourceRef.current = null;
+      cancelled = true;
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
       setConnected(false);
     };
   }, [groupId, enabled]);
@@ -315,24 +340,3 @@ export const useWatchSSE = (groupId, enabled = false) => {
   return { metrics, history, connected, error, resetHistory };
 };
 
-// ==================== 기존 Polling 방식 (더 이상 사용 안함) ====================
-
-// 최신 메트릭 조회 (Polling) - DEPRECATED: useWatchSSE 사용
-export const useWatchMetrics = (watchGroupId, enabled = true, refetchInterval = 10000) => {
-  console.warn('useWatchMetrics is deprecated. Use useWatchSSE instead.');
-  return useQuery({
-    queryKey: ['watchMetrics', watchGroupId],
-    queryFn: async () => null,
-    enabled: false,
-  });
-};
-
-// 히스토리 조회 - DEPRECATED: useWatchSSE 사용
-export const useWatchHistory = (watchGroupId, deviceId) => {
-  console.warn('useWatchHistory is deprecated. Use useWatchSSE instead.');
-  return useQuery({
-    queryKey: ['watchHistory', watchGroupId, deviceId],
-    queryFn: async () => [],
-    enabled: false,
-  });
-};

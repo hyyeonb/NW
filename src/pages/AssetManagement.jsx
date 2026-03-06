@@ -97,6 +97,11 @@ export default function AssetManagement() {
   // 차트 표시할 포트 Set (세션 기반 - IF_INDEX 저장)
   const [chartPortsSet, setChartPortsSet] = useState(new Set());
 
+  // 포트 우클릭 컨텍스트 메뉴
+  const [portContextMenu, setPortContextMenu] = useState({ visible: false, x: 0, y: 0, port: null });
+  // 포트 상태 체크 결과
+  const [portCheckResult, setPortCheckResult] = useState({ visible: false, loading: false, data: null, portName: '' });
+
   // 트래픽 차트 설정 상태
   const [showTrafficSettings, setShowTrafficSettings] = useState(false);
   const [trafficChartSettings, setTrafficChartSettings] = useState({
@@ -362,6 +367,26 @@ export default function AssetManagement() {
       }
       return newSet;
     });
+  };
+
+  // 포트 우클릭 메뉴
+  const handlePortContextMenu = (e, port) => {
+    e.preventDefault();
+    setPortContextMenu({ visible: true, x: e.clientX, y: e.clientY, port });
+  };
+
+  const closePortContextMenu = () => setPortContextMenu(prev => ({ ...prev, visible: false }));
+
+  // 포트 상태 실시간 체크
+  const handlePortCheck = async (port) => {
+    closePortContextMenu();
+    setPortCheckResult({ visible: true, loading: true, data: null, portName: port.IF_NAME || port.IF_DESCR || `ifIndex ${port.IF_INDEX}` });
+    try {
+      const res = await devicesApi.checkPortStatus(detailDevice.DEVICE_ID, port.IF_INDEX);
+      setPortCheckResult(prev => ({ ...prev, loading: false, data: res.data?.data }));
+    } catch (err) {
+      setPortCheckResult(prev => ({ ...prev, loading: false, data: { success: false, message: err.message } }));
+    }
   };
 
   // 차트 포트 초기화 (sessionStorage에서 삭제)
@@ -695,6 +720,9 @@ export default function AssetManagement() {
         data: editFormData
       });
       alert('장비 정보가 저장되었습니다.');
+      // detailDevice를 저장된 값으로 갱신 → hasEditChanges = false → 기어 아이콘 복원
+      const updated = { ...detailDevice, ...editFormData };
+      setDetailDevice(updated);
     } catch (error) {
       console.error('장비 수정 오류:', error);
       alert('장비 수정에 실패했습니다: ' + (error.response?.data?.message || error.message));
@@ -1216,15 +1244,18 @@ export default function AssetManagement() {
       sortable: true,
       align: 'center',
       hideable: true,
-      render: (value, row) => (
-        <span
-          className={`flag-badge clickable ${value === 1 || value === true ? 'active' : 'inactive'}`}
-          onClick={(e) => { e.stopPropagation(); handleTogglePortFlag(row, 'IF_OPER_FLAG'); }}
-          title="클릭하여 토글"
-        >
-          {value === 1 || value === true ? 'ON' : 'OFF'}
-        </span>
-      ),
+      render: (value, row) => {
+        const isOn = value === 1 || value === true;
+        return (
+          <span
+            className={`flag-toggle ${isOn ? 'active' : ''}`}
+            onClick={(e) => { e.stopPropagation(); handleTogglePortFlag(row, 'IF_OPER_FLAG'); }}
+            title={isOn ? '감시 중 (클릭하여 해제)' : '미감시 (클릭하여 활성화)'}
+          >
+            <span className="toggle-track"><span className="toggle-thumb" /></span>
+          </span>
+        );
+      },
     },
     {
       key: 'IF_PERF_FLAG',
@@ -1233,15 +1264,18 @@ export default function AssetManagement() {
       sortable: true,
       align: 'center',
       hideable: true,
-      render: (value, row) => (
-        <span
-          className={`flag-badge clickable ${value === 1 || value === true ? 'active' : 'inactive'}`}
-          onClick={(e) => { e.stopPropagation(); handleTogglePortFlag(row, 'IF_PERF_FLAG'); }}
-          title="클릭하여 토글"
-        >
-          {value === 1 || value === true ? 'ON' : 'OFF'}
-        </span>
-      ),
+      render: (value, row) => {
+        const isOn = value === 1 || value === true;
+        return (
+          <span
+            className={`flag-toggle ${isOn ? 'active' : ''}`}
+            onClick={(e) => { e.stopPropagation(); handleTogglePortFlag(row, 'IF_PERF_FLAG'); }}
+            title={isOn ? '감시 중 (클릭하여 해제)' : '미감시 (클릭하여 활성화)'}
+          >
+            <span className="toggle-track"><span className="toggle-thumb" /></span>
+          </span>
+        );
+      },
     },
   ], []);
 
@@ -1829,6 +1863,7 @@ export default function AssetManagement() {
                                           className={`port-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartPortsSet.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
                                           title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
                                           onClick={() => handleToggleChartPort(port)}
+                                          onContextMenu={(e) => handlePortContextMenu(e, port)}
                                         >
                                           <span className="port-num">{port.parsed.portNum}</span>
                                           <div className="port-connector">
@@ -1846,6 +1881,7 @@ export default function AssetManagement() {
                                           className={`port-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartPortsSet.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
                                           title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
                                           onClick={() => handleToggleChartPort(port)}
+                                          onContextMenu={(e) => handlePortContextMenu(e, port)}
                                         >
                                           <span className="port-num">{port.parsed.portNum}</span>
                                           <div className="port-connector">
@@ -1878,6 +1914,7 @@ export default function AssetManagement() {
                                           className={`port-jack uplink-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartPortsSet.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
                                           title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
                                           onClick={() => handleToggleChartPort(port)}
+                                          onContextMenu={(e) => handlePortContextMenu(e, port)}
                                         >
                                           <span className="port-num">{port.parsed.portNum}</span>
                                           <div className="port-connector sfp">
@@ -1967,6 +2004,7 @@ export default function AssetManagement() {
                           chartPortsSet={chartPortsSet}
                           portsData={portsData}
                           settings={trafficChartSettings}
+                          loading={trafficLoading}
                         />
                       </div>
                     </div>
@@ -2411,6 +2449,63 @@ export default function AssetManagement() {
             setSshTerminalInfo(null);
           }}
         />
+      )}
+
+      {/* 포트 우클릭 컨텍스트 메뉴 */}
+      {portContextMenu.visible && (
+        <>
+          <div className="port-ctx-backdrop" onClick={closePortContextMenu} />
+          <div
+            className="port-ctx-menu"
+            style={{ top: portContextMenu.y, left: portContextMenu.x }}
+          >
+            <button className="port-ctx-item" onClick={() => handlePortCheck(portContextMenu.port)}>
+              <i className="bi bi-activity" />
+              포트 체크
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* 포트 상태 체크 결과 */}
+      {portCheckResult.visible && (
+        <div className="port-check-backdrop" onClick={() => setPortCheckResult(prev => ({ ...prev, visible: false }))}>
+          <div className="port-check-card" onClick={e => e.stopPropagation()}>
+            <div className="port-check-header">
+              <span><i className="bi bi-ethernet" /> {portCheckResult.portName}</span>
+              <button onClick={() => setPortCheckResult(prev => ({ ...prev, visible: false }))}>
+                <i className="bi bi-x" />
+              </button>
+            </div>
+            {portCheckResult.loading ? (
+              <div className="port-check-loading">
+                <div className="port-check-spinner" />
+                SNMP 조회 중...
+              </div>
+            ) : portCheckResult.data ? (
+              portCheckResult.data.success ? (
+                <div className="port-check-body">
+                  <div className="port-check-row">
+                    <span className="port-check-label">Admin Status</span>
+                    <span className={`port-check-badge ${portCheckResult.data.adminStatus === 1 ? 'up' : 'down'}`}>
+                      {portCheckResult.data.adminStatusText}
+                    </span>
+                  </div>
+                  <div className="port-check-row">
+                    <span className="port-check-label">Oper Status</span>
+                    <span className={`port-check-badge ${portCheckResult.data.operStatus === 1 ? 'up' : 'down'}`}>
+                      {portCheckResult.data.operStatusText}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="port-check-error">
+                  <i className="bi bi-exclamation-triangle" /> {portCheckResult.data.message || 'SNMP 조회 실패'}
+                </div>
+              )
+            ) : null}
+          </div>
+        </div>
       )}
 
     </div>

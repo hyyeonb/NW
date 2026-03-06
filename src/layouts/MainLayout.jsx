@@ -24,7 +24,7 @@ export default function MainLayout() {
     <div className="app-layout">
       <Sidebar collapsed={sidebarCollapsed} onToggle={handleToggle} />
       <main className={`app-main ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-        <Outlet key={location.pathname} />
+        <Outlet />
       </main>
     </div>
   );

@@ -215,8 +215,32 @@
     background: var(--theme-accent-border);
 }
 
+/* 장비 대수 배지 */
+.ws-device-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 5px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--theme-accent-light);
+    background: var(--theme-accent-bg);
+    border-radius: 8px;
+    min-width: 16px;
+    flex-shrink: 0;
+}
+
+.group-item:hover .ws-device-count {
+    background: rgba(99, 102, 241, 0.2);
+}
+
+.group-item.selected .ws-device-count {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
 /* 그룹명 텍스트 */
-.group-item > span:not(.child-count):not(.group-icon) {
+.group-item > span:not(.child-count):not(.group-icon):not(.ws-device-count) {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -527,7 +551,7 @@
     background: var(--theme-bg-hover);
     border-radius: 4px;
     margin-left: auto;
-    font-family: 'Consolas', 'Monaco', monospace;
+    font-family: var(--font-family-mono);
 }
 
 .device-item:hover .device-ip-badge {
@@ -566,3 +590,4 @@
 .device-loading {
     padding: 8px 0;
 }
+

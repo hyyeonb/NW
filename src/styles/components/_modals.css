@@ -221,11 +221,11 @@
 }
 
 .success-row {
-    background: var(--color-success-soft);
+    background: var(--color-success-soft, rgba(34, 197, 94, 0.1));
 }
 
 .failure-row {
-    background: var(--color-error-soft);
+    background: var(--color-error-soft, rgba(239, 68, 68, 0.1));
 }
 
 /* Device Detail Modal */

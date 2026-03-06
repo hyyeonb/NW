@@ -1,9 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { faultApi, devicesApi } from '../api';
 import { useAlertStore } from '../stores/alertStore';
 import { DataTable } from '../components';
+import WatchSidebar from '../components/WatchSidebar';
+import { useWatchGroupDetail } from '../hooks/useWatch';
+import ConnectivityCheckModal from '../components/ConnectivityCheckModal';
 import '../styles/fault-monitoring.css';
+import '../styles/fault-stats.css';
 
 // 장애 등급 설정
 const ERROR_LEVELS = [
@@ -32,6 +37,26 @@ export default function RealtimeFault() {
   const [selectedError, setSelectedError] = useState(null);
   const [showAckModal, setShowAckModal] = useState(false);
   const [ackMessage, setAckMessage] = useState('');
+  const [checkDevice, setCheckDevice] = useState(null); // 장비 점검 대상 장비
+
+  // 관제 그룹 기반 필터링
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const { data: groupDetail } = useWatchGroupDetail(selectedGroup?.watchGroupId);
+  const { data: regularDevices } = useQuery({
+    queryKey: ['regularGroupDevices', selectedGroup?.groupId],
+    queryFn: () => devicesApi.getDevicesByGroup(selectedGroup.groupId).then(r => r.data?.data?.content || []),
+    enabled: !!selectedGroup?.groupId && selectedGroup?.type === 'regular',
+  });
+  const deviceIdsParam = useMemo(() => {
+    if (!selectedGroup) return undefined;
+    if (selectedGroup.type === 'regular') {
+      return regularDevices?.length ? regularDevices.map(d => d.DEVICE_ID) : undefined;
+    }
+    if (selectedGroup.watchGroupId && groupDetail?.devices?.length) {
+      return groupDetail.devices.map(d => d.deviceId);
+    }
+    return undefined;
+  }, [selectedGroup, groupDetail, regularDevices]);
 
   // 검색 필터
   const [searchDeviceName, setSearchDeviceName] = useState('');
@@ -89,6 +114,7 @@ export default function RealtimeFault() {
       if (searchErrorMessage.trim()) params.errorMessage = searchErrorMessage.trim();
       if (searchIp.trim()) params.deviceIp = searchIp.trim();
       if (searchGroupName.trim()) params.groupName = searchGroupName.trim();
+      if (deviceIdsParam) params.deviceIds = deviceIdsParam;
 
       const response = await faultApi.getErrors(params);
       const data = response.data?.data || {};
@@ -101,7 +127,7 @@ export default function RealtimeFault() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedLevels, searchDevCode, searchDeviceName, searchErrorMessage, searchIp, searchGroupName]);
+  }, [selectedLevels, searchDevCode, searchDeviceName, searchErrorMessage, searchIp, searchGroupName, deviceIdsParam]);
 
   // 초기화 버튼
   const handleReset = () => {
@@ -117,9 +143,12 @@ export default function RealtimeFault() {
     }
   };
 
-  // 초기 로드 및 필터 변경 시
+  // 초기 로드 및 필터 변경 시 (300ms 디바운스 — 검색 입력 시 연속 API 호출 방지)
   useEffect(() => {
-    fetchErrors();
+    const timer = setTimeout(() => {
+      fetchErrors();
+    }, 300);
+    return () => clearTimeout(timer);
   }, [fetchErrors]);
 
   // WebSocket 알림 수신 시 자동 새로고침
@@ -247,7 +276,7 @@ export default function RealtimeFault() {
   // 데이터 변경 시 페이지 초기화 (필터 변경 등)
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedLevels, searchDevCode, searchDeviceName, searchErrorMessage, searchIp, searchGroupName]);
+  }, [selectedLevels, searchDevCode, searchDeviceName, searchErrorMessage, searchIp, searchGroupName, deviceIdsParam]);
 
   // 인지 버튼 클릭 핸들러
   const handleAckClick = (error, e) => {
@@ -256,15 +285,22 @@ export default function RealtimeFault() {
     setShowAckModal(true);
   };
 
+  // 장비 점검 버튼 클릭 핸들러
+  const handleCheckClick = (row, e) => {
+    e.stopPropagation();
+    setCheckDevice({ DEVICE_ID: row.DEVICE_ID, DEVICE_NAME: row.DEVICE_NAME, DEVICE_IP: row.DEVICE_IP });
+  };
+
   // 테이블 컬럼 정의
   const columns = useMemo(() => [
     {
       key: 'ERROR_LEVEL',
       label: '등급',
-      width: '80px',
+      width: '62px',
       sortable: true,
       align: 'center',
       hideable: true,
+      className: 'cell-level',
       render: (value) => (
         <span className={`severity-badge ${getLevelClass(value)}`}>
           {getLevelLabel(value)}
@@ -274,7 +310,7 @@ export default function RealtimeFault() {
     {
       key: 'ERROR_FLAG',
       label: '상태',
-      width: '80px',
+      width: '70px',
       sortable: true,
       align: 'center',
       hideable: true,
@@ -287,14 +323,12 @@ export default function RealtimeFault() {
     {
       key: 'DEVICE_NAME',
       label: '장비명',
-      width: '150px',
       sortable: true,
       className: 'cell-truncate',
     },
     {
       key: 'DEVICE_IP',
       label: 'IP 주소',
-      width: '130px',
       sortable: true,
       className: 'cell-ip',
       hideable: true,
@@ -302,7 +336,6 @@ export default function RealtimeFault() {
     {
       key: 'GROUP_NAME',
       label: '그룹명',
-      width: '120px',
       sortable: true,
       className: 'cell-truncate',
       hideable: true,
@@ -316,7 +349,6 @@ export default function RealtimeFault() {
     {
       key: 'OCCUR_AT',
       label: '발생 시간',
-      width: '155px',
       sortable: true,
       className: 'cell-date',
       hideable: true,
@@ -325,18 +357,27 @@ export default function RealtimeFault() {
     {
       key: 'actions',
       label: '작업',
-      width: '80px',
+      width: '70px',
       align: 'center',
-      hideable: true,
+      className: 'cell-actions',
       render: (_, row) => (
-        <button
-          className="action-btn"
-          title="인지처리"
-          onClick={(e) => handleAckClick(row, e)}
-          disabled={row.ERROR_FLAG === 1}
-        >
-          <i className="bi bi-check-lg"></i>
-        </button>
+        <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+          <button
+            className="action-btn"
+            title="인지처리"
+            onClick={(e) => handleAckClick(row, e)}
+            disabled={row.ERROR_FLAG === 1}
+          >
+            <i className="bi bi-check-lg"></i>
+          </button>
+          <button
+            className="action-btn"
+            title="장비 점검"
+            onClick={(e) => handleCheckClick(row, e)}
+          >
+            <i className="bi bi-activity"></i>
+          </button>
+        </div>
       ),
     },
   ], []);
@@ -360,7 +401,13 @@ export default function RealtimeFault() {
         </div>
       </div>
 
-      {/* 장애 테이블 */}
+      {/* 사이드바 + 장애 테이블 */}
+      <div className="fault-stats-panels-wrapper">
+        <WatchSidebar
+          onGroupSelect={setSelectedGroup}
+          title="관제 그룹"
+          titleIcon="bi bi-exclamation-triangle"
+        />
       <div className="fault-content">
         <div className="table-panel">
         {/* 필터 영역 */}
@@ -442,7 +489,7 @@ export default function RealtimeFault() {
           </div>
         </div>
         <DataTable
-          tableId="realtime-fault"
+          tableId="realtime-fault-v2"
           columns={columns}
           data={paginatedErrors}
           rowKey="ERROR_ID"
@@ -475,6 +522,15 @@ export default function RealtimeFault() {
         />
         </div>
       </div>
+      </div>
+
+      {/* 장비 점검 모달 */}
+      {checkDevice && (
+        <ConnectivityCheckModal
+          device={checkDevice}
+          onClose={() => setCheckDevice(null)}
+        />
+      )}
 
       {/* 인지 처리 모달 */}
       {showAckModal && (

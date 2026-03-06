@@ -20,4 +20,26 @@ export const faultApi = {
   // 장애 이력 상세 조회
   getHistoryDetail: (errorHistoryId) =>
     apiClient.get(`/fault/history/${errorHistoryId}`),
+
+  // ========== 장애 통계 ==========
+
+  // 통계 요약 (등급별/유형별 현재장애수 + Aging)
+  getStatsSummary: (params = {}) =>
+    apiClient.get('/fault/stats/summary', { params }),
+
+  // 발생 추이 (일별)
+  getStatsTrend: (params) =>
+    apiClient.get('/fault/stats/trend', { params }),
+
+  // MTTR 통계
+  getStatsMttr: (params = {}) =>
+    apiClient.get('/fault/stats/mttr', { params }),
+
+  // 상습 장애 장비 Top N
+  getStatsTopDevices: (params) =>
+    apiClient.get('/fault/stats/top-devices', { params }),
+
+  // 시간대/요일 패턴
+  getStatsPattern: (params) =>
+    apiClient.get('/fault/stats/pattern', { params }),
 };

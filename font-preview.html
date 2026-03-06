@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NMS Font Preview — 폰트 비교 선택</title>
+
+<!-- Google Fonts CDN -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Fira+Code:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Pretendard CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+
+<!-- SUIT CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/variable/woff2/SUIT-Variable.css">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+  color: #e2e8f0;
+  min-height: 100vh;
+  padding: 40px 32px;
+  font-family: 'Inter', 'Pretendard', sans-serif;
+  font-size: 14px;
+}
+
+h1 {
+  color: #f8fafc;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.subtitle {
+  color: #94a3b8;
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.section-title {
+  color: #f8fafc;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 48px 0 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.section-title span {
+  color: #6366f1;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(20px);
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.15);
+  transform: translateY(-2px);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.font-name {
+  color: #f8fafc;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.font-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.tag-current {
+  background: rgba(16,185,129,0.15);
+  color: #10b981;
+  border: 1px solid rgba(16,185,129,0.3);
+}
+
+.tag-candidate {
+  background: rgba(99,102,241,0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99,102,241,0.3);
+}
+
+.sample-row {
+  margin-bottom: 14px;
+}
+
+.sample-label {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  font-family: 'Inter', sans-serif;
+}
+
+.sample-text {
+  line-height: 1.6;
+}
+
+.weight-row {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.weight-label {
+  color: #64748b;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.weight-text {
+  font-size: 15px;
+  color: #f8fafc;
+}
+
+.divider {
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+  margin: 14px 0;
+}
+
+/* Mono card specific */
+.mono-sample {
+  background: rgba(0,0,0,0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #a5f3fc;
+}
+</style>
+</head>
+<body>
+
+<h1>NMS Font Preview</h1>
+<p class="subtitle">각 폰트를 비교하고 영문 / 한글 / 모노스페이스를 선택하세요</p>
+
+<!-- ============================================================ -->
+<div class="section-title"><span>01</span> English Sans-serif</div>
+<div class="cards" id="sans-cards"></div>
+
+<!-- ============================================================ -->
+<div class="section-title"><span>02</span> Korean (한글)</div>
+<div class="cards" id="kr-cards"></div>
+
+<!-- ============================================================ -->
+<div class="section-title"><span>03</span> Monospace</div>
+<div class="cards" id="mono-cards"></div>
+
+<script>
+const sansFonts = [
+  { name: 'Inter', family: "'Inter', sans-serif", current: true, desc: 'UI 최적화, 가변폰트' },
+  { name: 'Poppins', family: "'Poppins', sans-serif", desc: '모던, 기하학적' },
+  { name: 'Source Sans 3', family: "'Source Sans 3', sans-serif", desc: 'Adobe, 기술문서용' },
+  { name: 'DM Sans', family: "'DM Sans', sans-serif", desc: '깔끔, 기하학적' },
+  { name: 'Plus Jakarta Sans', family: "'Plus Jakarta Sans', sans-serif", desc: '트렌디, 둥근' },
+  { name: 'Outfit', family: "'Outfit', sans-serif", desc: '클린, 현대적' },
+];
+
+const krFonts = [
+  { name: 'Pretendard', family: "'Pretendard Variable', 'Pretendard', sans-serif", current: true, desc: 'Inter 메트릭 호환' },
+  { name: 'Noto Sans KR', family: "'Noto Sans KR', sans-serif", desc: 'Google, 범용' },
+  { name: 'IBM Plex Sans KR', family: "'IBM Plex Sans KR', sans-serif", desc: '기술적, 단정' },
+  { name: 'SUIT', family: "'SUIT Variable', 'SUIT', sans-serif", desc: 'Noto Sans KR 기반 최적화' },
+];
+
+const monoFonts = [
+  { name: 'JetBrains Mono', family: "'JetBrains Mono', monospace", current: true, desc: '현재 변수에 정의됨' },
+  { name: 'Fira Code', family: "'Fira Code', monospace", desc: '리가처 지원' },
+  { name: 'Source Code Pro', family: "'Source Code Pro', monospace", desc: 'Adobe' },
+  { name: 'IBM Plex Mono', family: "'IBM Plex Mono', monospace", desc: 'IBM' },
+  { name: 'Roboto Mono', family: "'Roboto Mono', monospace", desc: 'Google' },
+];
+
+const enSamples = {
+  menu: 'Dashboard  Asset Management  Monitoring  Reports  Settings',
+  device: 'Cisco Catalyst 9300-48P  |  Juniper EX4300-48T  |  Aruba 6300M',
+  ip: '192.168.3.114:3306  /  10.0.0.1  /  172.16.254.1',
+  numbers: 'CPU 87.3%   MEM 4,096 MB   Uptime 142d 07:23:45   BPS 1.24 Gbps',
+};
+
+const krSamples = {
+  label: '장비 관리  |  네트워크 토폴로지  |  실시간 모니터링  |  알림 설정',
+  alert: '[장애 발생] 코어 스위치 Core-SW-01 응답 없음 (192.168.1.1)',
+  table: '장비명: 경찰청 본청 백본 스위치  |  그룹: 서울지방경찰청 > 본청 1층',
+  desc: '포트 Gi1/0/24 트래픽 임계치 초과 — 현재 사용률 94.7%',
+};
+
+const monoSamples = [
+  '192.168.3.114    10.0.0.1/24    fe80::1%eth0',
+  '1.3.6.1.2.1.1.5.0  =  STRING: "Core-SW-01"',
+  'ifHCInOctets:  18,446,744,073,709,551,616',
+  'In: 847.3 Mbps  Out: 1.24 Gbps  Loss: 0.00%',
+  '$ snmpwalk -v3 -u admin -l authPriv 192.168.1.1',
+];
+
+function renderSansCard(font) {
+  const tag = font.current
+    ? '<span class="font-tag tag-current">현재 사용</span>'
+    : '<span class="font-tag tag-candidate">후보</span>';
+
+  let weightsHtml = '';
+  [400, 500, 600, 700].forEach(w => {
+    const wName = {400:'Regular',500:'Medium',600:'SemiBold',700:'Bold'}[w];
+    weightsHtml += `
+      <div class="weight-row">
+        <span class="weight-label">${w}</span>
+        <span class="weight-text" style="font-family:${font.family};font-weight:${w}">${wName} — The quick brown fox jumps 0123456789</span>
+      </div>`;
+  });
+
+  let samplesHtml = '';
+  Object.entries(enSamples).forEach(([key, text]) => {
+    const label = {menu:'Menu Text',device:'Device Names',ip:'IP Addresses',numbers:'Numeric Data'}[key];
+    samplesHtml += `
+      <div class="sample-row">
+        <div class="sample-label">${label}</div>
+        <div class="sample-text" style="font-family:${font.family};font-weight:500;font-size:14px">${text}</div>
+      </div>`;
+  });
+
+  return `
+    <div class="card">
+      <div class="card-header">
+        <span class="font-name">${font.name}</span>
+        <span>${tag} <span style="color:#64748b;font-size:11px;margin-left:6px">${font.desc}</span></span>
+      </div>
+      ${weightsHtml}
+      <div class="divider"></div>
+      ${samplesHtml}
+    </div>`;
+}
+
+function renderKrCard(font) {
+  const tag = font.current
+    ? '<span class="font-tag tag-current">현재 사용</span>'
+    : '<span class="font-tag tag-candidate">후보</span>';
+
+  let weightsHtml = '';
+  [400, 500, 600, 700].forEach(w => {
+    const wName = {400:'Regular',500:'Medium',600:'SemiBold',700:'Bold'}[w];
+    weightsHtml += `
+      <div class="weight-row">
+        <span class="weight-label">${w}</span>
+        <span class="weight-text" style="font-family:${font.family};font-weight:${w}">${wName} — 가나다라 네트워크 장비 관리 시스템</span>
+      </div>`;
+  });
+
+  let samplesHtml = '';
+  Object.entries(krSamples).forEach(([key, text]) => {
+    const label = {label:'라벨/메뉴',alert:'알림 메시지',table:'테이블 데이터',desc:'설명 텍스트'}[key];
+    samplesHtml += `
+      <div class="sample-row">
+        <div class="sample-label">${label}</div>
+        <div class="sample-text" style="font-family:${font.family};font-weight:500;font-size:14px">${text}</div>
+      </div>`;
+  });
+
+  return `
+    <div class="card">
+      <div class="card-header">
+        <span class="font-name">${font.name}</span>
+        <span>${tag} <span style="color:#64748b;font-size:11px;margin-left:6px">${font.desc}</span></span>
+      </div>
+      ${weightsHtml}
+      <div class="divider"></div>
+      ${samplesHtml}
+    </div>`;
+}
+
+function renderMonoCard(font) {
+  const tag = font.current
+    ? '<span class="font-tag tag-current">현재 사용</span>'
+    : '<span class="font-tag tag-candidate">후보</span>';
+
+  let weightsHtml = '';
+  [400, 500, 600, 700].forEach(w => {
+    const wName = {400:'Regular',500:'Medium',600:'SemiBold',700:'Bold'}[w];
+    weightsHtml += `
+      <div class="weight-row">
+        <span class="weight-label">${w}</span>
+        <span class="weight-text" style="font-family:${font.family};font-weight:${w}">${wName} — 0Oo 1lI |  {} [] () => !== >=</span>
+      </div>`;
+  });
+
+  const monoLines = monoSamples.map(l => `<div>${l}</div>`).join('');
+
+  return `
+    <div class="card">
+      <div class="card-header">
+        <span class="font-name">${font.name}</span>
+        <span>${tag} <span style="color:#64748b;font-size:11px;margin-left:6px">${font.desc}</span></span>
+      </div>
+      ${weightsHtml}
+      <div class="divider"></div>
+      <div class="sample-label">NMS Terminal / Data Output</div>
+      <div class="mono-sample" style="font-family:${font.family}">${monoLines}</div>
+    </div>`;
+}
+
+document.getElementById('sans-cards').innerHTML = sansFonts.map(renderSansCard).join('');
+document.getElementById('kr-cards').innerHTML = krFonts.map(renderKrCard).join('');
+document.getElementById('mono-cards').innerHTML = monoFonts.map(renderMonoCard).join('');
+</script>
+
+</body>
+</html>

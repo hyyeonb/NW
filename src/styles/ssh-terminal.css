@@ -87,7 +87,7 @@
 
 .sftp-path-text {
   flex: 1;
-  font-family: 'Consolas', monospace;
+  font-family: var(--font-family-mono);
   font-size: 11px;
   color: #38bdf8;
   overflow: hidden;
@@ -102,7 +102,7 @@
 
 .sftp-path-input {
   flex: 1;
-  font-family: 'Consolas', monospace;
+  font-family: var(--font-family-mono);
   font-size: 11px;
   color: #38bdf8;
   background: #0f172a;
@@ -372,7 +372,7 @@
   font-size: 11px;
   color: #e2e8f0;
   outline: none;
-  font-family: 'Consolas', monospace;
+  font-family: var(--font-family-mono);
 }
 
 .sftp-mkdir-input input:focus {

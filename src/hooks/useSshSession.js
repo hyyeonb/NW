@@ -17,8 +17,7 @@ export const useSshSessions = (page = 1, size = 20, sort = 'session_id', order =
         totalPages: pageData.totalPages || 0,
       };
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 30000,
     placeholderData: (prev) => prev,
   });
 };

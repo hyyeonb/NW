@@ -37,3 +37,4 @@
 @import "./group-management.css";
 @import "./asset-management.css";
 /* Note: new-asset-management.css is now in pages folder */
+@import "./connectivity-check.css";

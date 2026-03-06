@@ -302,7 +302,7 @@ select:focus {
 /* IP 주소 - 줄바꿈 방지 */
 .device-table td:nth-child(5) {
     white-space: nowrap;
-    font-family: 'Consolas', 'Monaco', monospace;
+    font-family: var(--font-family-mono);
 }
 
 /* 모델 - 말줄임 */
@@ -1166,13 +1166,13 @@ select:focus {
 
 .port-speed {
     color: #60a5fa;
-    font-family: 'Consolas', monospace;
+    font-family: var(--font-family-mono);
     font-size: 11px;
 }
 
 .port-mac {
     color: #94a3b8;
-    font-family: 'Consolas', monospace;
+    font-family: var(--font-family-mono);
     font-size: 11px;
 }
 
@@ -1458,7 +1458,7 @@ select:focus {
 }
 
 .device-detail-modal .detail-input.ip-input {
-    font-family: 'Consolas', 'Monaco', monospace;
+    font-family: var(--font-family-mono);
     color: #60a5fa;
 }
 
@@ -2404,7 +2404,7 @@ select:focus {
 
 .info-row .value.ip {
     color: #60a5fa;
-    font-family: 'Consolas', monospace;
+    font-family: var(--font-family-mono);
 }
 
 /* 글래스모피즘 인라인 편집 필드 */
@@ -2446,7 +2446,7 @@ select:focus {
 }
 
 .info-row .edit-input.ip {
-    font-family: 'SF Mono', 'Consolas', monospace;
+    font-family: var(--font-family-mono);
     color: #93c5fd;
     letter-spacing: 0.5px;
 }
@@ -2999,7 +2999,7 @@ select:focus {
     font-size: 14px;
     font-weight: 500;
     color: #60a5fa;
-    font-family: 'Consolas', monospace;
+    font-family: var(--font-family-mono);
     padding: 4px 10px;
     background: rgba(59, 130, 246, 0.15);
     border-radius: 6px;
@@ -3819,4 +3819,137 @@ select:focus {
 /* 시스템 설명 행은 여러 줄일 수 있으므로 상단 정렬 */
 .info-row:has(.sys-descr-value) {
     align-items: flex-start;
+}
+
+/* ========== 포트 우클릭 컨텍스트 메뉴 ========== */
+.port-ctx-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+}
+.port-ctx-menu {
+    position: fixed;
+    z-index: 10001;
+    background: rgba(15, 15, 35, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 4px 0;
+    min-width: 140px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(12px);
+}
+.port-ctx-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 16px;
+    background: none;
+    border: none;
+    color: #e2e8f0;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.port-ctx-item:hover {
+    background: rgba(99, 102, 241, 0.2);
+    color: #a5b4fc;
+}
+
+/* ========== 포트 상태 체크 결과 카드 ========== */
+.port-check-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+}
+.port-check-card {
+    background: rgba(15, 15, 35, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    min-width: 280px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
+.port-check-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    font-size: 14px;
+    font-weight: 600;
+    color: #f1f5f9;
+    gap: 12px;
+}
+.port-check-header button {
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0;
+    transition: color 0.15s;
+}
+.port-check-header button:hover { color: #f1f5f9; }
+.port-check-loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 24px 18px;
+    color: #94a3b8;
+    font-size: 13px;
+}
+.port-check-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(99, 102, 241, 0.3);
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+}
+.port-check-body {
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.port-check-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.port-check-label {
+    font-size: 13px;
+    color: #94a3b8;
+}
+.port-check-badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+.port-check-badge.up {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.port-check-badge.down {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.port-check-error {
+    padding: 20px 18px;
+    color: #fca5a5;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }

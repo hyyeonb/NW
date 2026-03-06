@@ -40,13 +40,9 @@ const formatTime = (timeValue) => {
 };
 
 function DeviceMetricCard({ device, history = [], onHide }) {
-  const { globalChartSettings, globalSettingsVersion, gridSize } = useWatchStore();
-
-  // [DEBUG] mount/unmount 감지
-  useEffect(() => {
-    console.log('[DEBUG-CARD] MOUNT:', device.deviceId, device.deviceName);
-    return () => console.warn('[DEBUG-CARD] ❌ UNMOUNT:', device.deviceId, device.deviceName);
-  }, []);
+  const globalChartSettings = useWatchStore((s) => s.globalChartSettings);
+  const globalSettingsVersion = useWatchStore((s) => s.globalSettingsVersion);
+  const gridSize = useWatchStore((s) => s.gridSize);
 
   const [showCpu, setShowCpu] = useState(globalChartSettings.showCpu);
   const [showMem, setShowMem] = useState(globalChartSettings.showMem);
@@ -93,11 +89,20 @@ function DeviceMetricCard({ device, history = [], onHide }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showOptions]);
 
+  // history 전처리: slice + reverse + ifMap 인덱싱 (1회)
+  const processedHistory = useMemo(() => {
+    const sliced = history.slice(0, 20).reverse();
+    return sliced.map(h => ({
+      ...h,
+      ifMap: new Map((h.interfaces || []).map(i => [i.ifIndex, i])),
+    }));
+  }, [history]);
+
   // CPU/MEM 차트 옵션
   const cpuMemChartOption = useMemo(() => {
-    const times = history.slice(0, 20).map(h => formatTime(h.time)).reverse();
-    const cpuData = history.slice(0, 20).map(h => h.cpu ?? null).reverse();
-    const memData = history.slice(0, 20).map(h => h.mem ?? null).reverse();
+    const times = processedHistory.map(h => formatTime(h.time));
+    const cpuData = processedHistory.map(h => h.cpu ?? null);
+    const memData = processedHistory.map(h => h.mem ?? null);
 
     const series = [];
     if (showCpu) {
@@ -169,11 +174,11 @@ function DeviceMetricCard({ device, history = [], onHide }) {
       },
       series: series.length > 0 ? series : [{ name: 'No Data', type: 'line', data: [] }],
     };
-  }, [history, showCpu, showMem]);
+  }, [processedHistory, showCpu, showMem]);
 
   // 트래픽 차트 옵션 (IN/OUT 항상 함께 표시)
   const trafficChartOption = useMemo(() => {
-    const times = history.slice(0, 20).map(h => formatTime(h.time)).reverse();
+    const times = processedHistory.map(h => formatTime(h.time));
     const series = [];
     let maxValue = 1;
 
@@ -182,8 +187,8 @@ function DeviceMetricCard({ device, history = [], onHide }) {
       const portName = iface.ifName || `IF${iface.ifIndex}`;
 
       // IN 데이터 (단위별 변환) - 인터페이스 데이터 없으면 null (0이 아님)
-      const inData = history.slice(0, 20).map(h => {
-        const histIface = h.interfaces?.find(i => i.ifIndex === iface.ifIndex);
+      const inData = processedHistory.map(h => {
+        const histIface = h.ifMap.get(iface.ifIndex);
         if (!histIface) return null;
         if (trafficUnit === 'bps') {
           return histIface.inUsed ?? null;
@@ -196,7 +201,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         }
         if (raw == null) return null;
         return trafficUnit === 'byte' ? raw / 8 : raw;
-      }).reverse();
+      });
 
       maxValue = Math.max(maxValue, ...inData.filter(v => v != null).map(Math.abs));
 
@@ -213,8 +218,8 @@ function DeviceMetricCard({ device, history = [], onHide }) {
       });
 
       // OUT 데이터 (단위별 변환) - 인터페이스 데이터 없으면 null (0이 아님)
-      const outData = history.slice(0, 20).map(h => {
-        const histIface = h.interfaces?.find(i => i.ifIndex === iface.ifIndex);
+      const outData = processedHistory.map(h => {
+        const histIface = h.ifMap.get(iface.ifIndex);
         if (!histIface) return null;
         if (trafficUnit === 'bps') {
           return histIface.outUsed != null ? -histIface.outUsed : null;
@@ -227,7 +232,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         }
         if (raw == null) return null;
         return trafficUnit === 'byte' ? -(raw / 8) : -raw;
-      }).reverse();
+      });
 
       maxValue = Math.max(maxValue, ...outData.filter(v => v != null).map(Math.abs));
 
@@ -285,11 +290,11 @@ function DeviceMetricCard({ device, history = [], onHide }) {
       },
       series: series.length > 0 ? series : [{ name: 'No Data', type: 'line', data: [] }],
     };
-  }, [history, interfaces, counterType, trafficUnit]);
+  }, [processedHistory, interfaces, counterType, trafficUnit]);
 
   // Error/Discard 차트 옵션
   const errorDiscardChartOption = useMemo(() => {
-    const times = history.slice(0, 20).map(h => formatTime(h.time)).reverse();
+    const times = processedHistory.map(h => formatTime(h.time));
     const series = [];
     let maxValue = 1;
 
@@ -297,14 +302,14 @@ function DeviceMetricCard({ device, history = [], onHide }) {
       const portName = iface.ifName || `IF${iface.ifIndex}`;
 
       if (showError) {
-        const inErrData = history.slice(0, 20).map(h => {
-          const histIface = h.interfaces?.find(i => i.ifIndex === iface.ifIndex);
+        const inErrData = processedHistory.map(h => {
+          const histIface = h.ifMap.get(iface.ifIndex);
           return histIface ? (histIface.inError ?? null) : null;
-        }).reverse();
-        const outErrData = history.slice(0, 20).map(h => {
-          const histIface = h.interfaces?.find(i => i.ifIndex === iface.ifIndex);
+        });
+        const outErrData = processedHistory.map(h => {
+          const histIface = h.ifMap.get(iface.ifIndex);
           return histIface ? (histIface.outError ?? null) : null;
-        }).reverse();
+        });
 
         maxValue = Math.max(maxValue, ...inErrData.filter(v => v != null), ...outErrData.filter(v => v != null));
 
@@ -327,14 +332,14 @@ function DeviceMetricCard({ device, history = [], onHide }) {
       }
 
       if (showDiscard) {
-        const inDiscData = history.slice(0, 20).map(h => {
-          const histIface = h.interfaces?.find(i => i.ifIndex === iface.ifIndex);
+        const inDiscData = processedHistory.map(h => {
+          const histIface = h.ifMap.get(iface.ifIndex);
           return histIface ? (histIface.inDiscard ?? null) : null;
-        }).reverse();
-        const outDiscData = history.slice(0, 20).map(h => {
-          const histIface = h.interfaces?.find(i => i.ifIndex === iface.ifIndex);
+        });
+        const outDiscData = processedHistory.map(h => {
+          const histIface = h.ifMap.get(iface.ifIndex);
           return histIface ? (histIface.outDiscard ?? null) : null;
-        }).reverse();
+        });
 
         maxValue = Math.max(maxValue, ...inDiscData.filter(v => v != null), ...outDiscData.filter(v => v != null));
 
@@ -397,16 +402,19 @@ function DeviceMetricCard({ device, history = [], onHide }) {
       },
       series: series.length > 0 ? series : [{ name: 'No Data', type: 'line', data: [] }],
     };
-  }, [history, interfaces, showError, showDiscard]);
+  }, [processedHistory, interfaces, showError, showDiscard]);
 
-  // 장비 비활성화 상태 확인
+  // 장비 비활성화 또는 실제 데이터 없는 상태 확인
   const isDisabled = device.disabled === true;
+  const hasNoData = !isDisabled && device.cpu == null && device.mem == null
+    && (!device.interfaces || device.interfaces.length === 0 || device._isPreview);
+  const showWarning = isDisabled || hasNoData;
 
   return (
-    <div className={`device-card-mini ${isDisabled ? 'disabled' : ''}`}>
+    <div className={`device-card-mini ${showWarning ? 'disabled' : ''}`}>
       {/* 헤더 */}
       <div className="card-header-mini">
-        <span className="device-name" title={device.deviceIp}>{device.deviceName}</span>
+        <span className="device-name" title={`${device.deviceName} (${device.deviceIp})`}>{device.deviceName}</span>
         <div className="card-header-right">
           <span className="device-stats">
             <span className="cpu">CPU:{cpuValue != null ? `${cpuValue}%` : '-'}</span>
@@ -553,11 +561,11 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         </div>
       </div>
 
-      {/* 비활성화 상태: 전체 영역에 메시지 표시 */}
-      {isDisabled ? (
+      {/* 비활성화 또는 데이터 없는 상태: 경고 표시 */}
+      {showWarning ? (
         <div className="chart-disabled">
           <i className="bi bi-exclamation-triangle"></i>
-          <span>장비 확인 필요</span>
+          <span>{isDisabled ? '장비 확인 필요' : '데이터 수집 대기 중'}</span>
         </div>
       ) : (
         <>
@@ -603,6 +611,7 @@ export default memo(DeviceMetricCard, (prev, next) => {
   if (prev.device.cpu?.usage !== next.device.cpu?.usage) return false;
   if (prev.device.mem?.usage !== next.device.mem?.usage) return false;
   if (prev.device.disabled !== next.device.disabled) return false;
+  if (prev.device._isPreview !== next.device._isPreview) return false;
   if (prev.history.length !== next.history.length) return false;
   if (prev.history[0] !== next.history[0]) return false;
   // interfaces 변경 체크 (길이 + 첫 항목 inBps)

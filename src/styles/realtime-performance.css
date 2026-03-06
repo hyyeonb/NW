@@ -711,6 +711,14 @@
     font-weight: var(--font-weight-semibold);
     color: var(--theme-text-primary);
     margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.watch-modal-header h3 i {
+    font-size: 18px;
+    color: var(--theme-accent-light);
 }
 
 .modal-close {
@@ -884,6 +892,33 @@
 .group-filter-node .expand-icon-placeholder {
     width: 14px;
     flex-shrink: 0;
+}
+
+.group-filter-node .group-icon {
+    margin-right: 4px;
+    font-size: 14px;
+    flex-shrink: 0;
+    width: 18px;
+    text-align: center;
+}
+
+.group-filter-node .group-icon.custom-icon {
+    color: var(--theme-accent-light);
+}
+
+.group-filter-node .group-icon.default-icon {
+    color: var(--theme-text-muted);
+    opacity: 0.8;
+}
+
+.group-filter-node.active .group-icon.default-icon {
+    color: var(--theme-accent-light);
+    opacity: 1;
+}
+
+.group-filter-node:hover .group-icon.default-icon {
+    color: var(--theme-text-tertiary);
+    opacity: 1;
 }
 
 .group-filter-node .group-name {
@@ -2789,6 +2824,111 @@
 }
 
 /* ==================
+   WatchSidebar 탭 바
+   ================== */
+.ws-tab-bar {
+    display: flex;
+    gap: 2px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 2px;
+    margin: 0 var(--spacing-3) var(--spacing-3);
+    flex-shrink: 0;
+}
+
+.ws-tab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--theme-text-muted);
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ws-tab-btn:hover:not(.active) {
+    color: var(--theme-text-secondary);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.ws-tab-btn.active {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+/* ==================
+   WatchSidebar 검색 바
+   ================== */
+.ws-search-box {
+    position: relative;
+    padding: 0 var(--spacing-3);
+    margin-bottom: var(--spacing-3);
+    flex-shrink: 0;
+}
+
+.ws-search-icon {
+    position: absolute;
+    left: calc(var(--spacing-3) + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--theme-text-muted);
+    font-size: 12px;
+    pointer-events: none;
+}
+
+.ws-search-box input.ws-search-input {
+    width: 100%;
+    padding: 7px 30px 7px 34px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--theme-border-subtle);
+    border-radius: var(--radius-md);
+    color: var(--theme-text-primary);
+    font-size: 12px;
+    outline: none;
+    transition: all var(--transition-fast);
+}
+
+.ws-search-box input.ws-search-input:focus {
+    border-color: var(--theme-accent-border);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.ws-search-box input.ws-search-input::placeholder {
+    color: var(--theme-text-muted);
+}
+
+.ws-search-clear {
+    position: absolute;
+    right: calc(var(--spacing-3) + 6px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--theme-text-muted);
+    cursor: pointer;
+    padding: 2px;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.ws-search-clear:hover {
+    color: var(--theme-text-primary);
+}
+
+.ws-search-highlight {
+    background: rgba(99, 102, 241, 0.3);
+    color: #c7d2fe;
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
+/* ==================
    Import Group Modal (장비 그룹 가져오기 모달)
    주의: 전역 label { display: block } 때문에 <label> 사용 금지
    모든 클래스 import- 접두사로 충돌 방지
@@ -2937,6 +3077,24 @@
     cursor: default;
 }
 
+/* 그룹 아이콘 */
+.import-row .group-icon {
+    margin-right: 4px;
+    font-size: 14px;
+    flex-shrink: 0;
+    width: 18px;
+    text-align: center;
+}
+
+.import-row .group-icon.custom-icon {
+    color: var(--theme-accent-light);
+}
+
+.import-row .group-icon.default-icon {
+    color: var(--theme-text-muted);
+    opacity: 0.8;
+}
+
 /* 그룹 이름 */
 .import-row-name {
     flex: 1;
@@ -2983,5 +3141,16 @@
     font-size: 11px;
     color: var(--theme-text-muted);
     margin-top: 4px;
+}
+
+/* Card placeholder (IntersectionObserver lazy rendering) */
+.device-card-placeholder {
+    background: var(--theme-bg-tertiary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--theme-border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
 }
 

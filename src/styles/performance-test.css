@@ -1,0 +1,238 @@
+/* ==================
+   Performance Stats Page
+   Extends fault-stats.css shared classes
+   ================== */
+
+/* 전체 컨테이너 (fault-stats-container와 동일 패턴) */
+.perf-stats-container {
+    height: calc(100vh - 80px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 패널 래퍼: 사이드바 + 콘텐츠 */
+.perf-stats-panels-wrapper {
+    display: flex;
+    gap: var(--spacing-4);
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* 콘텐츠 영역 */
+.perf-stats-panels-wrapper > .perf-stats-content {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Summary 7칸 그리드 (기본 6칸 → 7칸 오버라이드) */
+.perf-summary-7col {
+    grid-template-columns: repeat(7, 1fr) !important;
+}
+
+/* Summary 카드 부가 텍스트 (장비명) */
+.stats-card-sub {
+    font-size: 11px;
+    color: var(--theme-text-muted, #64748b);
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* 고부하 장비 테이블 full-width */
+.panel-full-width {
+    grid-column: 1 / -1;
+}
+
+/* ==================
+   Custom Range Picker
+   ================== */
+.custom-range-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 12px;
+}
+
+.custom-range-input {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: #f8fafc;
+    font-size: 13px;
+    font-family: var(--font-mono, monospace);
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.custom-range-input:focus {
+    border-color: rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+.custom-range-input::-webkit-calendar-picker-indicator {
+    filter: invert(0.7);
+    cursor: pointer;
+}
+
+.custom-range-separator {
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* ==================
+   Snapshot Grid (5분 모드)
+   ================== */
+.snapshot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+}
+
+.snapshot-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.2s ease;
+}
+
+.snapshot-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.snapshot-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.snapshot-card-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #f8fafc;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 60%;
+}
+
+.snapshot-card-ip {
+    font-size: 12px;
+    font-family: var(--font-mono, monospace);
+    color: #64748b;
+}
+
+.snapshot-metric-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.snapshot-metric-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    width: 32px;
+    flex-shrink: 0;
+}
+
+.snapshot-progress {
+    flex: 1;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.snapshot-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.snapshot-metric-value {
+    font-size: 13px;
+    font-weight: 700;
+    width: 48px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.snapshot-traffic-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.snapshot-traffic-row b {
+    font-weight: 700;
+}
+
+/* ==================
+   Responsive
+   ================== */
+@media (max-width: 1280px) {
+    .perf-summary-7col {
+        grid-template-columns: repeat(4, 1fr) !important;
+    }
+}
+
+@media (max-width: 1024px) {
+    .perf-summary-7col {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+
+    .perf-stats-container .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-3);
+    }
+
+    .custom-range-picker {
+        margin-left: 0;
+        margin-top: 8px;
+    }
+}
+
+
+@media (max-width: 768px) {
+    .perf-stats-panels-wrapper {
+        flex-direction: column;
+    }
+
+    .perf-stats-panels-wrapper > .watch-sidebar {
+        flex: none;
+        max-height: 250px;
+        width: 100%;
+    }
+
+    .perf-stats-container {
+        height: auto;
+        min-height: calc(100vh - 80px);
+    }
+}
+
+@media (max-width: 640px) {
+    .perf-summary-7col {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}

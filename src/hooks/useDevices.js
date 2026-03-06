@@ -13,8 +13,7 @@ export const useDevicesByGroup = (groupId) => {
       return { content: Array.isArray(devices) ? devices : [] };
     },
     enabled: groupId !== undefined && groupId !== null,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 30000,
   });
 };
 
@@ -38,8 +37,7 @@ export const useDevicesByGroupPaged = (groupId, page = 1, size = 10, sort = 'DEV
       };
     },
     enabled: !!groupId,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 30000,
     placeholderData: (previousData) => previousData, // 이전 데이터 유지하여 깜빡임 방지
   });
 };
@@ -52,6 +50,7 @@ export const useDevice = (deviceId) => {
       return response.data;
     },
     enabled: !!deviceId,
+    staleTime: 30000,
   });
 };
 
@@ -65,6 +64,7 @@ export const useDevicePorts = (deviceId) => {
       return Array.isArray(ports) ? ports : [];
     },
     enabled: !!deviceId,
+    staleTime: 30000,
   });
 };
 
@@ -185,8 +185,7 @@ export const useVendors = () => {
       const response = await devicesApi.getVendors();
       return response.data?.data || response.data || [];
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 5 * 60 * 1000,
   });
 };
 
@@ -199,8 +198,7 @@ export const useModels = (vendorId) => {
       const response = await devicesApi.getModels(vendorId);
       return response.data?.data || response.data || [];
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 5 * 60 * 1000,
   });
 };
 
@@ -300,8 +298,7 @@ export const useDevCodeTree = () => {
       const response = await devicesApi.getDevCodeTree();
       return response.data?.data || response.data || [];
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 5 * 60 * 1000,
   });
 };
 
@@ -313,8 +310,7 @@ export const useDevCodes = () => {
       const response = await devicesApi.getDevCodes();
       return response.data?.data || response.data || [];
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 5 * 60 * 1000,
   });
 };
 

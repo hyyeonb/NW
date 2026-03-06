@@ -54,7 +54,15 @@ function GroupNode({ group, depth = 0, isEditMode, onGroupSelect }) {
           title={isEditMode ? `드래그하여 토폴로지에 추가: ${group.GROUP_NAME}` : group.GROUP_NAME}
         >
           {isEditMode && <i className="bi bi-grip-vertical drag-handle"></i>}
-          <i className={`bi ${isExpanded ? 'bi-folder2-open' : 'bi-folder2'} group-icon`}></i>
+          {(() => {
+            const iconName = group.ICON_NAME;
+            if (iconName) {
+              if (iconName.startsWith('fa-')) return <i className={`fa-solid ${iconName} group-icon custom-icon`} />;
+              if (iconName.startsWith('bi-')) return <i className={`${iconName} group-icon custom-icon`} />;
+              return <span className="material-icons group-icon custom-icon">{iconName}</span>;
+            }
+            return <i className={`bi ${isExpanded ? 'bi-folder2-open' : 'bi-folder2'} group-icon default-icon`} />;
+          })()}
           <span className="group-name" title={group.GROUP_NAME}>{group.GROUP_NAME}</span>
           {hasChildren && (
             <span className="group-count">{group.children.length}</span>

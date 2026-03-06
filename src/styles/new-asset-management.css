@@ -836,6 +836,16 @@
 }
 
 /* ==================
+   결과 테이블 래퍼 - 독립 스크롤
+   ================== */
+.table-wrapper {
+    max-height: 240px;
+    overflow-y: auto;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ==================
    스크롤바
    ================== */
 .modal-content::-webkit-scrollbar,
@@ -939,7 +949,9 @@
 .registration-modal-content {
     max-width: 1100px !important;
     width: 95% !important;
+    max-height: 85vh !important;
 }
+
 
 .progress-section {
     margin-bottom: 24px;
@@ -972,15 +984,6 @@
     font-weight: 500;
 }
 
-.registration-modal .result-summary {
-    display: flex;
-    justify-content: center;
-    gap: 32px;
-    padding: 16px;
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.4) 100%);
-    border-radius: 12px;
-    margin-bottom: 24px;
-}
 
 .result-summary .success-count {
     color: #4ade80;
@@ -1012,6 +1015,37 @@
     gap: 8px;
 }
 
+.section-count {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+    margin-left: 2px;
+}
+
+.success-section .section-count {
+    background: rgba(74, 222, 128, 0.12);
+    color: #4ade80;
+}
+
+.failure-section .section-count {
+    background: rgba(248, 113, 113, 0.12);
+    color: #f87171;
+}
+
+.result-empty {
+    font-size: 13px;
+    color: #64748b;
+    padding: 16px 12px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    margin: 0;
+}
+
 .success-section h4 {
     color: #4ade80;
 }
@@ -1026,14 +1060,51 @@
 }
 
 .result-table th {
-    background: rgba(59, 130, 246, 0.15);
+    background: rgba(255, 255, 255, 0.04);
     padding: 10px 12px;
     text-align: left;
     font-size: 12px;
     font-weight: 600;
-    color: #e2e8f0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s ease;
+}
+
+.sortable:hover {
+    color: #e2e8f0;
+}
+
+.sort-icon {
+    font-size: 10px;
+    margin-left: 4px;
+    vertical-align: middle;
+    opacity: 0.3;
+}
+
+.sort-icon.active {
+    opacity: 1;
+    color: #60a5fa;
+}
+
+/* 성공 섹션 테이블 헤더 - 초록 톤 */
+.success-section .result-table th {
+    background: rgba(74, 222, 128, 0.06);
+    border-bottom-color: rgba(74, 222, 128, 0.15);
+}
+
+/* 실패 섹션 테이블 헤더 - 빨간 톤 */
+.failure-section .result-table th {
+    background: rgba(248, 113, 113, 0.06);
+    border-bottom-color: rgba(248, 113, 113, 0.15);
 }
 
 .result-table td {
@@ -1050,7 +1121,7 @@
 
 .result-table .device-ip {
     color: #60a5fa;
-    font-family: 'Fira Code', monospace;
+    font-family: var(--font-family-mono);
     white-space: nowrap;
 }
 
@@ -1061,7 +1132,7 @@
     white-space: nowrap;
 }
 
-.result-table .error-message {
+.result-table .failure-reason {
     color: #fca5a5;
     font-size: 12px;
 }

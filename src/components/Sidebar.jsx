@@ -1,8 +1,74 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore, useThemeStore } from '../stores';
 
-export default function Sidebar({ collapsed, onToggle }) {
+// 메뉴 구조 — 변하지 않으므로 모듈 레벨 상수
+const MENU_ITEMS = [
+  {
+    icon: 'bi-speedometer2',
+    label: '대시보드',
+    children: [
+      { label: '통합 대시보드', path: '/dashboard', icon: 'bi-grid-1x2' },
+      { label: '토폴로지', path: '/topology', icon: 'bi-diagram-3' },
+      { label: '사용자 토폴로지', path: '/user-topology', icon: 'bi-person-workspace' },
+    ],
+  },
+  {
+    icon: 'bi-activity',
+    label: '성능감시',
+    children: [
+      { label: '실시간 성능감시', path: '/watch/realtime', icon: 'bi-speedometer' },
+      { label: '성능 통계', path: '/perf/stats', icon: 'bi-bar-chart-line' },
+    ],
+  },
+  {
+    icon: 'bi-exclamation-triangle',
+    label: '장애감시',
+    children: [
+      { label: '실시간 장애감시', path: '/fault/realtime', icon: 'bi-broadcast' },
+      { label: '장애이력', path: '/fault/history', icon: 'bi-clock-history' },
+      { label: '장애통계', path: '/fault/stats', icon: 'bi-bar-chart-line' },
+    ],
+  },
+  {
+    icon: 'bi-gear',
+    label: '종합분석',
+    children: [
+      { label: '그룹 관리', path: '/mgmt/groups', icon: 'bi-folder' },
+      { label: '자산 관리', path: '/mgmt/assets', icon: 'bi-hdd-network' },
+      { label: '자산 Config 관리', path: '/mgmt/asset-config', icon: 'bi-sliders' },
+      { label: '신규 자산 관리', path: '/mgmt/new-assets', icon: 'bi-plus-circle' },
+      { label: '모델 관리', path: '/mgmt/models', icon: 'bi-cpu' },
+      { label: 'SSH 접속 이력', path: '/mgmt/ssh-sessions', icon: 'bi-terminal' },
+    ],
+  },
+  {
+    icon: 'bi-tools',
+    label: '네트워크 도구',
+    children: [
+      { label: 'Traceroute', path: '/tools/traceroute', icon: 'bi-signpost-split' },
+    ],
+  },
+  {
+    icon: 'bi-clipboard2-data',
+    label: '게시판',
+    children: [
+      { label: '자료실', path: '/board/files', icon: 'bi-folder2-open' },
+      { label: '공지사항', path: '/board/notices', icon: 'bi-megaphone' },
+    ],
+  },
+  {
+    icon: 'bi-gear-fill',
+    label: '설정',
+    children: [
+      { label: '테마 설정', icon: 'bi-palette', isThemeToggle: true },
+      { label: '계정 설정', path: '/settings/account', icon: 'bi-person-gear' },
+      { label: '알림 설정', path: '/settings/notifications', icon: 'bi-bell' },
+    ],
+  },
+];
+
+export default memo(function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
   const { user, logout } = useAuthStore();
   const { resolvedTheme, toggleTheme, initTheme } = useThemeStore();
@@ -30,62 +96,6 @@ export default function Sidebar({ collapsed, onToggle }) {
     await logout();
     window.location.href = '/login';
   };
-
-  const menuItems = [
-    {
-      icon: 'bi-speedometer2',
-      label: '대시보드',
-      children: [
-        { label: '통합 대시보드', path: '/dashboard', icon: 'bi-grid-1x2' },
-        { label: '토폴로지', path: '/topology', icon: 'bi-diagram-3' },
-        { label: '사용자 토폴로지', path: '/user-topology', icon: 'bi-person-workspace' },
-      ],
-    },
-    {
-      icon: 'bi-activity',
-      label: '성능감시',
-      children: [
-        { label: '실시간 성능감시', path: '/watch/realtime', icon: 'bi-speedometer' },
-      ],
-    },
-    {
-      icon: 'bi-exclamation-triangle',
-      label: '장애감시',
-      children: [
-        { label: '실시간 장애감시', path: '/fault/realtime', icon: 'bi-broadcast' },
-        { label: '장애이력', path: '/fault/history', icon: 'bi-clock-history' },
-      ],
-    },
-    {
-      icon: 'bi-gear',
-      label: '종합분석',
-      children: [
-        { label: '그룹 관리', path: '/mgmt/groups', icon: 'bi-folder' },
-        { label: '자산 관리', path: '/mgmt/assets', icon: 'bi-hdd-network' },
-        { label: '자산 Config 관리', path: '/mgmt/asset-config', icon: 'bi-sliders' },
-        { label: '신규 자산 관리', path: '/mgmt/new-assets', icon: 'bi-plus-circle' },
-        { label: '모델 관리', path: '/mgmt/models', icon: 'bi-cpu' },
-        { label: 'SSH 접속 이력', path: '/mgmt/ssh-sessions', icon: 'bi-terminal' },
-      ],
-    },
-    {
-      icon: 'bi-clipboard2-data',
-      label: '게시판',
-      children: [
-        { label: '자료실', path: '/board/files', icon: 'bi-folder2-open' },
-        { label: '공지사항', path: '/board/notices', icon: 'bi-megaphone' },
-      ],
-    },
-    {
-      icon: 'bi-gear-fill',
-      label: '설정',
-      children: [
-        { label: '테마 설정', icon: 'bi-palette', isThemeToggle: true },
-        { label: '계정 설정', path: '/settings/account', icon: 'bi-person-gear' },
-        { label: '알림 설정', path: '/settings/notifications', icon: 'bi-bell' },
-      ],
-    },
-  ];
 
   const toggleMenu = (index) => {
     setExpandedMenus((prev) => ({
@@ -132,7 +142,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       {/* 메뉴 */}
       <nav className="sidebar-menu">
         <ul>
-          {menuItems.map((item, index) => (
+          {MENU_ITEMS.map((item, index) => (
             <li key={index} className={`menu-item ${item.children ? 'has-children' : ''} ${isChildActive(item.children) ? 'child-active' : ''}`}>
               {item.path ? (
                 <Link
@@ -254,4 +264,4 @@ export default function Sidebar({ collapsed, onToggle }) {
       </div>
     </aside>
   );
-}
+})

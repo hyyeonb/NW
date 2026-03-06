@@ -5,8 +5,12 @@
 
 :root {
     /* Font Family */
-    --font-family-base: 'Inter', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-family-base: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-family-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Monaco, monospace;
+
+    /* Aliases (legacy compatibility) */
+    --font-primary: var(--font-family-base);
+    --font-mono: var(--font-family-mono);
 
     /* Font Weights */
     --font-weight-regular: 400;

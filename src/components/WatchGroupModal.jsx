@@ -102,6 +102,15 @@ function GroupFilterNode({ group, selectedGroupId, onSelect, depth, deviceCountM
         ) : (
           <span className="expand-icon-placeholder" />
         )}
+        {(() => {
+          const iconName = group.ICON_NAME;
+          if (iconName) {
+            if (iconName.startsWith('fa-')) return <i className={`fa-solid ${iconName} group-icon custom-icon`} />;
+            if (iconName.startsWith('bi-')) return <i className={`${iconName} group-icon custom-icon`} />;
+            return <span className="material-icons group-icon custom-icon">{iconName}</span>;
+          }
+          return <i className="bi bi-folder2 group-icon default-icon" />;
+        })()}
         <span className="group-name">{group.GROUP_NAME}</span>
         <span className="group-device-count">{totalCount}</span>
       </div>
@@ -212,6 +221,7 @@ export default function WatchGroupModal({ isOpen, onClose, onSave, editingGroup 
   useEffect(() => {
     if (editingGroup) {
       setGroupName(editingGroup.groupName || '');
+      setSelectedDevices([]); // 항상 초기화 — groupDetailData 로드 후 복원됨
       // 연동 그룹인 경우 해당 R_GROUP_T 그룹으로 자동 필터링 (고정)
       if (editingGroup.linkedGroupId) {
         setSelectedGroupId(editingGroup.linkedGroupId);
@@ -226,12 +236,12 @@ export default function WatchGroupModal({ isOpen, onClose, onSave, editingGroup 
     setBrowsingDeviceId(null);
   }, [editingGroup, isOpen]);
 
-  // groupDetailData 로드 후 선택 상태 복원
+  // groupDetailData 로드 후 선택 상태 복원 (최대 포트 수 제한 적용)
   useEffect(() => {
     if (groupDetailData && groupDetailData.devices) {
       const deviceSelections = groupDetailData.devices.map(d => ({
         deviceId: d.deviceId,
-        ifIndexes: d.ifIndexes || [],
+        ifIndexes: (d.ifIndexes || []).slice(0, MAX_PORTS_PER_DEVICE),
       }));
       setSelectedDevices(deviceSelections);
     }

@@ -1209,89 +1209,103 @@ export default function NewAssetManagement() {
             </div>
 
             {/* 성공 목록 */}
-            {registrationProgress.successList.length > 0 && (
+            {(registrationProgress.successList.length > 0 || registrationProgress.isComplete) && (
               <div className="result-section success-section">
-                <h4><i className="bi bi-check-circle"></i> 성공한 장비</h4>
-                <div className="table-wrapper">
-                  <table className="result-table">
-                    <thead>
-                      <tr>
-                        <th className="sortable" style={{ minWidth: '120px' }} onClick={() => handleSuccessSort('deviceName')}>
-                          장비명 {renderSortIcon('deviceName', successSortField, successSortOrder)}
-                        </th>
-                        <th className="sortable" style={{ minWidth: '130px' }} onClick={() => handleSuccessSort('deviceIp')}>
-                          IP 주소 {renderSortIcon('deviceIp', successSortField, successSortOrder)}
-                        </th>
-                        <th className="sortable" style={{ minWidth: '100px' }} onClick={() => handleSuccessSort('statusText')}>
-                          상태 {renderSortIcon('statusText', successSortField, successSortOrder)}
-                        </th>
-                        <th className="sortable" style={{ minWidth: '120px' }} onClick={() => handleSuccessSort('systemName')}>
-                          시스템명 {renderSortIcon('systemName', successSortField, successSortOrder)}
-                        </th>
-                        <th className="sortable" style={{ minWidth: '100px' }} onClick={() => handleSuccessSort('vendorName')}>
-                          벤더 {renderSortIcon('vendorName', successSortField, successSortOrder)}
-                        </th>
-                        <th className="sortable desc-column" onClick={() => handleSuccessSort('deviceDesc')}>
-                          장비 설명 {renderSortIcon('deviceDesc', successSortField, successSortOrder)}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedSuccessList.map((device, idx) => (
-                        <tr key={idx} className="success-row">
-                          <td className="device-name">{device.deviceName || '-'}</td>
-                          <td className="device-ip">{device.deviceIp || '-'}</td>
-                          <td className="status-text">
-                            {device.collectType === 'PING' ? 'PING' :
-                             device.collectType === 'SNMP' ? 'SNMP' :
-                             device.collectType === 'AGENT' ? 'AGENT' :
-                             (device.pingResult ? 'SNMP' : 'PING')}
-                          </td>
-                          <td>{device.systemName || '-'}</td>
-                          <td>{device.vendorName || '-'}</td>
-                          <td className="desc-column" title={device.deviceDesc}>{device.deviceDesc || '-'}</td>
+                <h4>
+                  <i className="bi bi-check-circle"></i> 성공한 장비
+                  <span className="section-count">{registrationProgress.successList.length}개</span>
+                </h4>
+                {registrationProgress.successList.length > 0 ? (
+                  <div className="table-wrapper">
+                    <table className="result-table">
+                      <thead>
+                        <tr>
+                          <th className="sortable" style={{ minWidth: '120px' }} onClick={() => handleSuccessSort('deviceName')}>
+                            장비명 {renderSortIcon('deviceName', successSortField, successSortOrder)}
+                          </th>
+                          <th className="sortable" style={{ minWidth: '130px' }} onClick={() => handleSuccessSort('deviceIp')}>
+                            IP 주소 {renderSortIcon('deviceIp', successSortField, successSortOrder)}
+                          </th>
+                          <th className="sortable" style={{ minWidth: '100px' }} onClick={() => handleSuccessSort('statusText')}>
+                            상태 {renderSortIcon('statusText', successSortField, successSortOrder)}
+                          </th>
+                          <th className="sortable" style={{ minWidth: '120px' }} onClick={() => handleSuccessSort('systemName')}>
+                            시스템명 {renderSortIcon('systemName', successSortField, successSortOrder)}
+                          </th>
+                          <th className="sortable" style={{ minWidth: '100px' }} onClick={() => handleSuccessSort('vendorName')}>
+                            벤더 {renderSortIcon('vendorName', successSortField, successSortOrder)}
+                          </th>
+                          <th className="sortable desc-column" onClick={() => handleSuccessSort('deviceDesc')}>
+                            장비 설명 {renderSortIcon('deviceDesc', successSortField, successSortOrder)}
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {sortedSuccessList.map((device, idx) => (
+                          <tr key={idx} className="success-row">
+                            <td className="device-name">{device.deviceName || '-'}</td>
+                            <td className="device-ip">{device.deviceIp || '-'}</td>
+                            <td className="status-text">
+                              {device.collectType === 'PING' ? 'PING' :
+                               device.collectType === 'SNMP' ? 'SNMP' :
+                               device.collectType === 'AGENT' ? 'AGENT' :
+                               (device.pingResult ? 'SNMP' : 'PING')}
+                            </td>
+                            <td>{device.systemName || '-'}</td>
+                            <td>{device.vendorName || '-'}</td>
+                            <td className="desc-column" title={device.deviceDesc}>{device.deviceDesc || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="result-empty">등록된 장비가 없습니다.</p>
+                )}
               </div>
             )}
 
             {/* 실패 목록 */}
-            {registrationProgress.failureList.length > 0 && (
+            {(registrationProgress.failureList.length > 0 || registrationProgress.isComplete) && (
               <div className="result-section failure-section">
-                <h4><i className="bi bi-x-circle"></i> 실패한 장비</h4>
-                <div className="table-wrapper">
-                  <table className="result-table">
-                    <thead>
-                      <tr>
-                        <th className="sortable" style={{ minWidth: '120px' }} onClick={() => handleFailureSort('deviceName')}>
-                          장비명 {renderSortIcon('deviceName', failureSortField, failureSortOrder)}
-                        </th>
-                        <th className="sortable" style={{ minWidth: '130px' }} onClick={() => handleFailureSort('deviceIp')}>
-                          IP 주소 {renderSortIcon('deviceIp', failureSortField, failureSortOrder)}
-                        </th>
-                        <th className="sortable" style={{ minWidth: '80px' }} onClick={() => handleFailureSort('collectType')}>
-                          상태 {renderSortIcon('collectType', failureSortField, failureSortOrder)}
-                        </th>
-                        <th className="sortable" onClick={() => handleFailureSort('errorMessage')}>
-                          실패 사유 {renderSortIcon('errorMessage', failureSortField, failureSortOrder)}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedFailureList.map((device, idx) => (
-                        <tr key={idx} className="failure-row">
-                          <td className="device-name">{device.deviceName || '-'}</td>
-                          <td className="device-ip">{device.deviceIp || '-'}</td>
-                          <td className="status-text">{device.collectType || 'SNMP'}</td>
-                          <td className="error-message">{device.errorMessage || '연결 실패'}</td>
+                <h4>
+                  <i className="bi bi-x-circle"></i> 실패한 장비
+                  <span className="section-count">{registrationProgress.failureList.length}개</span>
+                </h4>
+                {registrationProgress.failureList.length > 0 ? (
+                  <div className="table-wrapper">
+                    <table className="result-table">
+                      <thead>
+                        <tr>
+                          <th className="sortable" style={{ minWidth: '120px' }} onClick={() => handleFailureSort('deviceName')}>
+                            장비명 {renderSortIcon('deviceName', failureSortField, failureSortOrder)}
+                          </th>
+                          <th className="sortable" style={{ minWidth: '130px' }} onClick={() => handleFailureSort('deviceIp')}>
+                            IP 주소 {renderSortIcon('deviceIp', failureSortField, failureSortOrder)}
+                          </th>
+                          <th className="sortable" style={{ minWidth: '80px' }} onClick={() => handleFailureSort('collectType')}>
+                            상태 {renderSortIcon('collectType', failureSortField, failureSortOrder)}
+                          </th>
+                          <th className="sortable" onClick={() => handleFailureSort('errorMessage')}>
+                            실패 사유 {renderSortIcon('errorMessage', failureSortField, failureSortOrder)}
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {sortedFailureList.map((device, idx) => (
+                          <tr key={idx} className="failure-row">
+                            <td className="device-name">{device.deviceName || '-'}</td>
+                            <td className="device-ip">{device.deviceIp || '-'}</td>
+                            <td className="status-text">{device.collectType || 'SNMP'}</td>
+                            <td className="failure-reason">{device.errorMessage || '연결 실패'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="result-empty">실패한 장비가 없습니다.</p>
+                )}
               </div>
             )}
 

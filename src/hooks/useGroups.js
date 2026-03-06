@@ -9,8 +9,7 @@ export const useGroupTree = () => {
       const data = response.data?.data || response.data;
       return Array.isArray(data) ? data : [];
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 60000,
   });
 };
 

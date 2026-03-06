@@ -300,14 +300,14 @@
 /* IP 주소 스타일 */
 .data-table td.cell-ip {
     color: var(--theme-accent-light);
-    font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+    font-family: var(--font-family-mono);
     font-size: 12px;
     font-weight: 500;
 }
 
 /* 숫자 스타일 */
 .data-table td.cell-number {
-    font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+    font-family: var(--font-family-mono);
     text-align: right;
 }
 
@@ -463,6 +463,19 @@
 @keyframes pulse-critical {
     0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(239, 68, 68, 0.7); }
     50% { opacity: 0.7; box-shadow: 0 0 12px rgba(239, 68, 68, 0.9); }
+}
+
+/* 등급 셀 — 배지 크기에 맞게 padding 축소 */
+.data-table td.cell-level,
+.data-table th.cell-level {
+    padding: 8px 6px;
+}
+
+/* 액션 셀 — 버튼이 잘리지 않도록 overflow 허용 + padding 축소 */
+.data-table td.cell-actions {
+    padding: 8px 10px;
+    overflow: visible;
+    text-overflow: clip;
 }
 
 /* 액션 버튼 */
@@ -802,6 +815,19 @@
 
 .column-sidebar-footer .btn-reset-columns i {
     font-size: 13px;
+}
+
+
+/* Table scroll wrapper for tablet */
+.data-table-scroll-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 1024px) {
+    .data-table {
+        min-width: 800px;
+    }
 }
 
 /* ==================

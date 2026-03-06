@@ -3,7 +3,7 @@
    (React SPA용 - body 스타일 대신 wrapper 사용)
    ================== */
 .login-page {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: var(--font-family-base);
     background: #0f0f1e;
     min-height: 100vh;
     display: flex;
@@ -418,7 +418,7 @@ h1 {
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.05);
     font-size: 11px;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-family-mono);
     max-height: 200px;
     overflow-y: auto;
     display: none;

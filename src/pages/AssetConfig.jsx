@@ -169,6 +169,7 @@ export default function AssetConfig() {
       key: 'actions',
       label: '',
       width: '60px',
+      className: 'cell-actions',
       hideable: true,
       render: (_, row) => (
         <button

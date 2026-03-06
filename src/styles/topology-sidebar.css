@@ -250,13 +250,14 @@
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 8px;
-  border-radius: 4px;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
   cursor: pointer;
-  color: var(--text-secondary);
+  color: var(--theme-text-secondary, var(--text-secondary));
   transition: background-color 0.2s, color 0.2s;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500;
   min-width: 0;
 }
 
@@ -271,8 +272,34 @@
 }
 
 .topology-group-item .group-icon {
-  font-size: 12px;
+  margin-right: 8px;
+  font-size: 14px;
   flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+}
+
+.topology-group-item .group-icon.custom-icon {
+  color: var(--theme-accent-light);
+}
+
+.topology-group-item .group-icon.default-icon {
+  color: var(--theme-text-muted);
+  opacity: 0.8;
+}
+
+.topology-group-item:hover .group-icon.default-icon {
+  color: var(--theme-text-tertiary);
+  opacity: 1;
+}
+
+.topology-group-item.selected .group-icon.default-icon {
+  color: var(--theme-accent-light);
+  opacity: 1;
+}
+
+.topology-group-item.selected .group-icon.custom-icon {
+  color: var(--theme-accent-lighter, #a5b4fc);
 }
 
 .topology-group-item .group-name {

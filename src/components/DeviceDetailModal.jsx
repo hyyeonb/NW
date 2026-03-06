@@ -387,27 +387,33 @@ export default function DeviceDetailModal({ deviceId, onClose }) {
     },
     {
       key: 'IF_OPER_FLAG', label: 'Oper 감시', width: '90px', sortable: true, align: 'center', hideable: true,
-      render: (value, row) => (
-        <span
-          className={`flag-badge clickable ${value === 1 || value === true ? 'active' : 'inactive'}`}
-          onClick={(e) => { e.stopPropagation(); handleTogglePortFlag(row, 'IF_OPER_FLAG'); }}
-          title="클릭하여 토글"
-        >
-          {value === 1 || value === true ? 'ON' : 'OFF'}
-        </span>
-      ),
+      render: (value, row) => {
+        const isOn = value === 1 || value === true;
+        return (
+          <span
+            className={`flag-toggle ${isOn ? 'active' : ''}`}
+            onClick={(e) => { e.stopPropagation(); handleTogglePortFlag(row, 'IF_OPER_FLAG'); }}
+            title={isOn ? '감시 중 (클릭하여 해제)' : '미감시 (클릭하여 활성화)'}
+          >
+            <span className="toggle-track"><span className="toggle-thumb" /></span>
+          </span>
+        );
+      },
     },
     {
       key: 'IF_PERF_FLAG', label: '성능 감시', width: '90px', sortable: true, align: 'center', hideable: true,
-      render: (value, row) => (
-        <span
-          className={`flag-badge clickable ${value === 1 || value === true ? 'active' : 'inactive'}`}
-          onClick={(e) => { e.stopPropagation(); handleTogglePortFlag(row, 'IF_PERF_FLAG'); }}
-          title="클릭하여 토글"
-        >
-          {value === 1 || value === true ? 'ON' : 'OFF'}
-        </span>
-      ),
+      render: (value, row) => {
+        const isOn = value === 1 || value === true;
+        return (
+          <span
+            className={`flag-toggle ${isOn ? 'active' : ''}`}
+            onClick={(e) => { e.stopPropagation(); handleTogglePortFlag(row, 'IF_PERF_FLAG'); }}
+            title={isOn ? '감시 중 (클릭하여 해제)' : '미감시 (클릭하여 활성화)'}
+          >
+            <span className="toggle-track"><span className="toggle-thumb" /></span>
+          </span>
+        );
+      },
     },
   ], []);
 

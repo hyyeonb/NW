@@ -15,10 +15,13 @@
     padding: var(--spacing-5);
     transition: margin-left var(--transition-normal);
     min-height: 100vh;
+    max-width: calc(100vw - var(--sidebar-width));
+    overflow: hidden;
 }
 
 .app-main.sidebar-collapsed {
     margin-left: var(--sidebar-collapsed-width);
+    max-width: calc(100vw - var(--sidebar-collapsed-width));
 }
 
 /* Sidebar Container */

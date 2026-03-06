@@ -42,15 +42,17 @@ export const useAlertStore = create((set, get) => ({
         );
 
         // CLEAR 알림은 목록에만 추가, Toast는 띄우지 않음
+        const clearAlerts = [alert, ...updatedAlerts];
         return {
-          alerts: [alert, ...updatedAlerts].slice(0, MAX_ALERTS),
+          alerts: clearAlerts.length > MAX_ALERTS ? clearAlerts.slice(0, MAX_ALERTS) : clearAlerts,
           toasts: state.toasts, // Toast 유지 (CLEAR 알림은 Toast 표시 안함)
         };
       }
 
       // 신규 장애 알림
+      const newAlerts = [alert, ...state.alerts];
       return {
-        alerts: [alert, ...state.alerts].slice(0, MAX_ALERTS),
+        alerts: newAlerts.length > MAX_ALERTS ? newAlerts.slice(0, MAX_ALERTS) : newAlerts,
         toasts: addToast(state.toasts, alert),
       };
     }),

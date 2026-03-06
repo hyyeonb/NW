@@ -84,6 +84,14 @@ export const watchApi = {
   deleteLinkedGroup: (linkedGroupId) =>
     apiClient.delete(`/watch/groups/linked/${linkedGroupId}`),
 
+  // 연동된 관제 그룹 조회 (read-only, 동기화 없이 조회만)
+  getByLinkedGroup: (groupId) =>
+    apiClient.get(`/watch/groups/by-linked/${groupId}`),
+
+  // 일반 그룹 → 관제 그룹 동기화 (장비+인터페이스 매핑 테이블에 저장)
+  syncFromGroup: (groupId) =>
+    apiClient.post(`/watch/groups/sync-from-group/${groupId}`),
+
   // ==================== 관제 시작/중지/Heartbeat ====================
 
   // 관제 수집 시작

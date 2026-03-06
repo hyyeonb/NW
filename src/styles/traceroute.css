@@ -1,0 +1,1119 @@
+/* =============================================
+   Traceroute Page Styles
+   ============================================= */
+
+.traceroute-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  height: calc(100vh - 40px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 헤더 */
+.traceroute-header {
+  flex-shrink: 0;
+}
+
+.traceroute-title-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.traceroute-icon {
+  font-size: 2rem;
+  color: #8b5cf6;
+}
+
+.traceroute-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.traceroute-subtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 4px 0 0;
+}
+
+/* ─── 메인 바디 (트리 + 오른쪽) ─── */
+.traceroute-body {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ─── 왼쪽 트리 패널 ─── */
+.traceroute-tree-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: none;
+  height: 100%;
+  overflow: hidden;
+}
+
+.traceroute-tree-header {
+  padding: 12px 16px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+
+.traceroute-tree-header--source {
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.traceroute-tree-header--target {
+  background: rgba(139, 92, 246, 0.04);
+}
+
+.traceroute-tree-header-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 3px;
+}
+
+.traceroute-tree-header--source .traceroute-tree-header-top { color: #34d399; }
+.traceroute-tree-header--target .traceroute-tree-header-top { color: #a78bfa; }
+
+.traceroute-tree-header-sub {
+  font-size: 0.7rem;
+  color: #475569;
+  padding-left: 20px;
+}
+
+/* 선택 모드 탭 */
+.traceroute-mode-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+
+.traceroute-mode-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 9px 8px;
+  border: none;
+  background: none;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-bottom: 2px solid transparent;
+  position: relative;
+}
+
+.traceroute-mode-tab:hover { color: #94a3b8; background: rgba(255,255,255,0.02); }
+
+.traceroute-mode-tab.active {
+  color: #f8fafc;
+  border-bottom-color: #6366f1;
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.traceroute-tab-check {
+  font-size: 0.65rem;
+  color: #10b981;
+  margin-left: 2px;
+}
+
+/* 검색 */
+.traceroute-search-wrap {
+  position: relative;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+
+.traceroute-search-icon {
+  position: absolute;
+  left: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #475569;
+  font-size: 0.8rem;
+}
+
+.traceroute-search-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 7px 28px 7px 30px;
+  color: #e2e8f0;
+  font-size: 0.82rem;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.traceroute-search-input:focus {
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+.traceroute-search-input::placeholder {
+  color: #334155;
+}
+
+.traceroute-search-clear {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #475569;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0;
+  line-height: 1;
+}
+
+/* 트리 스크롤 */
+.traceroute-tree-scroll {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.2) transparent;
+}
+
+.traceroute-tree-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.traceroute-tree-scroll::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 2px;
+}
+
+.traceroute-tree-loading,
+.traceroute-tree-err {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 16px;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.traceroute-tree-err { color: #f87171; }
+
+/* 트리 그룹 */
+.tree-group-node {
+  margin: 0;
+}
+
+.tree-group-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.tree-group-row:hover {
+  background: var(--theme-accent-bg, rgba(255, 255, 255, 0.03));
+}
+
+.tree-chevron {
+  font-size: 10px;
+  color: var(--theme-text-muted, #7b8a9e);
+  width: 12px;
+  flex-shrink: 0;
+}
+
+.tree-folder-icon {
+  font-size: 14px;
+  color: var(--theme-text-muted, #7b8a9e);
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+  opacity: 0.8;
+}
+
+.tree-folder-icon.tree-custom-icon {
+  color: var(--theme-accent-light, #818cf8);
+  opacity: 1;
+}
+
+.tree-folder-icon.tree-custom-icon.material-icons {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.tree-group-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--theme-text-secondary, #e2e8f0);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-device-count {
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--theme-accent-bg, rgba(99, 102, 241, 0.12));
+  color: var(--theme-accent-light, #818cf8);
+  border-radius: 8px;
+  padding: 1px 5px;
+  min-width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* 트리 그룹 자식 (들여쓰기) */
+.tree-group-children {
+  padding-left: 18px;
+}
+
+/* 트리 장비 행 */
+.tree-device-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  margin: 1px 6px;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.tree-device-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tree-device-row.tree-device--source {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.tree-device-row.tree-device--target {
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.tree-device-icon {
+  font-size: 0.85rem;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.tree-device--source .tree-device-icon { color: #10b981; }
+.tree-device--target .tree-device-icon { color: #8b5cf6; }
+
+.tree-device-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.tree-device-name {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #e2e8f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-device-ip {
+  display: block;
+  font-size: 0.7rem;
+  color: #64748b;
+  font-family: var(--font-family-mono);
+}
+
+.tree-device-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.tree-device-tag--src {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.tree-device-tag--dst {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+}
+
+/* ─── 오른쪽 영역 ─── */
+.traceroute-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 설정 패널 — 가로 1줄 배치 (endpoint + options) */
+.traceroute-config-panel {
+  padding: 10px 14px;
+  flex: 2;
+  min-height: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+}
+
+/* 결과 스크롤 래퍼 — 80% 비율 */
+.traceroute-result-scroll {
+  flex: 8;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.2) transparent;
+}
+
+.traceroute-result-scroll::-webkit-scrollbar { width: 4px; }
+.traceroute-result-scroll::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 2px;
+}
+
+/* 출발지 / 목적지 카드 행 */
+.traceroute-endpoint-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.traceroute-device-card {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  min-height: auto;
+}
+
+.traceroute-device-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.traceroute-device-card--active {
+  border-style: solid;
+  border-color: rgba(139, 92, 246, 0.5);
+  background: rgba(139, 92, 246, 0.06);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.1);
+}
+
+.traceroute-device-card--required.traceroute-device-card:not(.traceroute-device-card--active) {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.traceroute-card-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.traceroute-required-dot {
+  color: #ef4444;
+  font-size: 0.8rem;
+}
+
+.traceroute-card-selected {
+  position: relative;
+  padding-right: 28px;
+}
+
+.traceroute-card-device-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #f8fafc;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.traceroute-card-device-ip {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-family: var(--font-family-mono);
+}
+
+.traceroute-card-clear {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: #64748b;
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  transition: all 0.15s;
+}
+
+.traceroute-card-clear:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.traceroute-card-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.traceroute-card-empty-icon {
+  font-size: 1rem;
+  color: #334155;
+  margin-bottom: 2px;
+}
+
+.traceroute-card-placeholder {
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+.traceroute-card-hint {
+  font-size: 0.7rem;
+  color: #334155;
+  font-style: italic;
+}
+
+/* 목적지 섹션 (모드 토글 + 카드/IP입력) */
+.traceroute-target-section {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* 목적지 모드 토글 (장비 선택 / IP 직접 입력) */
+.traceroute-target-mode-toggle {
+  display: flex;
+  gap: 0;
+  margin-bottom: 3px;
+}
+
+.traceroute-target-mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.traceroute-target-mode-btn:first-child {
+  border-radius: 8px 0 0 8px;
+  border-right: none;
+}
+
+.traceroute-target-mode-btn:last-child {
+  border-radius: 0 8px 8px 0;
+}
+
+.traceroute-target-mode-btn:hover {
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.traceroute-target-mode-btn.active {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.35);
+  color: #a78bfa;
+}
+
+.traceroute-target-mode-btn.active + .traceroute-target-mode-btn {
+  border-left-color: rgba(139, 92, 246, 0.35);
+}
+
+/* IP 직접 입력 카드 */
+.traceroute-ip-input-card {
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: rgba(139, 92, 246, 0.04);
+  min-height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.traceroute-ip-input-wrap {
+  position: relative;
+  margin-top: 6px;
+}
+
+.traceroute-ip-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 10px 36px 10px 14px;
+  color: #f8fafc;
+  font-size: 0.92rem;
+  font-family: var(--font-family-mono);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.traceroute-ip-input:focus {
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.1);
+}
+
+.traceroute-ip-input::placeholder {
+  color: #334155;
+  font-family: var(--font-family-base);
+}
+
+.traceroute-ip-input:disabled {
+  opacity: 0.5;
+}
+
+.traceroute-ip-valid-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #10b981;
+  font-size: 0.9rem;
+}
+
+.traceroute-ip-invalid-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #f59e0b;
+  font-size: 0.9rem;
+}
+
+/* 트리 목적지 탭 비활성화 (IP 모드) */
+.traceroute-mode-tab--disabled {
+  opacity: 0.4;
+  cursor: not-allowed !important;
+}
+
+.traceroute-mode-tab--disabled:hover {
+  color: #475569;
+  background: none;
+}
+
+/* 장비 카드 사이 화살표 */
+.traceroute-arrow-between {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0 8px;
+  flex-shrink: 0;
+}
+
+.traceroute-arrow-line-v {
+  width: 2px;
+  height: 8px;
+  background: rgba(139, 92, 246, 0.3);
+}
+
+.traceroute-arrow-icon {
+  font-size: 0.85rem;
+  color: rgba(139, 92, 246, 0.6);
+}
+
+/* 옵션 행 */
+.traceroute-options-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.traceroute-opt-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.traceroute-opt-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.traceroute-opt-input {
+  width: 100px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: #f8fafc;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.traceroute-opt-input:focus {
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+.traceroute-opt-input:disabled {
+  opacity: 0.5;
+}
+
+/* 실행 버튼 */
+.traceroute-run-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 20px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+  white-space: nowrap;
+  height: 34px;
+}
+
+.traceroute-run-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+}
+
+.traceroute-run-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* 스피너 */
+.traceroute-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: tr-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes tr-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 에러 — flex-wrap 시 줄바꿈 강제 */
+.traceroute-error {
+  flex-basis: 100%;
+  margin-top: 2px;
+  padding: 9px 14px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 8px;
+  color: #f87171;
+  font-size: 0.83rem;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* ─── 결과 영역 ─── */
+.traceroute-result-area {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: tr-fadeIn 0.25s ease;
+}
+
+@keyframes tr-fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 플로우 패널 */
+.traceroute-flow-panel {
+  padding: 18px 20px 16px;
+  overflow: hidden;
+}
+
+.traceroute-flow-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.traceroute-flow-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.traceroute-flow-meta {
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.traceroute-flow-meta strong { color: #a78bfa; }
+
+/* 가로 스크롤 */
+.traceroute-flow-scroll {
+  overflow-x: auto;
+  overflow-y: visible;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.25) transparent;
+}
+
+.traceroute-flow-scroll::-webkit-scrollbar { height: 4px; }
+.traceroute-flow-scroll::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.25);
+  border-radius: 2px;
+}
+
+/* 플로우 체인 */
+.traceroute-flow-chain {
+  display: flex;
+  align-items: center;
+  padding: 4px 2px 8px;
+  min-width: max-content;
+}
+
+/* 홉 노드 */
+.traceroute-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 14px 12px 10px;
+  border-radius: 12px;
+  min-width: 110px;
+  max-width: 140px;
+  border: 1px solid;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.traceroute-node:hover { transform: translateY(-3px); }
+
+.traceroute-node--source {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+.traceroute-node--source .traceroute-node-icon { color: #10b981; }
+
+.traceroute-node--target {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.18);
+}
+.traceroute-node--target .traceroute-node-icon { color: #10b981; }
+
+.traceroute-node--registered {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+.traceroute-node--registered .traceroute-node-icon { color: #818cf8; }
+
+.traceroute-node--unknown {
+  background: rgba(100, 116, 139, 0.06);
+  border-color: rgba(100, 116, 139, 0.2);
+}
+.traceroute-node--unknown .traceroute-node-icon { color: #64748b; }
+
+.traceroute-node--timeout {
+  background: rgba(239, 68, 68, 0.05);
+  border-color: rgba(239, 68, 68, 0.18);
+  opacity: 0.65;
+}
+.traceroute-node--timeout .traceroute-node-icon { color: #ef4444; }
+
+.traceroute-node-hop-num {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.traceroute-node-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  margin: 2px 0;
+}
+
+.traceroute-node-name {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  text-align: center;
+  max-width: 124px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.traceroute-node-ip {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  font-family: var(--font-family-mono);
+  text-align: center;
+}
+
+.traceroute-node-rtt {
+  font-size: 0.66rem;
+  color: #475569;
+  margin-top: 1px;
+}
+
+/* 화살표 */
+.traceroute-arrow {
+  display: flex;
+  align-items: center;
+  padding: 0 3px;
+  flex-shrink: 0;
+}
+
+.traceroute-arrow-line {
+  width: 28px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0.3), rgba(139, 92, 246, 0.6));
+}
+
+.traceroute-arrow-head {
+  font-size: 0.65rem;
+  color: rgba(139, 92, 246, 0.65);
+  margin-left: -4px;
+}
+
+/* ─── 요약 통계 카드 ─── */
+.traceroute-summary-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.traceroute-summary-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.traceroute-summary-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #f8fafc;
+  font-family: var(--font-family-mono);
+}
+
+.traceroute-summary-value--warning { color: #f59e0b; }
+
+.traceroute-summary-label {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* 홉 테이블 패널 */
+.traceroute-table-panel {
+  overflow: hidden;
+}
+
+.traceroute-table-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 18px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.traceroute-count-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.traceroute-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.traceroute-table th {
+  background: rgba(255, 255, 255, 0.02);
+  color: #475569;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 9px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.traceroute-table td {
+  padding: 9px 14px;
+  color: #e2e8f0;
+  font-size: 0.83rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.traceroute-table tr:last-child td { border-bottom: none; }
+.traceroute-table tr:hover td { background: rgba(255, 255, 255, 0.015); }
+.traceroute-row--timeout td { opacity: 0.5; }
+
+.traceroute-td-hop { color: #475569 !important; font-weight: 600; width: 44px; }
+.traceroute-td-ip  { font-family: var(--font-family-mono); font-size: 0.8rem !important; }
+.traceroute-ip-text { color: #a78bfa; }
+.traceroute-timeout-text { color: #ef4444; }
+.traceroute-device-name { display: flex; align-items: center; gap: 5px; color: #818cf8; }
+.traceroute-unregistered { color: #f59e0b; font-size: 0.76rem; }
+.traceroute-na { color: #2d3748; }
+.traceroute-td-rtt { font-size: 0.75rem !important; color: #64748b !important; font-family: var(--font-family-mono); }
+
+/* 뱃지 */
+.traceroute-badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 9px; border-radius: 20px;
+  font-size: 0.7rem; font-weight: 600;
+}
+.traceroute-badge--registered { background: rgba(99,102,241,.12); color: #818cf8; border: 1px solid rgba(99,102,241,.25); }
+.traceroute-badge--unknown    { background: rgba(245,158,11,.1);  color: #f59e0b; border: 1px solid rgba(245,158,11,.2); }
+.traceroute-badge--timeout    { background: rgba(239,68,68,.08);  color: #f87171; border: 1px solid rgba(239,68,68,.18); }
+
+/* 빈 상태 스텝 가이드 */
+.traceroute-empty {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 16px;
+  padding: 48px 20px; text-align: center;
+  flex: 1;
+}
+
+.traceroute-empty-icon {
+  font-size: 3rem; color: #1e293b; margin-bottom: 4px;
+}
+
+.traceroute-empty-title {
+  font-size: 1.1rem; font-weight: 600; color: #94a3b8; margin: 0;
+}
+
+.traceroute-empty-steps {
+  display: flex; flex-direction: column; gap: 10px;
+  max-width: 340px; width: 100%; text-align: left;
+}
+
+.traceroute-empty-step {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 0.82rem; color: #94a3b8;
+}
+
+.traceroute-step-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: rgba(139, 92, 246, 0.12); color: #a78bfa;
+  font-size: 0.72rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.traceroute-empty-step strong { color: #e2e8f0; }
+
+.traceroute-empty-hint {
+  font-size: 0.75rem; color: #475569; margin: 8px 0 0;
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* ─── 임시 등록 버튼 ─── */
+/* glass-panel */
+.traceroute-page .glass-panel {
+  background: rgba(255,255,255,.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.22);
+}

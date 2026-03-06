@@ -16,8 +16,7 @@ export const useNoticePosts = (page = 1, size = 10, search) => {
         totalPages: pageData.totalPages || 0,
       };
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 30000,
     placeholderData: (previousData) => previousData,
   });
 };

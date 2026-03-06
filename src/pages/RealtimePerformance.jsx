@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   useWatchGroups,
@@ -12,14 +12,13 @@ import {
   useStopWatch,
   useSendHeartbeat,
   useWatchSSE,
-  useDeleteLinkedGroup,
 } from '../hooks/useWatch';
+import { useGroupTree } from '../hooks/useGroups';
 import { useWatchStore } from '../stores/watchStore';
 import { watchApi } from '../api/watch';
 import DeviceMetricCard from '../components/DeviceMetricCard';
 import WatchGroupModal from '../components/WatchGroupModal';
 import WatchIconSelectorModal from '../components/WatchIconSelectorModal';
-import ImportGroupModal from '../components/ImportGroupModal';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import '../styles/realtime-performance.css';
@@ -37,10 +36,34 @@ const restrictHorizontalToWindow = ({ transform, draggingNodeRect, windowRect })
   };
 };
 
-// 드래그 정렬 가능한 장비 카드 래퍼
-function SortableDeviceCard({ id, device, history, onHide }) {
+// 드래그 정렬 가능한 장비 카드 래퍼 (IntersectionObserver로 뷰포트 밖 카드 lazy 렌더링)
+const SortableDeviceCard = memo(function SortableDeviceCard({ id, device, history, onHide }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id });
+  const cardRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // 한 번이라도 보였으면 계속 렌더링 유지 (unmount 방지)
+  const hasBeenVisible = useRef(false);
+
+  useEffect(() => {
+    const node = cardRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          hasBeenVisible.current = true;
+        } else if (hasBeenVisible.current) {
+          // 한번 보인 후 벗어나면 비활성화 (ECharts 메모리 해제)
+          setIsVisible(false);
+        }
+      },
+      { rootMargin: '200px 0px' } // 뷰포트 위아래 200px 여유
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   const style = {
     transform: transform
@@ -53,15 +76,36 @@ function SortableDeviceCard({ id, device, history, onHide }) {
     minWidth: 0,
   };
 
+  // dnd-kit에 양쪽 ref 모두 전달
+  const mergedRef = useCallback((node) => {
+    cardRef.current = node;
+    setNodeRef(node);
+  }, [setNodeRef]);
+
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <DeviceMetricCard device={device} history={history} onHide={onHide} />
+    <div ref={mergedRef} style={style} {...attributes} {...listeners}>
+      {isVisible || isDragging ? (
+        <DeviceMetricCard device={device} history={history} onHide={onHide} />
+      ) : (
+        <div className="device-card-placeholder" style={{ minHeight: '280px' }}>
+          <span style={{ color: '#64748b', fontSize: '13px' }}>
+            {device.deviceName || device.deviceIp || `Device ${device.deviceId}`}
+          </span>
+        </div>
+      )}
     </div>
   );
-}
+}, (prev, next) => {
+  if (prev.id !== next.id) return false;
+  if (prev.device !== next.device) return false;
+  if (prev.history === next.history) return true;
+  if (prev.history?.length !== next.history?.length) return false;
+  if (prev.history?.[0] !== next.history?.[0]) return false;
+  return true;
+});
 
 // 컨텍스트 메뉴 컴포넌트
-function WatchContextMenu({ x, y, group, onClose, onAdd, onAddChild, onRename, onEditDevices, onDelete, onSetIcon, onUnlink }) {
+function WatchContextMenu({ x, y, group, onClose, onAdd, onAddChild, onRename, onEditDevices, onDelete, onSetIcon }) {
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -123,86 +167,171 @@ function WatchContextMenu({ x, y, group, onClose, onAdd, onAddChild, onRename, o
     );
   }
 
-  const isLinked = !!group.linkedGroupId;
-
   return createPortal(
     <div
       ref={menuRef}
       className="watch-context-menu"
       style={{ left: x, top: y }}
     >
-      {!isLinked && (
-        <div
-          className="watch-context-menu-item"
-          onClick={() => {
-            onSetIcon(group);
-            onClose();
-          }}
-        >
-          <i className="bi bi-palette"></i>
-          <span>아이콘 설정</span>
-        </div>
-      )}
-      {!isLinked && (
-        <div
-          className="watch-context-menu-item"
-          onClick={() => {
-            onRename(group);
-            onClose();
-          }}
-        >
-          <i className="bi bi-pencil"></i>
-          <span>그룹 이름 변경</span>
-        </div>
-      )}
       <div
         className="watch-context-menu-item"
-        onClick={() => {
-          onEditDevices(group);
-          onClose();
-        }}
+        onClick={() => { onSetIcon(group); onClose(); }}
+      >
+        <i className="bi bi-palette"></i>
+        <span>아이콘 설정</span>
+      </div>
+      <div
+        className="watch-context-menu-item"
+        onClick={() => { onRename(group); onClose(); }}
+      >
+        <i className="bi bi-pencil"></i>
+        <span>그룹 이름 변경</span>
+      </div>
+      <div
+        className="watch-context-menu-item"
+        onClick={() => { onEditDevices(group); onClose(); }}
       >
         <i className="bi bi-hdd-network"></i>
         <span>관제 장비 설정</span>
       </div>
-      {!isLinked && (
-        <div
-          className="watch-context-menu-item"
-          onClick={() => {
-            onAddChild(group);
-            onClose();
-          }}
-        >
-          <i className="bi bi-plus-lg"></i>
-          <span>하위 그룹 추가</span>
-        </div>
-      )}
+      <div
+        className="watch-context-menu-item"
+        onClick={() => { onAddChild(group); onClose(); }}
+      >
+        <i className="bi bi-plus-lg"></i>
+        <span>하위 그룹 추가</span>
+      </div>
       <div className="watch-context-menu-divider"></div>
-      {isLinked ? (
-        <div
-          className="watch-context-menu-item danger"
-          onClick={() => {
-            onUnlink(group);
-            onClose();
-          }}
-        >
-          <i className="bi bi-link-45deg"></i>
-          <span>연동 해제</span>
-        </div>
-      ) : (
-        <div
-          className="watch-context-menu-item danger"
-          onClick={() => {
-            onDelete(group);
-            onClose();
-          }}
-        >
-          <i className="bi bi-trash"></i>
-          <span>삭제</span>
-        </div>
-      )}
+      <div
+        className="watch-context-menu-item danger"
+        onClick={() => { onDelete(group); onClose(); }}
+      >
+        <i className="bi bi-trash"></i>
+        <span>삭제</span>
+      </div>
     </div>,
     document.body
+  );
+}
+
+// 일반 그룹 컨텍스트 메뉴 (관제 장비 설정만)
+function RegularGroupContextMenu({ x, y, group, onClose, onEditDevices }) {
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) onClose();
+    };
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    // setTimeout으로 다음 틱에 등록해야 열리자마자 닫히는 것 방지
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
+
+  useEffect(() => {
+    if (menuRef.current) {
+      const rect = menuRef.current.getBoundingClientRect();
+      let newX = x, newY = y;
+      if (rect.right > window.innerWidth) newX = x - rect.width;
+      if (rect.bottom > window.innerHeight) newY = y - rect.height;
+      menuRef.current.style.left = `${newX}px`;
+      menuRef.current.style.top = `${newY}px`;
+    }
+  }, [x, y]);
+
+  return createPortal(
+    <div ref={menuRef} className="watch-context-menu" style={{ left: x, top: y, zIndex: 9999 }}>
+      <div
+        className="watch-context-menu-item"
+        onClick={() => { onEditDevices(group); onClose(); }}
+      >
+        <i className="bi bi-hdd-network"></i>
+        <span>관제 장비 설정</span>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// 일반 그룹 트리 노드 (읽기 전용, 외부 컴포넌트로 분리하여 unmount/remount 방지)
+function RegularGroupNode({ group, depth = 0, expandedNodes, selectedGroupId, searchText, onToggle, onSelect, onContextMenu }) {
+  const hasChildren = group.children && group.children.length > 0;
+  const isExpanded = expandedNodes.has(group.GROUP_ID);
+  const isSelected = selectedGroupId === group.GROUP_ID;
+
+  const renderIcon = () => {
+    const iconName = group.ICON_NAME;
+    if (iconName) {
+      if (iconName.startsWith('fa-')) return <i className={`fa-solid ${iconName} group-icon custom-icon`} />;
+      if (iconName.startsWith('bi-')) return <i className={`${iconName} group-icon custom-icon`} />;
+      return <span className="material-icons group-icon custom-icon">{iconName}</span>;
+    }
+    return <i className="bi bi-folder group-icon custom-icon"></i>;
+  };
+
+  const renderName = () => {
+    const name = group.GROUP_NAME;
+    if (!searchText) return name;
+    const idx = name.toLowerCase().indexOf(searchText.toLowerCase());
+    if (idx === -1) return name;
+    return (
+      <>
+        {name.substring(0, idx)}
+        <mark className="ws-search-highlight">{name.substring(idx, idx + searchText.length)}</mark>
+        {name.substring(idx + searchText.length)}
+      </>
+    );
+  };
+
+  return (
+    <li>
+      <div className="group-item-wrapper">
+        {hasChildren ? (
+          <div className={`toggle-icon ${isExpanded ? 'expanded' : ''}`} onClick={(e) => { e.stopPropagation(); onToggle(group.GROUP_ID); }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </div>
+        ) : (
+          <div className="toggle-icon" style={{ visibility: 'hidden' }}></div>
+        )}
+        <div
+          className={`group-item depth-${depth} ${isSelected ? 'selected' : ''}`}
+          onClick={() => onSelect(group)}
+          onContextMenu={(e) => onContextMenu(e, group)}
+        >
+          {renderIcon()}
+          <span>{renderName()}</span>
+          {group.DEVICE_COUNT > 0 && <span className="ws-device-count">{group.DEVICE_COUNT}</span>}
+        </div>
+      </div>
+      {hasChildren && isExpanded && (
+        <ul>
+          {group.children.map((child) => (
+            <RegularGroupNode
+              key={child.GROUP_ID}
+              group={child}
+              depth={depth + 1}
+              expandedNodes={expandedNodes}
+              selectedGroupId={selectedGroupId}
+              searchText={searchText}
+              onToggle={onToggle}
+              onSelect={onSelect}
+              onContextMenu={onContextMenu}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
   );
 }
 
@@ -243,10 +372,6 @@ function WatchGroupNode({
         return <span className="material-icons group-icon custom-icon">{iconName}</span>;
       }
     }
-    // 연동 그룹은 링크 아이콘
-    if (group.linkedGroupId) {
-      return <i className="bi bi-link-45deg group-icon custom-icon linked-icon"></i>;
-    }
     // 기본 아이콘
     return <i className="bi bi-speedometer2 group-icon custom-icon"></i>;
   };
@@ -267,16 +392,16 @@ function WatchGroupNode({
           <div className="toggle-icon" style={{ visibility: 'hidden' }}></div>
         )}
         <div
-          className={`group-item depth-${depth} ${isSelected ? 'selected' : ''} ${group.linkedGroupId ? 'linked' : ''}`}
+          className={`group-item depth-${depth} ${isSelected ? 'selected' : ''}`}
           data-group-id={group.watchGroupId}
-          draggable={!group.linkedGroupId}
+          draggable
           onClick={() => onSelect(group)}
           onContextMenu={(e) => {
             e.preventDefault();
             e.stopPropagation();
             onContextMenu(e, group);
           }}
-          onDragStart={(e) => !group.linkedGroupId && onDragStart(e, group)}
+          onDragStart={(e) => onDragStart(e, group)}
           onDragEnd={onDragEnd}
           onDragOver={(e) => onDragOver(e, group)}
           onDragLeave={onDragLeave}
@@ -284,6 +409,7 @@ function WatchGroupNode({
         >
           {renderIcon()}
           <span>{group.groupName}</span>
+          {group.deviceCount > 0 && <span className="ws-device-count">{group.deviceCount}</span>}
           {childCount > 0 && <span className="child-count">{childCount}</span>}
         </div>
       </div>
@@ -350,9 +476,6 @@ export default function RealtimePerformance() {
   const [showFirstGroupModal, setShowFirstGroupModal] = useState(false);
   const [firstGroupName, setFirstGroupName] = useState('');
 
-  // 장비 그룹 가져오기 모달 상태
-  const [showImportModal, setShowImportModal] = useState(false);
-
   // 사이드바 접힘 상태
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -371,12 +494,24 @@ export default function RealtimePerformance() {
 
   // 컨텍스트 메뉴 상태
   const [contextMenu, setContextMenu] = useState(null);
+  const [regularContextMenu, setRegularContextMenu] = useState(null);
 
   // 트리 확장 상태
   const [expandedNodes, setExpandedNodes] = useState(new Set());
 
+  // 탭 상태
+  const [activeTab, setActiveTab] = useState('custom'); // 'custom' | 'regular'
+  const [regularExpandedNodes, setRegularExpandedNodes] = useState(new Set());
+  const [selectedRegularGroup, setSelectedRegularGroup] = useState(null);
+  const [syncingRegularGroup, setSyncingRegularGroup] = useState(false);
+  const syncedGroupCache = useRef(new Map());
+  const [searchText, setSearchText] = useState('');
+
   // 그룹 목록 조회
   const { data: watchGroups, isLoading: groupsLoading, refetch: refetchGroups } = useWatchGroups();
+
+  // 일반 그룹 (R_GROUP_T) 트리 조회
+  const { data: regularGroups, isLoading: regularLoading } = useGroupTree();
 
   // 선택된 그룹 상세 조회
   const { data: groupDetail } = useWatchGroupDetail(selectedWatchGroup?.watchGroupId);
@@ -392,7 +527,6 @@ export default function RealtimePerformance() {
   const deleteGroupMutation = useDeleteWatchGroup();
   const moveGroupMutation = useMoveWatchGroup();
   const updateIconMutation = useUpdateWatchGroupIcon();
-  const deleteLinkedGroupMutation = useDeleteLinkedGroup();
 
   // SSE 기반 실시간 메트릭 (Redis 미사용)
   const {
@@ -449,6 +583,11 @@ export default function RealtimePerformance() {
     const groupId = selectedWatchGroup.watchGroupId;
 
     try {
+      // 연동 그룹이면 관제 시작 전 매핑 테이블 동기화 (최신 장비 반영)
+      if (selectedWatchGroup.linkedGroupId) {
+        await watchApi.syncFromGroup(selectedWatchGroup.linkedGroupId);
+      }
+
       await startWatchMutation.mutateAsync(groupId);
       setIsWatching(true);
       setLastUpdated(new Date());
@@ -537,23 +676,6 @@ export default function RealtimePerformance() {
     }
   };
 
-  // 연동 해제
-  const handleUnlinkGroup = async (group) => {
-    if (!confirm(`"${group.groupName}" 연동을 해제하시겠습니까?`)) return;
-
-    try {
-      await deleteLinkedGroupMutation.mutateAsync(group.linkedGroupId);
-      if (selectedWatchGroup?.watchGroupId === group.watchGroupId) {
-        setSelectedWatchGroup(null);
-        setIsWatching(false);
-      }
-      refetchGroups();
-    } catch (error) {
-      console.error('연동 해제 실패:', error);
-      alert('연동 해제에 실패했습니다.');
-    }
-  };
-
   // 컨텍스트 메뉴 열기 (그룹 우클릭)
   const handleContextMenu = (e, group) => {
     e.preventDefault();
@@ -580,6 +702,54 @@ export default function RealtimePerformance() {
   // 컨텍스트 메뉴 닫기
   const closeContextMenu = () => {
     setContextMenu(null);
+  };
+
+  // 일반 그룹 컨텍스트 메뉴
+  const handleRegularContextMenu = (e, group) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setRegularContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      group,
+    });
+  };
+
+  const closeRegularContextMenu = () => {
+    setRegularContextMenu(null);
+  };
+
+  // 일반 그룹 관제 장비 설정
+  const handleRegularEditDevices = async (group) => {
+    const toWatchGroup = (data) => ({
+      watchGroupId: data.WATCH_GROUP_ID,
+      groupName: data.GROUP_NAME,
+      linkedGroupId: data.LINKED_GROUP_ID,
+      intervalSec: data.INTERVAL_SEC,
+      depth: data.DEPTH,
+      parentGroupId: data.PARENT_GROUP_ID,
+    });
+
+    // 1) GET 조회 (기존 포트 선택 유지)
+    try {
+      const res = await watchApi.getByLinkedGroup(group.GROUP_ID);
+      const data = res.data?.data;
+      if (data) {
+        openGroupModal(toWatchGroup(data), null, 'devices');
+        return;
+      }
+    } catch (e) { /* 미동기화 → 아래로 진행 */ }
+
+    // 2) 미동기화 → 첫 1회만 sync
+    try {
+      const res = await watchApi.syncFromGroup(group.GROUP_ID);
+      const data = res.data?.data;
+      if (data) {
+        openGroupModal(toWatchGroup(data), null, 'devices');
+      }
+    } catch (err) {
+      console.error('일반 그룹 동기화 실패:', err);
+    }
   };
 
   // 트리 노드 토글
@@ -919,14 +1089,15 @@ export default function RealtimePerformance() {
       }
     });
 
-    const result = orderedIds.map(id => deviceMap.get(id)).filter(Boolean);
-    console.log('[DEBUG-RENDER] orderedVisibleDevices:', result.length, '개, ids:', result.map(d => d.deviceId), 'currentDevices:', currentDevices.length, 'hidden:', currentHiddenIds.length);
-    return result;
+    return orderedIds.map(id => deviceMap.get(id)).filter(Boolean);
   }, [currentDevices, groupId, currentHiddenIds, currentOrder]);
 
   // 관제 중 위젯이 절대 사라지지 않도록 마지막 유효 목록 캐시
   const stableVisibleRef = useRef([]);
+  // handleCardDragEnd 콜백 안정화용 ref (SSE 업데이트마다 콜백 재생성 방지)
+  const orderedVisibleRef = useRef(orderedVisibleDevices);
   useEffect(() => {
+    orderedVisibleRef.current = orderedVisibleDevices;
     if (orderedVisibleDevices.length > 0) {
       stableVisibleRef.current = orderedVisibleDevices;
     }
@@ -935,10 +1106,6 @@ export default function RealtimePerformance() {
   // 렌더링용: 관제 중 빈 목록이 되면 마지막 캐시 사용
   const useStableFallback = isWatching && orderedVisibleDevices.length === 0 && stableVisibleRef.current.length > 0;
   const renderDevices = useStableFallback ? stableVisibleRef.current : orderedVisibleDevices;
-  if (useStableFallback) {
-    console.warn('[DEBUG-RENDER] ⚠️ stableVisibleRef 폴백 사용! orderedVisible=0, stable=', stableVisibleRef.current.length);
-  }
-  console.log('[DEBUG-RENDER] renderDevices 최종:', renderDevices.length, '개, isWatching:', isWatching);
 
   // 숨긴 장비 정보 (드롭다운 표시용)
   const hiddenDevicesInfo = useMemo(() => {
@@ -995,7 +1162,7 @@ export default function RealtimePerformance() {
     const { active, over } = event;
     if (!over || active.id === over.id || !groupId) return;
 
-    const orderedIds = orderedVisibleDevices.map(d => d.deviceId);
+    const orderedIds = orderedVisibleRef.current.map(d => d.deviceId);
     const oldIndex = orderedIds.indexOf(active.id);
     const newIndex = orderedIds.indexOf(over.id);
     if (oldIndex === -1 || newIndex === -1) return;
@@ -1004,7 +1171,7 @@ export default function RealtimePerformance() {
     // 숨긴 장비도 순서에 보존
     const hiddenInOrder = currentOrder.filter(id => currentHiddenIds.includes(id));
     setDeviceOrder(groupId, [...newOrder, ...hiddenInOrder]);
-  }, [groupId, orderedVisibleDevices, currentOrder, currentHiddenIds, setDeviceOrder]);
+  }, [groupId, currentOrder, currentHiddenIds, setDeviceOrder]);
 
   // 트리 구조를 1차원 배열로 풀기 (미니 사이드바용)
   const flattenedGroups = useMemo(() => {
@@ -1027,14 +1194,177 @@ export default function RealtimePerformance() {
       if (iconName.startsWith('bi-')) return <i className={iconName} />;
       return <span className="material-icons">{iconName}</span>;
     }
-    if (group.linkedGroupId) {
-      return <i className="bi bi-link-45deg linked-icon"></i>;
-    }
     return <i className="bi bi-speedometer2"></i>;
   };
 
+  // ==================== 일반 그룹 관련 ====================
+
+  // 일반 그룹 '미등록 장비' 필터링 + 검색 필터링
+  const filteredRegularGroups = useMemo(() => {
+    const filterUnregistered = (nodes) => {
+      if (!nodes) return [];
+      return nodes
+        .filter(g => g.GROUP_NAME !== '미등록 장비')
+        .map(node => ({ ...node, children: filterUnregistered(node.children) }));
+    };
+    const cleaned = filterUnregistered(regularGroups);
+    if (!searchText.trim()) return cleaned;
+    const searchLower = searchText.toLowerCase().trim();
+    const matchesSearch = (node) => node.GROUP_NAME?.toLowerCase().includes(searchLower);
+    const filterNodes = (nodes) => {
+      if (!nodes) return [];
+      return nodes.map(node => {
+        const filteredChildren = filterNodes(node.children);
+        if (matchesSearch(node) || filteredChildren.length > 0) return { ...node, children: filteredChildren };
+        return null;
+      }).filter(Boolean);
+    };
+    return filterNodes(cleaned);
+  }, [regularGroups, searchText]);
+
+  // 커스텀 그룹 검색 필터링
+  const filteredWatchGroups = useMemo(() => {
+    if (!watchGroups || !searchText.trim()) return watchGroups;
+    const searchLower = searchText.toLowerCase().trim();
+    const matchesSearch = (node) => node.groupName?.toLowerCase().includes(searchLower);
+    const filterNodes = (nodes) => {
+      if (!nodes) return [];
+      return nodes.map(node => {
+        const filteredChildren = filterNodes(node.children);
+        if (matchesSearch(node) || filteredChildren.length > 0) return { ...node, children: filteredChildren };
+        return null;
+      }).filter(Boolean);
+    };
+    return filterNodes(watchGroups);
+  }, [watchGroups, searchText]);
+
+  // 일반 그룹 전체 확장 (초기 로드)
+  useEffect(() => {
+    if (regularGroups && regularGroups.length > 0) {
+      const allIds = new Set();
+      const collectIds = (groups) => {
+        groups.forEach((g) => {
+          allIds.add(g.GROUP_ID);
+          if (g.children) collectIds(g.children);
+        });
+      };
+      collectIds(regularGroups);
+      setRegularExpandedNodes(allIds);
+    }
+  }, [regularGroups]);
+
+  // 일반 그룹용 플랫 목록 (미니 사이드바)
+  const flattenedRegularGroups = useMemo(() => {
+    if (!regularGroups) return [];
+    const result = [];
+    const flatten = (groups) => {
+      groups.forEach((g) => {
+        if (g.GROUP_NAME !== '미등록 장비') {
+          result.push(g);
+          if (g.children) flatten(g.children);
+        }
+      });
+    };
+    flatten(regularGroups);
+    return result;
+  }, [regularGroups]);
+
+  // 일반 그룹 선택 → 캐시/GET 조회 우선, 미동기화 시에만 sync
+  const handleSelectRegularGroup = async (group) => {
+    if (isWatching) {
+      handleStopWatch();
+    }
+    setSelectedRegularGroup(group);
+
+    const toWatchGroup = (data) => ({
+      watchGroupId: data.WATCH_GROUP_ID,
+      groupName: data.GROUP_NAME,
+      linkedGroupId: data.LINKED_GROUP_ID,
+      intervalSec: data.INTERVAL_SEC,
+      depth: data.DEPTH,
+      parentGroupId: data.PARENT_GROUP_ID,
+    });
+
+    // 1) 프론트 캐시 확인 (즉시)
+    const cached = syncedGroupCache.current.get(group.GROUP_ID);
+    if (cached) {
+      setSelectedWatchGroup(cached);
+      return;
+    }
+
+    // 2) GET 조회 (read-only, 빠름)
+    try {
+      const res = await watchApi.getByLinkedGroup(group.GROUP_ID);
+      const data = res.data?.data;
+      if (data) {
+        const watchGroup = toWatchGroup(data);
+        syncedGroupCache.current.set(group.GROUP_ID, watchGroup);
+        setSelectedWatchGroup(watchGroup);
+        resetHistory();
+        lastDevicesRef.current = [];
+        stableVisibleRef.current = [];
+        return;
+      }
+    } catch (e) { /* 미동기화 → 아래로 진행 */ }
+
+    // 3) 미동기화 → 첫 1회만 sync
+    setSyncingRegularGroup(true);
+    try {
+      const res = await watchApi.syncFromGroup(group.GROUP_ID);
+      const data = res.data?.data;
+      if (data) {
+        const watchGroup = toWatchGroup(data);
+        syncedGroupCache.current.set(group.GROUP_ID, watchGroup);
+        setSelectedWatchGroup(watchGroup);
+        resetHistory();
+        lastDevicesRef.current = [];
+        stableVisibleRef.current = [];
+      }
+    } catch (err) {
+      console.error('일반 그룹 동기화 실패:', err);
+    } finally {
+      setSyncingRegularGroup(false);
+    }
+  };
+
+  // 일반 그룹 노드 토글
+  const handleToggleRegularNode = useCallback((groupId) => {
+    setRegularExpandedNodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  }, []);
+
+  // 탭 전환
+  const handleTabChange = useCallback((tab) => {
+    if (tab === activeTab) return;
+    setActiveTab(tab);
+    setSearchText('');
+    if (tab === 'custom') {
+      setSelectedRegularGroup(null);
+    } else {
+      setSelectedWatchGroup(null);
+      setIsWatching(false);
+    }
+  }, [activeTab, setSelectedWatchGroup, setIsWatching]);
+
+  // (RegularGroupNode는 파일 상단에 별도 컴포넌트로 분리됨)
+
   return (
     <div className="realtime-performance-container">
+      {/* 페이지 헤더 */}
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">
+            <i className="bi bi-activity"></i>
+            실시간 성능 감시
+          </h1>
+          <span className="page-subtitle">관제 그룹별 장비 상태를 실시간으로 모니터링합니다</span>
+        </div>
+      </div>
+
       <div className={`realtime-panels-wrapper ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         {/* 왼쪽 사이드바 - 관제 그룹 목록 (미니 사이드바 지원) */}
         <aside className={`watch-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
@@ -1053,78 +1383,177 @@ export default function RealtimePerformance() {
               <i className={`bi bi-chevron-${sidebarCollapsed ? 'right' : 'left'}`}></i>
             </button>
           </div>
-          <div
-            className="sidebar-content"
-            onContextMenu={!sidebarCollapsed ? handleEmptyContextMenu : undefined}
-            onDragOver={!sidebarCollapsed ? handleContainerDragOver : undefined}
-            onDrop={!sidebarCollapsed ? handleContainerDrop : undefined}
-          >
-            {sidebarCollapsed ? (
-              <div className="mini-group-list">
-                {flattenedGroups.map(group => (
-                  <div
-                    key={group.watchGroupId}
-                    className={`mini-group-item ${selectedWatchGroup?.watchGroupId === group.watchGroupId ? 'selected' : ''}`}
-                    onClick={() => handleSelectGroup(group)}
-                    title={group.groupName}
-                  >
-                    {renderGroupIcon(group)}
-                  </div>
-                ))}
-              </div>
-            ) : groupsLoading ? (
-              <div className="watch-loading">
-                <div className="spinner"></div>
-                <p>그룹 목록 로딩 중...</p>
-              </div>
-            ) : watchGroups && watchGroups.length > 0 ? (
-              <div className="gm-tree">
-                <ul>
-                  {watchGroups.map((group) => (
-                    <WatchGroupNode
-                      key={group.watchGroupId}
-                      group={group}
-                      depth={0}
-                      selectedGroup={selectedWatchGroup}
-                      expandedNodes={expandedNodes}
-                      onSelect={handleSelectGroup}
-                      onToggle={handleToggleNode}
-                      onContextMenu={handleContextMenu}
-                      onDragStart={handleDragStart}
-                      onDragEnd={handleDragEnd}
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                    />
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <div className="watch-empty-state">
-                <i className="bi bi-inbox"></i>
-                <p>관제 그룹이 없습니다.<br />우클릭하여 그룹을 추가하세요.</p>
-              </div>
-            )}
-          </div>
+
+          {/* 탭 (펼쳐진 상태에서만) */}
           {!sidebarCollapsed && (
-            <div className="sidebar-footer">
-              <button className="import-group-btn" onClick={() => setShowImportModal(true)}>
-                <i className="bi bi-box-arrow-in-down"></i>
-                장비 그룹 가져오기
+            <div className="ws-tab-bar">
+              <button
+                className={`ws-tab-btn ${activeTab === 'custom' ? 'active' : ''}`}
+                onClick={() => handleTabChange('custom')}
+              >
+                커스텀 그룹
+              </button>
+              <button
+                className={`ws-tab-btn ${activeTab === 'regular' ? 'active' : ''}`}
+                onClick={() => handleTabChange('regular')}
+              >
+                일반 그룹
               </button>
             </div>
           )}
+
+          {/* 검색 (펼쳐진 상태에서만) */}
+          {!sidebarCollapsed && (
+            <div className="ws-search-box">
+              <i className="bi bi-search ws-search-icon"></i>
+              <input
+                type="text"
+                className="ws-search-input"
+                placeholder="그룹 검색..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
+              {searchText && (
+                <button className="ws-search-clear" onClick={() => setSearchText('')} title="검색어 지우기">
+                  <i className="bi bi-x"></i>
+                </button>
+              )}
+            </div>
+          )}
+
+          <div
+            className="sidebar-content"
+            onContextMenu={!sidebarCollapsed && activeTab === 'custom' ? handleEmptyContextMenu : undefined}
+            onDragOver={!sidebarCollapsed && activeTab === 'custom' ? handleContainerDragOver : undefined}
+            onDrop={!sidebarCollapsed && activeTab === 'custom' ? handleContainerDrop : undefined}
+          >
+            {sidebarCollapsed ? (
+              <div className="mini-group-list">
+                {activeTab === 'custom' ? (
+                  flattenedGroups.map(group => (
+                    <div
+                      key={group.watchGroupId}
+                      className={`mini-group-item ${selectedWatchGroup?.watchGroupId === group.watchGroupId ? 'selected' : ''}`}
+                      onClick={() => handleSelectGroup(group)}
+                      title={group.groupName}
+                    >
+                      {renderGroupIcon(group)}
+                    </div>
+                  ))
+                ) : (
+                  flattenedRegularGroups.map(group => (
+                    <div
+                      key={group.GROUP_ID}
+                      className={`mini-group-item ${selectedRegularGroup?.GROUP_ID === group.GROUP_ID ? 'selected' : ''}`}
+                      onClick={() => handleSelectRegularGroup(group)}
+                      title={group.GROUP_NAME}
+                    >
+                      {group.ICON_NAME ? (
+                        group.ICON_NAME.startsWith('fa-') ? <i className={`fa-solid ${group.ICON_NAME}`} /> :
+                        group.ICON_NAME.startsWith('bi-') ? <i className={group.ICON_NAME} /> :
+                        <span className="material-icons">{group.ICON_NAME}</span>
+                      ) : (
+                        <i className="bi bi-folder"></i>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : activeTab === 'custom' ? (
+              /* ===== 커스텀 그룹 탭 ===== */
+              groupsLoading ? (
+                <div className="watch-loading">
+                  <div className="spinner"></div>
+                  <p>그룹 목록 로딩 중...</p>
+                </div>
+              ) : filteredWatchGroups && filteredWatchGroups.length > 0 ? (
+                <div className="gm-tree">
+                  <ul>
+                    {filteredWatchGroups.map((group) => (
+                      <WatchGroupNode
+                        key={group.watchGroupId}
+                        group={group}
+                        depth={0}
+                        selectedGroup={selectedWatchGroup}
+                        expandedNodes={expandedNodes}
+                        onSelect={handleSelectGroup}
+                        onToggle={handleToggleNode}
+                        onContextMenu={handleContextMenu}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                      />
+                    ))}
+                  </ul>
+                </div>
+              ) : searchText.trim() ? (
+                <div className="watch-empty-state">
+                  <i className="bi bi-search"></i>
+                  <p>"{searchText}" 검색 결과가 없습니다.</p>
+                </div>
+              ) : (
+                <div className="watch-empty-state">
+                  <i className="bi bi-inbox"></i>
+                  <p>관제 그룹이 없습니다.<br />우클릭하여 그룹을 추가하세요.</p>
+                </div>
+              )
+            ) : (
+              /* ===== 일반 그룹 탭 ===== */
+              regularLoading ? (
+                <div className="watch-loading">
+                  <div className="spinner"></div>
+                  <p>그룹 목록 로딩 중...</p>
+                </div>
+              ) : filteredRegularGroups && filteredRegularGroups.length > 0 ? (
+                <div className="gm-tree">
+                  <ul>
+                    {filteredRegularGroups.map((group) => (
+                      <RegularGroupNode
+                        key={group.GROUP_ID}
+                        group={group}
+                        depth={0}
+                        expandedNodes={regularExpandedNodes}
+                        selectedGroupId={selectedRegularGroup?.GROUP_ID}
+                        searchText={searchText}
+                        onToggle={handleToggleRegularNode}
+                        onSelect={handleSelectRegularGroup}
+                        onContextMenu={handleRegularContextMenu}
+                      />
+                    ))}
+                  </ul>
+                </div>
+              ) : searchText.trim() ? (
+                <div className="watch-empty-state">
+                  <i className="bi bi-search"></i>
+                  <p>"{searchText}" 검색 결과가 없습니다.</p>
+                </div>
+              ) : (
+                <div className="watch-empty-state">
+                  <i className="bi bi-inbox"></i>
+                  <p>등록된 그룹이 없습니다.</p>
+                </div>
+              )
+            )}
+          </div>
         </aside>
 
         {/* 메인 콘텐츠 영역 */}
         <main className="watch-main">
-          {selectedWatchGroup ? (
+          {syncingRegularGroup ? (
+            <div className="watch-no-selection">
+              <div className="spinner" style={{ width: 40, height: 40, border: '3px solid rgba(255,255,255,0.1)', borderTop: '3px solid #6366f1', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: 16 }}></div>
+              <h2>장비 정보 동기화 중...</h2>
+              <p>처음 선택한 그룹입니다. 잠시만 기다려주세요.</p>
+            </div>
+          ) : selectedWatchGroup ? (
             <>
               {/* 헤더 */}
               <div className="watch-header">
                 <div className="watch-header-left">
                   <h1>
-                    <i className="bi bi-activity"></i>
+                    <i className="bi bi-collection"></i>
                     {selectedWatchGroup.groupName}
                   </h1>
                   <div className={`watch-status ${isWatching ? (sseConnected ? 'active' : 'connecting') : 'inactive'}`}>
@@ -1414,7 +1843,17 @@ export default function RealtimePerformance() {
           onEditDevices={(group) => openGroupModal(group, null, 'devices')}
           onDelete={handleDeleteGroup}
           onSetIcon={handleSetIcon}
-          onUnlink={handleUnlinkGroup}
+        />
+      )}
+
+      {/* 일반 그룹 컨텍스트 메뉴 (관제 장비 설정만) */}
+      {regularContextMenu && (
+        <RegularGroupContextMenu
+          x={regularContextMenu.x}
+          y={regularContextMenu.y}
+          group={regularContextMenu.group}
+          onClose={closeRegularContextMenu}
+          onEditDevices={handleRegularEditDevices}
         />
       )}
 
@@ -1425,12 +1864,6 @@ export default function RealtimePerformance() {
           onSuccess={() => refetchGroups()}
         />
       )}
-
-      {/* 장비 그룹 가져오기 모달 */}
-      <ImportGroupModal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-      />
 
       {/* 첫 관제 그룹 등록 모달 */}
       {showFirstGroupModal && (

@@ -44,7 +44,7 @@ const formatCount = (val) => {
   return val.toFixed(0);
 };
 
-export default function PortTrafficChart({ rawData, chartPortsSet, portsData, settings = {} }) {
+export default function PortTrafficChart({ rawData, chartPortsSet, portsData, settings = {}, loading = false }) {
   const { counterType = '64bit', trafficUnit = 'bit', showError = false, showDiscard = false } = settings;
 
   const portColorMap = useMemo(() => {
@@ -56,12 +56,22 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
     return map;
   }, [chartPortsSet]);
 
-  const getPortName = (ifIndex) => {
-    const port = portsData?.find(p => p.IF_INDEX === ifIndex);
-    return port ? (port.IF_NAME || port.IF_DESCR || `Port ${ifIndex}`) : `Port ${ifIndex}`;
-  };
-
   const chartAreaRef = useRef(null);
+
+  // portsData → O(1) 룩업 Map (포트명, 속도)
+  const portLookup = useMemo(() => {
+    const nameMap = {};
+    const speedMap = {};
+    if (portsData) {
+      for (const p of portsData) {
+        nameMap[p.IF_INDEX] = p.IF_NAME || p.IF_DESCR || `Port ${p.IF_INDEX}`;
+        speedMap[p.IF_INDEX] = (p.IF_HIGH_SPEED && p.IF_HIGH_SPEED > 0)
+          ? p.IF_HIGH_SPEED * 1e6
+          : (p.IF_SPEED || 0);
+      }
+    }
+    return { nameMap, speedMap };
+  }, [portsData]);
 
   const chartData = useMemo(() => {
     if (!rawData || rawData.length === 0 || chartPortsSet.size === 0) {
@@ -95,32 +105,25 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
       return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     });
 
-    // 포트별 ifSpeed (bps 단위) 조회
-    const getIfSpeedBps = (ifIndex) => {
-      const port = portsData?.find(p => p.IF_INDEX === ifIndex);
-      if (!port) return 0;
-      // IF_HIGH_SPEED는 Mbps 단위, IF_SPEED는 bps 단위
-      if (port.IF_HIGH_SPEED && port.IF_HIGH_SPEED > 0) return port.IF_HIGH_SPEED * 1e6;
-      return port.IF_SPEED || 0;
-    };
+    const { nameMap, speedMap } = portLookup;
 
     const getInValue = (r) => {
       let val = counterType === '64bit' ? (r.IN_HIGH_BPS ?? r.IN_BPS ?? 0) : (r.IN_BPS ?? 0);
-      if (trafficUnit === 'byte') return val / 8;
-      if (trafficUnit === 'bps') {
-        const speed = getIfSpeedBps(r.IF_INDEX);
-        return speed > 0 ? (val / speed) * 100 : 0;
-      }
-      return val;
+      if (trafficUnit === 'bps') return val;  // 이미 % 값
+      // % → raw bps 역산
+      const speed = speedMap[r.IF_INDEX] || 0;
+      const rawBps = speed > 0 ? (val / 100) * speed : 0;
+      if (trafficUnit === 'byte') return rawBps / 8;
+      return rawBps;
     };
     const getOutValue = (r) => {
       let val = counterType === '64bit' ? (r.OUT_HIGH_BPS ?? r.OUT_BPS ?? 0) : (r.OUT_BPS ?? 0);
-      if (trafficUnit === 'byte') return -(val / 8);
-      if (trafficUnit === 'bps') {
-        const speed = getIfSpeedBps(r.IF_INDEX);
-        return speed > 0 ? -((val / speed) * 100) : 0;
-      }
-      return -val;
+      if (trafficUnit === 'bps') return -val;  // 이미 % 값
+      // % → raw bps 역산
+      const speed = speedMap[r.IF_INDEX] || 0;
+      const rawBps = speed > 0 ? (val / 100) * speed : 0;
+      if (trafficUnit === 'byte') return -(rawBps / 8);
+      return -rawBps;
     };
 
     const inSeries = [];
@@ -130,7 +133,7 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
 
     Object.entries(byPort).forEach(([ifIdx, rows]) => {
       const ifIndex = parseInt(ifIdx);
-      const portName = getPortName(ifIndex);
+      const portName = nameMap[ifIndex] || `Port ${ifIndex}`;
       const color = portColorMap[ifIndex] || '#3b82f6';
 
       const timeMap = {};
@@ -207,7 +210,7 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
     });
 
     return { timeLabels, inSeries, outSeries, errorSeries, discardSeries };
-  }, [rawData, chartPortsSet, portsData, counterType, trafficUnit, showError, showDiscard, portColorMap]);
+  }, [rawData, chartPortsSet, portLookup, counterType, trafficUnit, showError, showDiscard, portColorMap]);
 
   const hasQuality = showError || showDiscard;
   const qualitySeries = [...chartData.errorSeries, ...chartData.discardSeries];
@@ -218,7 +221,10 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
       return {
         graphic: {
           type: 'text', left: 'center', top: 'center',
-          style: { text: '선택된 포트의 트래픽 데이터가 없습니다', fill: '#64748b', fontSize: 13 },
+          style: {
+            text: loading ? '' : (chartPortsSet.size === 0 ? '포트를 클릭하여 차트에 추가하세요' : '선택된 포트의 트래픽 데이터가 없습니다'),
+            fill: '#64748b', fontSize: 13,
+          },
         },
       };
     }
@@ -332,7 +338,7 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
       <div className="ptc-chart-area" ref={chartAreaRef}>
         <ReactECharts
           key={`main-${counterType}-${trafficUnit}-${Array.from(chartPortsSet).join('-')}`}
-          notMerge={true}
+          notMerge={false}
           option={mainOption}
           style={{ height: '100%', width: '100%' }}
         />
@@ -346,7 +352,7 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
           </div>
           <ReactECharts
             key={`quality-${showError}-${showDiscard}-${Array.from(chartPortsSet).join('-')}`}
-            notMerge={true}
+            notMerge={false}
             option={qualityOption}
             style={{ height: '100%', width: '100%' }}
           />

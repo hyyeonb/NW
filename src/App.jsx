@@ -1,13 +1,35 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores';
 import MainLayout from './layouts/MainLayout';
-import { Login, Signup, Dashboard, SignupSuccess, FindAccount, SocialLoginLanding, Main, GroupManagement, AssetManagement, AssetConfig, AssetConfigDetail, NewAssetManagement, ModelManagement, NetworkTopology, RealtimeFault, FaultHistory, RealtimePerformance, FileBoard, NoticeBoard, SshSessionHistory, UserTopology } from './pages';
+// 가벼운 공개 페이지 — 정적 import
+import { Login, Signup, SignupSuccess, FindAccount, SocialLoginLanding } from './pages';
 import AlertToast from './components/AlertToast';
 import UrgentNoticePopup from './components/UrgentNoticePopup';
 import GlobalTooltip from './components/GlobalTooltip';
 import { useAlertWebSocket } from './hooks';
+
+// 무거운 보호 페이지 — lazy import (코드 스플리팅)
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const NetworkTopology = lazy(() => import('./pages/NetworkTopology'));
+const UserTopology = lazy(() => import('./pages/UserTopology'));
+const AssetManagement = lazy(() => import('./pages/AssetManagement'));
+const PerformanceTest = lazy(() => import('./pages/PerformanceTest'));
+const RealtimePerformance = lazy(() => import('./pages/RealtimePerformance'));
+const FaultStats = lazy(() => import('./pages/FaultStats'));
+// 비교적 가벼운 페이지도 lazy 처리 (라우트 단위 청크)
+const GroupManagement = lazy(() => import('./pages/GroupManagement'));
+const AssetConfig = lazy(() => import('./pages/AssetConfig'));
+const AssetConfigDetail = lazy(() => import('./pages/AssetConfigDetail'));
+const NewAssetManagement = lazy(() => import('./pages/NewAssetManagement'));
+const ModelManagement = lazy(() => import('./pages/ModelManagement'));
+const RealtimeFault = lazy(() => import('./pages/RealtimeFault'));
+const FaultHistory = lazy(() => import('./pages/FaultHistory'));
+const FileBoard = lazy(() => import('./pages/FileBoard'));
+const NoticeBoard = lazy(() => import('./pages/NoticeBoard'));
+const SshSessionHistory = lazy(() => import('./pages/SshSessionHistory'));
+const Traceroute = lazy(() => import('./pages/Traceroute'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -98,6 +120,36 @@ function AlertWebSocketProvider({ children }) {
   return children;
 }
 
+// 에러 바운더리 — 컴포넌트 에러 시 앱 전체 크래시 방지
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('ErrorBoundary caught:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--theme-bg-primary, #0f0f23)', color: '#f8fafc', gap: '16px' }}>
+          <i className="bi bi-exclamation-triangle" style={{ fontSize: '48px', color: '#ef4444' }}></i>
+          <h2 style={{ margin: 0 }}>페이지 로드 중 오류가 발생했습니다</h2>
+          <p style={{ color: '#94a3b8', margin: 0 }}>{this.state.error?.message}</p>
+          <button onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
+            style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', cursor: 'pointer', fontSize: '14px' }}>
+            새로고침
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // 보호된 라우트 - 인증되지 않으면 로그인 페이지로 리다이렉트
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuthStore();
@@ -129,6 +181,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <ErrorBoundary>
         <AuthProvider>
           <AlertWebSocketProvider>
             {/* 전역 Toast 알림 */}
@@ -137,6 +190,11 @@ export default function App() {
             <UrgentNoticePopup />
             {/* 전역 말줄임 툴팁 */}
             <GlobalTooltip />
+            <Suspense fallback={
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--theme-bg-primary, #0f0f23)' }}>
+                <div className="login-transition-spinner" />
+              </div>
+            }>
             <Routes>
             {/* Public Routes - 로그인된 사용자는 메인으로 리다이렉트 */}
             <Route
@@ -202,16 +260,21 @@ export default function App() {
               <Route path="mgmt/ssh-sessions" element={<SshSessionHistory />} />
               <Route path="fault/realtime" element={<RealtimeFault />} />
               <Route path="fault/history" element={<FaultHistory />} />
+              <Route path="fault/stats" element={<FaultStats />} />
               <Route path="watch/realtime" element={<RealtimePerformance />} />
               <Route path="board/files" element={<FileBoard />} />
               <Route path="board/notices" element={<NoticeBoard />} />
+              <Route path="perf/stats" element={<PerformanceTest />} />
+              <Route path="tools/traceroute" element={<Traceroute />} />
             </Route>
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
+          </Suspense>
           </AlertWebSocketProvider>
         </AuthProvider>
+        </ErrorBoundary>
       </BrowserRouter>
     </QueryClientProvider>
   );

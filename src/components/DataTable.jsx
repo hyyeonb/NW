@@ -117,6 +117,7 @@ export default function DataTable({
   enableColumnReorder = true, // 컬럼 리오더링 활성화
   onColumnOrderChange, // 외부에서 컬럼 순서 변경 감지
   exportConfig, // { fileName, fetchAllData? }
+  tableLayout = 'auto', // 'fixed' | 'auto'
 }) {
   // localStorage에서 컬럼 순서 불러오기
   const getStoredColumnOrder = useCallback(() => {
@@ -330,6 +331,9 @@ export default function DataTable({
     })
   );
 
+  // 컬럼 Map (O(1) 룩업)
+  const columnsMap = useMemo(() => new Map(columns.map(c => [c.key, c])), [columns]);
+
   // TanStack Table 컬럼 정의 변환
   const tableColumns = useMemo(() => {
     // 선택 컬럼
@@ -342,7 +346,7 @@ export default function DataTable({
 
     // 데이터 컬럼 (순서에 따라 정렬 + 가시성 필터)
     const orderedColumns = columnOrder
-      .map(key => columns.find(c => c.key === key))
+      .map(key => columnsMap.get(key))
       .filter(Boolean)
       .filter(col => isColumnVisible(col))
       .map(col => ({
@@ -359,13 +363,48 @@ export default function DataTable({
       }));
 
     return [...selectColumn, ...orderedColumns];
-  }, [columns, columnOrder, selectable, selectMode, isColumnVisible]);
+  }, [columnsMap, columnOrder, selectable, selectMode, isColumnVisible]);
 
   // === 컬럼 비례 너비 계산 (수동 리사이즈 없을 때) ===
+  // px/% 혼용 시: px 컬럼은 고정, % 컬럼은 나머지 공간을 비례 분배
+  // 동일 단위(전부 px 또는 전부 %)일 때: 기존 비례 분배
   const autoWidths = useMemo(() => {
     if (columnWidths) return null;
+    if (tableLayout === 'auto') return null;
     const visibleDataCols = tableColumns.filter(c => c.id !== '_select');
     if (visibleDataCols.length === 0) return null;
+
+    const hasPx = visibleDataCols.some(c => typeof c.width === 'string' && c.width.endsWith('px'));
+    const hasPct = visibleDataCols.some(c => typeof c.width === 'string' && c.width.endsWith('%'));
+
+    // px/% 혼용: px는 고정, %는 나머지 공간 비례 분배
+    if (hasPx && hasPct) {
+      const result = {};
+      let totalFixedPx = 0;
+      let totalFlexWeight = 0;
+      const flexWeights = {};
+
+      visibleDataCols.forEach(col => {
+        const w = col.width;
+        if (typeof w === 'string' && w.endsWith('px')) {
+          result[col.id] = w;
+          totalFixedPx += parseInt(w) || 0;
+        } else {
+          const weight = parseInt(w) || 100;
+          flexWeights[col.id] = weight;
+          totalFlexWeight += weight;
+        }
+      });
+
+      Object.entries(flexWeights).forEach(([id, weight]) => {
+        const pct = ((weight / totalFlexWeight) * 100).toFixed(2);
+        result[id] = `calc((100% - ${totalFixedPx}px) * ${pct} / 100)`;
+      });
+
+      return result;
+    }
+
+    // 동일 단위: 기존 비례 분배
     let totalWeight = 0;
     const weights = {};
     visibleDataCols.forEach(col => {
@@ -471,7 +510,7 @@ export default function DataTable({
 
   // 드래그 가능한 컬럼 ID 목록 (선택 컬럼 제외, visible 컬럼만)
   const draggableColumnIds = columnOrder.filter(key => {
-    const col = columns.find(c => c.key === key);
+    const col = columnsMap.get(key);
     return col && isColumnVisible(col);
   });
 
@@ -526,7 +565,7 @@ export default function DataTable({
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <table className="data-table" ref={tableRef} style={{ tableLayout: 'fixed' }}>
+          <table className="data-table" ref={tableRef} style={{ tableLayout }}>
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>

@@ -163,7 +163,7 @@
 
 /* IP 주소 - 고정폭 폰트 */
 .new-asset-page .device-table td:nth-child(2) .table-input {
-    font-family: 'Consolas', 'Monaco', monospace;
+    font-family: var(--font-family-mono);
     color: var(--theme-accent-light) !important;
 }
 
@@ -601,7 +601,7 @@
 
 /* IP 주소 스타일 */
 .ip-input {
-    font-family: 'Consolas', 'Monaco', monospace;
+    font-family: var(--font-family-mono);
     color: var(--theme-accent-light) !important;
 }
 
@@ -622,4 +622,26 @@
     opacity: 0.3;
     margin-bottom: 12px;
     color: var(--theme-text-muted);
+}
+
+/* ==================
+   Responsive - Tablet
+   ================== */
+@media (max-width: 1024px) {
+    .device-input-row {
+        min-width: 900px;
+    }
+
+    .device-unified-section {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .input-row-highlight {
+        min-width: 900px;
+    }
+
+    .device-list-row {
+        min-width: 900px;
+    }
 }

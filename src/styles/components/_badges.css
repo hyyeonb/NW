@@ -27,47 +27,67 @@
     border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-/* Flag Badges (Toggle) */
-.flag-badge {
+/* Flag Toggle Switch (감시 ON/OFF) */
+.flag-toggle {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    padding: 4px 10px;
-    border-radius: var(--radius-full);
-    font-size: var(--font-size-badge);
-    font-weight: var(--font-weight-semibold);
-    text-transform: uppercase;
-    transition: all var(--transition-fast);
-}
-
-.flag-badge.active {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
-    color: var(--color-primary-400);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-}
-
-.flag-badge.inactive {
-    background: linear-gradient(135deg, rgba(100, 116, 139, 0.2) 0%, rgba(100, 116, 139, 0.1) 100%);
-    color: var(--color-text-muted);
-    border: 1px solid rgba(100, 116, 139, 0.3);
-}
-
-.flag-badge.clickable {
+    gap: 6px;
     cursor: pointer;
+    user-select: none;
 }
 
-.flag-badge.clickable:hover {
-    transform: scale(1.05);
+.flag-toggle .toggle-track {
+    position: relative;
+    width: 34px;
+    height: 18px;
+    border-radius: 9px;
+    background: rgba(100, 116, 139, 0.35);
+    border: 1px solid rgba(100, 116, 139, 0.3);
+    transition: all 0.2s ease;
 }
 
-.flag-badge.clickable.active:hover {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(59, 130, 246, 0.2) 100%);
+.flag-toggle .toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #94a3b8;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.flag-toggle .toggle-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    min-width: 22px;
+}
+
+/* Active state - 파란색 (상태 Up/Down 초록/빨강과 명확히 구분) */
+.flag-toggle.active .toggle-track {
+    background: rgba(59, 130, 246, 0.35);
     border-color: rgba(59, 130, 246, 0.5);
 }
 
-.flag-badge.clickable.inactive:hover {
-    background: linear-gradient(135deg, rgba(100, 116, 139, 0.3) 0%, rgba(100, 116, 139, 0.2) 100%);
-    border-color: rgba(100, 116, 139, 0.5);
+.flag-toggle.active .toggle-thumb {
+    left: 18px;
+    background: #3b82f6;
+    box-shadow: 0 0 6px rgba(59, 130, 246, 0.5), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.flag-toggle.active .toggle-label {
+    color: #3b82f6;
+}
+
+/* Hover */
+.flag-toggle:hover .toggle-track {
+    border-color: rgba(100, 116, 139, 0.6);
+}
+
+.flag-toggle.active:hover .toggle-track {
+    border-color: rgba(59, 130, 246, 0.7);
 }
 
 /* Port Badge */

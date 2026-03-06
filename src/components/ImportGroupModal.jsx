@@ -33,9 +33,18 @@ function ImportGroupNode({ group, depth, checkedIds, linkedIds, onToggle }) {
           className="import-row-checkbox"
           checked={isChecked || isLinked}
           disabled={isLinked}
-          onChange={() => {}}
+          onChange={() => !isLinked && onToggle(group.GROUP_ID)}
           onClick={(e) => e.stopPropagation()}
         />
+        {(() => {
+          const iconName = group.ICON_NAME;
+          if (iconName) {
+            if (iconName.startsWith('fa-')) return <i className={`fa-solid ${iconName} group-icon custom-icon`} />;
+            if (iconName.startsWith('bi-')) return <i className={`${iconName} group-icon custom-icon`} />;
+            return <span className="material-icons group-icon custom-icon">{iconName}</span>;
+          }
+          return <i className="bi bi-folder2 group-icon default-icon" />;
+        })()}
         <span className="import-row-name">{group.GROUP_NAME}</span>
         {isLinked && <span className="import-row-badge">연동됨</span>}
       </div>
