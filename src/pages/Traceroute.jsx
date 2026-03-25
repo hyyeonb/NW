@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { devicesApi } from '../api/devices';
 import { groupsApi } from '../api/groups';
+import { historyApi } from '../api/history';
 import '../styles/traceroute.css';
 
 export default function Traceroute() {
@@ -139,6 +140,12 @@ export default function Traceroute() {
     setError('');
     setResult(null);
     setLoading(true);
+    const targetIp = targetMode === 'ip' ? targetIpInput.trim() : targetDevice?.DEVICE_IP;
+    historyApi.recordPageView('traceroute', '/tools/traceroute', {
+      targetType: 'TRACEROUTE',
+      targetName: targetIp,
+      detail: `Traceroute 실행 - ${sourceDevice ? sourceDevice.DEVICE_NAME + '(' + sourceDevice.DEVICE_IP + ')' : '미들웨어'} → ${targetIp}`,
+    });
     try {
       const res = await devicesApi.traceroute(
         sourceDevice?.DEVICE_ID || null,

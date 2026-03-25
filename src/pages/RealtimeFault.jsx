@@ -9,6 +9,7 @@ import WatchSidebar from '../components/WatchSidebar';
 import { useWatchGroupDetail } from '../hooks/useWatch';
 import ConnectivityCheckModal from '../components/ConnectivityCheckModal';
 import '../styles/fault-monitoring.css';
+import { historyApi } from '../api/history';
 import '../styles/fault-stats.css';
 
 // 장애 등급 설정
@@ -321,7 +322,7 @@ export default function RealtimeFault() {
     {
       key: 'ERROR_LEVEL',
       label: '등급',
-      width: '62px',
+      width: '74px',
       sortable: true,
       align: 'center',
       hideable: true,
@@ -541,7 +542,14 @@ export default function RealtimeFault() {
           emptyIcon="bi-check-circle"
           sort={{ field: sortConfig.key, order: sortConfig.direction }}
           onSort={handleSort}
-          onRowClick={(row) => setSelectedError(row)}
+          onRowClick={(row) => {
+            historyApi.recordPageView('fault_realtime', '/fault/realtime', {
+              targetType: 'ERROR',
+              targetName: `${row.DEVICE_NAME || ''}(${row.DEVICE_IP || ''})`,
+              detail: `장애 상세 조회 - ${row.DEVICE_NAME || ''}(${row.DEVICE_IP || ''}) ${row.ERROR_MESSAGE || ''}`,
+            });
+            navigate(`/mgmt/assets?deviceId=${row.DEVICE_ID}&tab=fault-info&errorId=active_${row.ERROR_ID}`);
+          }}
           rowClassName={(row) => {
             const classes = [];
             if (row.ERROR_FLAG === 1) classes.push('acknowledged');

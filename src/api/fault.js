@@ -17,6 +17,10 @@ export const faultApi = {
   getHistory: (params = {}) =>
     apiClient.get('/fault/history', { params }),
 
+  // 장애 이력의 페이지 위치 조회 (해당 이력이 몇 페이지에 있는지)
+  getHistoryPosition: (errorHistoryId, deviceId, size = 20) =>
+    apiClient.get(`/fault/history/${errorHistoryId}/position`, { params: { deviceId, size } }),
+
   // 장애 이력 상세 조회
   getHistoryDetail: (errorHistoryId) =>
     apiClient.get(`/fault/history/${errorHistoryId}`),

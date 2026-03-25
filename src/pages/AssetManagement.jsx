@@ -17,6 +17,7 @@ import {
 } from '../hooks';
 import { devicesApi } from '../api/devices';
 import { faultApi } from '../api/fault';
+import { historyApi } from '../api/history';
 
 export default function AssetManagement() {
   const [urlParams, setUrlParams] = useSearchParams();
@@ -26,6 +27,7 @@ export default function AssetManagement() {
   const [selectedDevices, setSelectedDevices] = useState([]);
   const [detailDevice, setDetailDevice] = useState(null);
   const [activeTab, setActiveTab] = useState('device-info');
+  const [deviceMetrics, setDeviceMetrics] = useState([]);  // 장비의 수집 메트릭 목록
 
   // 그룹 이동 모달 상태
   const [showMoveGroupModal, setShowMoveGroupModal] = useState(false);
@@ -63,6 +65,20 @@ export default function AssetManagement() {
   });
   const [sidebarSaving, setSidebarSaving] = useState(false);
 
+  // 수집 서버(미들웨어) 목록
+  const [middlewares, setMiddlewares] = useState([]);
+  const [selectedMiddlewareId, setSelectedMiddlewareId] = useState(null);
+  const [originalMiddlewareId, setOriginalMiddlewareId] = useState(null);
+
+  // 장비별 임계치 상태
+  const [deviceThresholds, setDeviceThresholds] = useState([]);
+  const [thresholdLoading, setThresholdLoading] = useState(false);
+
+  // 사이드바 dirty 감지용 원본
+  const [originalSnmpConfig, setOriginalSnmpConfig] = useState(null);
+  const [originalSshConfig, setOriginalSshConfig] = useState(null);
+  const [originalThresholds, setOriginalThresholds] = useState(null);
+
   // 장비 인라인 편집 상태
   const [editFormData, setEditFormData] = useState({});
 
@@ -87,6 +103,19 @@ export default function AssetManagement() {
   const [showFaultAckModal, setShowFaultAckModal] = useState(false);
   const [faultAckMessage, setFaultAckMessage] = useState('');
   const [selectedFaultError, setSelectedFaultError] = useState(null);
+  const focusErrorIdRef = useRef(null); // URL에서 전달된 포커스 대상 에러
+
+  // 변경이력 탭 상태
+  const [changeHistory, setChangeHistory] = useState([]);
+  const [changeHistoryLoading, setChangeHistoryLoading] = useState(false);
+  const [changeHistoryPage, setChangeHistoryPage] = useState(1);
+  const [changeHistoryTotal, setChangeHistoryTotal] = useState(0);
+
+  // SSH이력 탭 상태
+  const [sshHistory, setSshHistory] = useState([]);
+  const [sshHistoryLoading, setSshHistoryLoading] = useState(false);
+  const [sshHistoryPage, setSshHistoryPage] = useState(1);
+  const [sshHistoryTotal, setSshHistoryTotal] = useState(0);
 
   // 검색 상태
   const [searchDeviceName, setSearchDeviceName] = useState('');
@@ -168,6 +197,47 @@ export default function AssetManagement() {
       }
     };
     loadDevCodes();
+  }, []);
+
+  // URL 파라미터로 장비/탭/에러 자동 선택 (장애 페이지에서 이동 시)
+  useEffect(() => {
+    const deviceIdParam = urlParams.get('deviceId');
+    const tabParam = urlParams.get('tab');
+    const errorIdParam = urlParams.get('errorId');
+
+    if (deviceIdParam) {
+      (async () => {
+        try {
+          const res = await devicesApi.getDevice(parseInt(deviceIdParam));
+          const device = res.data?.data;
+          if (device) {
+            handleRowClick(device);
+            if (tabParam) setActiveTab(tabParam);
+
+            if (errorIdParam) {
+              focusErrorIdRef.current = errorIdParam;
+
+              // hist_* 이력인 경우 해당 페이지 계산
+              if (errorIdParam.startsWith('hist_')) {
+                const histId = errorIdParam.replace('hist_', '');
+                try {
+                  const posRes = await faultApi.getHistoryPosition(histId, device.DEVICE_ID, faultPageSize);
+                  const targetPage = posRes.data?.data?.page || 1;
+                  setFaultPage(targetPage);
+                } catch { /* 실패 시 1페이지 유지 */ }
+              }
+            }
+          }
+        } catch (e) {
+          console.error('장비 자동 선택 실패:', e);
+        }
+      })();
+      // 파라미터 소비 후 URL에서 제거
+      urlParams.delete('deviceId');
+      urlParams.delete('tab');
+      urlParams.delete('errorId');
+      setUrlParams(urlParams, { replace: true });
+    }
   }, []);
 
   // 그룹 변경 시 페이지 및 검색 초기화
@@ -313,8 +383,22 @@ export default function AssetManagement() {
           _faultRowId: `hist_${e.ERROR_HISTORY_ID || i}`,
         }));
 
-        setFaultData([...activeFormatted, ...histFormatted]);
+        const allFaults = [...activeFormatted, ...histFormatted];
+        setFaultData(allFaults);
         setFaultTotal(deviceActiveErrors.length + (histData.totalElements || 0));
+
+        // URL에서 전달된 focusErrorId가 있으면 해당 행 하이라이트 + 스크롤
+        if (focusErrorIdRef.current) {
+          const faultRowId = focusErrorIdRef.current;
+          focusErrorIdRef.current = null;
+          setTimeout(() => {
+            const targetRow = document.querySelector(`[data-fault-row="${faultRowId}"]`);
+            if (targetRow) {
+              targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              targetRow.classList.add('fault-focus-row');
+            }
+          }, 500);
+        }
       } catch (error) {
         console.error('장애 데이터 조회 실패:', error);
         setFaultData([]);
@@ -324,6 +408,44 @@ export default function AssetManagement() {
     };
     fetchFaults();
   }, [detailDevice?.DEVICE_ID, activeTab, faultPage, faultPageSize, faultSortField, faultSortOrder]);
+
+  // 변경이력 데이터 조회
+  useEffect(() => {
+    if (!detailDevice?.DEVICE_ID || activeTab !== 'change-history') return;
+    const fetchChangeHistory = async () => {
+      setChangeHistoryLoading(true);
+      try {
+        const res = await devicesApi.getDeviceChangeHistory(detailDevice.DEVICE_ID, changeHistoryPage, 20);
+        const data = res.data?.data || {};
+        setChangeHistory(data.content || []);
+        setChangeHistoryTotal(data.totalElements || 0);
+      } catch {
+        setChangeHistory([]);
+      } finally {
+        setChangeHistoryLoading(false);
+      }
+    };
+    fetchChangeHistory();
+  }, [detailDevice?.DEVICE_ID, activeTab, changeHistoryPage]);
+
+  // SSH이력 데이터 조회
+  useEffect(() => {
+    if (!detailDevice?.DEVICE_ID || activeTab !== 'ssh-history') return;
+    const fetchSshHistory = async () => {
+      setSshHistoryLoading(true);
+      try {
+        const res = await devicesApi.getDeviceSshHistory(detailDevice.DEVICE_ID, sshHistoryPage, 20);
+        const data = res.data?.data || {};
+        setSshHistory(data.content || []);
+        setSshHistoryTotal(data.totalElements || 0);
+      } catch {
+        setSshHistory([]);
+      } finally {
+        setSshHistoryLoading(false);
+      }
+    };
+    fetchSshHistory();
+  }, [detailDevice?.DEVICE_ID, activeTab, sshHistoryPage]);
 
   // 가상 인터페이스 필터링 (docker, veth, br-, lo 등 제외)
   const portsData = useMemo(() => {
@@ -638,7 +760,7 @@ export default function AssetManagement() {
   // 장비 설정 사이드바 열기
   const handleOpenSettingsSidebar = () => {
     if (detailDevice) {
-      setSnmpConfig({
+      const snmp = {
         SNMP_VERSION: detailDevice.SNMP_VERSION || 2,
         SNMP_PORT: detailDevice.SNMP_PORT || 161,
         SNMP_COMMUNITY: detailDevice.SNMP_COMMUNITY || 'public',
@@ -647,9 +769,54 @@ export default function AssetManagement() {
         SNMP_AUTH_PASSWORD: detailDevice.SNMP_AUTH_PASSWORD || '',
         SNMP_PRIV_PROTOCOL: detailDevice.SNMP_PRIV_PROTOCOL || 'DES',
         SNMP_PRIV_PASSWORD: detailDevice.SNMP_PRIV_PASSWORD || ''
-      });
+      };
+      setSnmpConfig(snmp);
+      setOriginalSnmpConfig(JSON.stringify(snmp));
+      setOriginalSshConfig(JSON.stringify(sshConfig));
     }
+    // 수집 서버 초기값
+    setSelectedMiddlewareId(detailDevice?.MIDDLEWARE_ID || null);
+    setOriginalMiddlewareId(detailDevice?.MIDDLEWARE_ID || null);
+
+    // 수집 서버 목록 로드
+    devicesApi.getMiddlewares().then(res => {
+      setMiddlewares(res.data?.data || []);
+    }).catch(() => setMiddlewares([]));
+
     setShowSettingsSidebar(true);
+
+    // 장비별 임계치 로드
+    if (detailDevice) {
+      setThresholdLoading(true);
+      (async () => {
+        try {
+          const { adminApi } = await import('../api/admin');
+          const [thrRes, metricsRes] = await Promise.all([
+            adminApi.getDeviceThreshold(detailDevice.DEVICE_ID),
+            devicesApi.getDeviceMetrics(detailDevice.DEVICE_ID),
+          ]);
+          const data = thrRes.data?.data || thrRes.data || [];
+          const dMetrics = metricsRes.data?.data || metricsRes.data || [];
+
+          if (data.length > 0) {
+            const filtered = data.filter(t => dMetrics.includes(t.TYPE));
+            setDeviceThresholds(filtered.map(t => ({ ...t })));
+            setOriginalThresholds(JSON.stringify(filtered));
+          } else {
+            const baseRes = await adminApi.getThresholds();
+            const base = baseRes.data?.data || baseRes.data || [];
+            const filtered = base.filter(t => dMetrics.includes(t.TYPE));
+            const init = filtered.map(t => ({ ...t, DEVICE_ID: String(detailDevice.DEVICE_ID) }));
+            setDeviceThresholds(init);
+            setOriginalThresholds(JSON.stringify(init));
+          }
+        } catch {
+          setDeviceThresholds([]);
+        } finally {
+          setThresholdLoading(false);
+        }
+      })();
+    }
   };
 
   // 장비 설정 사이드바 저장
@@ -657,11 +824,12 @@ export default function AssetManagement() {
     if (!detailDevice) return;
     setSidebarSaving(true);
     try {
-      // SNMP 설정 저장 (장비 정보 업데이트)
+      // SNMP 설정 + 수집 서버 저장 (장비 정보 업데이트)
       await updateDeviceMutation.mutateAsync({
         deviceId: detailDevice.DEVICE_ID,
         data: {
           ...editFormData,
+          MIDDLEWARE_ID: selectedMiddlewareId,
           SNMP_VERSION: snmpConfig.SNMP_VERSION,
           SNMP_PORT: snmpConfig.SNMP_PORT,
           SNMP_COMMUNITY: snmpConfig.SNMP_COMMUNITY,
@@ -675,6 +843,11 @@ export default function AssetManagement() {
       // SSH 설정 저장
       if (sshConfig.SSH_USER) {
         await devicesApi.saveDeviceSsh(detailDevice.DEVICE_ID, sshConfig);
+      }
+      // 임계치 저장
+      if (deviceThresholds.length > 0) {
+        const { adminApi } = await import('../api/admin');
+        await adminApi.upsertDeviceThresholds(String(detailDevice.DEVICE_ID), deviceThresholds);
       }
       setShowSettingsSidebar(false);
     } catch (error) {
@@ -889,6 +1062,16 @@ export default function AssetManagement() {
   const handleRowClick = (device) => {
     setDetailDevice(device);
     setActiveTab('device-info');
+    // 장비 조회 활동 로그
+    historyApi.recordPageView('asset_mgmt', '/mgmt/assets', {
+      targetType: 'DEVICE',
+      targetName: `${device.DEVICE_NAME || ''}(${device.DEVICE_IP || ''})`,
+      detail: `장비 조회 - ${device.DEVICE_NAME || ''}(${device.DEVICE_IP || ''})`,
+    });
+    // 장비 메트릭 로드
+    devicesApi.getDeviceMetrics(device.DEVICE_ID)
+      .then(r => setDeviceMetrics(r.data?.data || r.data || []))
+      .catch(() => setDeviceMetrics([]));
     setFaultData([]);
     setFaultTotal(0);
     setFaultPage(1);
@@ -1311,7 +1494,7 @@ export default function AssetManagement() {
       className: 'cell-truncate',
       hideable: true,
       render: (value) => (
-        <span style={{ color: '#94a3b8', fontSize: '12px' }}>{value || '-'}</span>
+        <span style={{ color: 'var(--theme-text-tertiary, #94a3b8)', fontSize: '12px' }}>{value || '-'}</span>
       ),
     },
     {
@@ -1432,7 +1615,7 @@ export default function AssetManagement() {
           {!selectedGroup ? (
           <p id="welcome-message">그룹을 선택하여 해당 그룹의 장비 목록을 확인하세요.</p>
         ) : isLoading ? (
-          <p style={{ color: '#94a3b8' }}>로딩 중...</p>
+          <p style={{ color: 'var(--theme-text-tertiary, #94a3b8)' }}>로딩 중...</p>
         ) : (
           <div id="device-list-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
             {selectedDevices.length > 0 && (
@@ -1562,6 +1745,28 @@ export default function AssetManagement() {
                   </div>
 
                   <div className="settings-sidebar-body">
+                    {/* 수집 서버 설정 */}
+                    <div className="settings-section">
+                      <div className="settings-section-title">
+                        <i className="bi bi-server"></i> 수집 서버
+                      </div>
+                      <div className="settings-form">
+                        <div className="settings-form-group">
+                          <select
+                            value={selectedMiddlewareId || ''}
+                            onChange={(e) => setSelectedMiddlewareId(e.target.value ? parseInt(e.target.value) : null)}
+                          >
+                            <option value="">미지정 (수집 안 함)</option>
+                            {middlewares.filter(m => m.STATUS === 'ACTIVE').map(m => (
+                              <option key={m.MIDDLEWARE_ID} value={m.MIDDLEWARE_ID}>
+                                {m.MIDDLEWARE_NAME} ({m.MIDDLEWARE_URL})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* 관제 범위 설정 */}
                     <div className="settings-section">
                       <div className="settings-section-title">
@@ -1709,30 +1914,73 @@ export default function AssetManagement() {
                         </div>
                       </div>
                     </div>
+                    {/* 임계치 설정 */}
+                    <div className="settings-section">
+                      <div className="settings-section-title">
+                        <i className="bi bi-speedometer2"></i> 임계치 설정
+                      </div>
+                      {thresholdLoading ? (
+                        <div className="scope-loading"><i className="bi bi-arrow-repeat spinning"></i> 로딩 중...</div>
+                      ) : (
+                        <div className="sthr-list">
+                          {deviceThresholds.map((t, idx) => (
+                            <div key={t.TYPE} className="sthr-row">
+                              <span className="sthr-type">{t.TYPE}</span>
+                              <div className="sthr-inputs">
+                                {[['CRITICAL', 'critical', 'C'], ['MAJOR', 'major', 'M'], ['MINOR', 'minor', 'N'], ['WARNING', 'warning', 'W']].map(([sev, cls, label]) => (
+                                  <div key={sev} className="sthr-cell">
+                                    <span className={`sthr-badge ${cls}`}>{label}</span>
+                                    <input
+                                      type="number" min={0} max={100}
+                                      value={t[sev] ?? ''}
+                                      onChange={e => {
+                                        setDeviceThresholds(prev => {
+                                          const next = [...prev];
+                                          next[idx] = { ...next[idx], [sev]: parseInt(e.target.value) || 0 };
+                                          return next;
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="settings-sidebar-footer">
                     <button className="btn btn-secondary" onClick={() => setShowSettingsSidebar(false)} disabled={sidebarSaving}>취소</button>
-                    <button className="btn btn-primary" onClick={handleSaveSettings} disabled={sidebarSaving}>
+                    <button className={`btn btn-primary ${(JSON.stringify(snmpConfig) !== originalSnmpConfig || JSON.stringify(sshConfig) !== originalSshConfig || JSON.stringify(deviceThresholds) !== originalThresholds || selectedMiddlewareId !== originalMiddlewareId) ? 'dirty' : ''}`} onClick={handleSaveSettings} disabled={sidebarSaving || (JSON.stringify(snmpConfig) === originalSnmpConfig && JSON.stringify(sshConfig) === originalSshConfig && JSON.stringify(deviceThresholds) === originalThresholds && selectedMiddlewareId === originalMiddlewareId)}>
                       {sidebarSaving ? <><i className="bi bi-arrow-repeat spinning"></i> 저장 중...</> : <><i className="bi bi-check-lg"></i> 저장</>}
                     </button>
                   </div>
                 </div>
               </div>
 
-            {/* 탭 헤더 */}
+            {/* 탭 헤더 (메트릭 기반 동적) */}
             <div className="detail-tabs-row">
               <div className="detail-tabs">
                 <button className={`detail-tab ${activeTab === 'device-info' ? 'active' : ''}`} onClick={() => setActiveTab('device-info')}>
                   <i className="bi bi-info-circle"></i> 장비 정보
                 </button>
-                <button className={`detail-tab ${activeTab === 'port-info' ? 'active' : ''}`} onClick={() => setActiveTab('port-info')}>
-                  <i className="bi bi-ethernet"></i> 포트 정보
-                  {portsDataRaw?.length > 0 && <span className="tab-badge">{portsDataRaw.length}</span>}
-                </button>
+                {(deviceMetrics.length === 0 || deviceMetrics.includes('INTERFACE')) && (
+                  <button className={`detail-tab ${activeTab === 'port-info' ? 'active' : ''}`} onClick={() => setActiveTab('port-info')}>
+                    <i className="bi bi-ethernet"></i> 포트 정보
+                    {portsDataRaw?.length > 0 && <span className="tab-badge">{portsDataRaw.length}</span>}
+                  </button>
+                )}
                 <button className={`detail-tab ${activeTab === 'fault-info' ? 'active' : ''}`} onClick={() => setActiveTab('fault-info')}>
                   <i className="bi bi-exclamation-triangle"></i> 장애
                   {faultTotal > 0 && <span className="tab-badge danger">{faultTotal}</span>}
+                </button>
+                <button className={`detail-tab ${activeTab === 'change-history' ? 'active' : ''}`} onClick={() => setActiveTab('change-history')}>
+                  <i className="bi bi-clock-history"></i> 변경이력
+                </button>
+                <button className={`detail-tab ${activeTab === 'ssh-history' ? 'active' : ''}`} onClick={() => setActiveTab('ssh-history')}>
+                  <i className="bi bi-terminal"></i> SSH이력
                 </button>
               </div>
             </div>
@@ -1783,7 +2031,8 @@ export default function AssetManagement() {
                       </div>
                     </div>
 
-                    {/* CPU / MEM */}
+                    {/* CPU / MEM (메트릭에 포함된 경우만) */}
+                    {(deviceMetrics.length === 0 || deviceMetrics.includes('CPU') || deviceMetrics.includes('MEM')) && (
                     <div className="info-box cpu-mem-box">
                       <div className="info-box-header"><i className="bi bi-cpu"></i> CPU / MEM</div>
                       <div className="info-box-body pie-body">
@@ -1843,6 +2092,12 @@ export default function AssetManagement() {
                         </div>
                       </div>
                     </div>
+                    )}
+
+                    {/* 온습도 (메트릭에 포함된 경우) */}
+                    {(deviceMetrics.includes('TEMPERATURE') || deviceMetrics.includes('HUMIDITY')) && (
+                      <EnvironmentBox deviceId={detailDevice?.DEVICE_ID} metrics={deviceMetrics} />
+                    )}
                   </div>
 
                   {/* 우측: 포트현황, 트래픽차트 */}
@@ -2057,6 +2312,7 @@ export default function AssetManagement() {
                   columns={faultColumns}
                   data={faultData}
                   rowKey="_faultRowId"
+                  rowAttrs={(row) => ({ 'data-fault-row': row._faultRowId || '' })}
                   loading={faultLoading}
                   loadingText="장애 이력을 불러오는 중..."
                   emptyText="장애 이력이 없습니다"
@@ -2131,6 +2387,105 @@ export default function AssetManagement() {
               </div>
             )}
 
+            {/* 변경이력 탭 */}
+            {activeTab === 'change-history' && (
+              <div id="change-history-tab" className="detail-tab-content active">
+                {changeHistoryLoading ? (
+                  <div className="tab-loading"><i className="bi bi-arrow-repeat spinning"></i> 변경이력을 불러오는 중...</div>
+                ) : changeHistory.length === 0 ? (
+                  <div className="tab-empty"><i className="bi bi-clock-history"></i><span>변경이력이 없습니다</span></div>
+                ) : (
+                  <>
+                    <div className="history-timeline">
+                      {changeHistory.map((log, idx) => (
+                        <div key={log.LOG_ID || idx} className="history-item">
+                          <div className="history-item-icon">
+                            {log.ACTION_TYPE === 'CREATE' && <i className="bi bi-plus-circle text-success"></i>}
+                            {log.ACTION_TYPE === 'UPDATE' && <i className="bi bi-pencil-square text-info"></i>}
+                            {log.ACTION_TYPE === 'DELETE' && <i className="bi bi-trash text-danger"></i>}
+                          </div>
+                          <div className="history-item-content">
+                            <div className="history-item-header">
+                              <span className={`history-action-badge ${log.ACTION_TYPE?.toLowerCase()}`}>
+                                {log.ACTION_TYPE === 'CREATE' ? '등록' : log.ACTION_TYPE === 'UPDATE' ? '수정' : log.ACTION_TYPE === 'DELETE' ? '삭제' : log.ACTION_TYPE}
+                              </span>
+                              <span className="history-target-type">{log.TARGET_TYPE}</span>
+                              <span className="history-user">{log.USER_NAME || '시스템'}</span>
+                              <span className="history-time">{log.CREATED_AT ? new Date(log.CREATED_AT).toLocaleString('ko-KR') : ''}</span>
+                            </div>
+                            {log.DETAIL && (
+                              <div className="history-item-detail">{log.DETAIL}</div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {changeHistoryTotal > 20 && (
+                      <div className="history-pagination">
+                        <button disabled={changeHistoryPage <= 1} onClick={() => setChangeHistoryPage(p => p - 1)}>
+                          <i className="bi bi-chevron-left"></i>
+                        </button>
+                        <span>{changeHistoryPage} / {Math.ceil(changeHistoryTotal / 20)}</span>
+                        <button disabled={changeHistoryPage >= Math.ceil(changeHistoryTotal / 20)} onClick={() => setChangeHistoryPage(p => p + 1)}>
+                          <i className="bi bi-chevron-right"></i>
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* SSH이력 탭 */}
+            {activeTab === 'ssh-history' && (
+              <div id="ssh-history-tab" className="detail-tab-content active">
+                {sshHistoryLoading ? (
+                  <div className="tab-loading"><i className="bi bi-arrow-repeat spinning"></i> SSH이력을 불러오는 중...</div>
+                ) : sshHistory.length === 0 ? (
+                  <div className="tab-empty"><i className="bi bi-terminal"></i><span>SSH 접속 이력이 없습니다</span></div>
+                ) : (
+                  <>
+                    <div className="ssh-history-list">
+                      {sshHistory.map((session, idx) => (
+                        <div key={session.sessionId || idx} className="ssh-history-item">
+                          <div className="ssh-history-icon">
+                            <i className={`bi ${session.disconnectedAt ? 'bi-plug' : 'bi-plug-fill text-success'}`}></i>
+                          </div>
+                          <div className="ssh-history-content">
+                            <div className="ssh-history-header">
+                              <span className="ssh-user-badge">{session.sshUser}@{session.host}</span>
+                              <span className="ssh-history-user">{session.userName || '알 수 없음'}</span>
+                              <span className={`ssh-status-badge ${session.disconnectedAt ? 'closed' : 'active'}`}>
+                                {session.disconnectedAt ? '종료' : '접속중'}
+                              </span>
+                            </div>
+                            <div className="ssh-history-times">
+                              <span><i className="bi bi-box-arrow-in-right"></i> {session.connectedAt ? new Date(session.connectedAt).toLocaleString('ko-KR') : ''}</span>
+                              {session.disconnectedAt && (
+                                <span><i className="bi bi-box-arrow-right"></i> {new Date(session.disconnectedAt).toLocaleString('ko-KR')}</span>
+                              )}
+                              <span className="ssh-remote-addr">접속IP: {session.remoteAddr}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {sshHistoryTotal > 20 && (
+                      <div className="history-pagination">
+                        <button disabled={sshHistoryPage <= 1} onClick={() => setSshHistoryPage(p => p - 1)}>
+                          <i className="bi bi-chevron-left"></i>
+                        </button>
+                        <span>{sshHistoryPage} / {Math.ceil(sshHistoryTotal / 20)}</span>
+                        <button disabled={sshHistoryPage >= Math.ceil(sshHistoryTotal / 20)} onClick={() => setSshHistoryPage(p => p + 1)}>
+                          <i className="bi bi-chevron-right"></i>
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
           </div>
         </div>
       )}
@@ -2166,16 +2521,16 @@ export default function AssetManagement() {
                 top: '16px',
                 right: '16px',
                 fontSize: '24px',
-                color: '#94a3b8',
+                color: 'var(--theme-text-tertiary, #94a3b8)',
                 cursor: 'pointer',
                 lineHeight: 1
               }}
             >&times;</span>
-            <h3 style={{ marginBottom: '16px', color: '#f1f5f9', fontSize: '18px' }}>
+            <h3 style={{ marginBottom: '16px', color: 'var(--theme-text-primary, #f1f5f9)', fontSize: '18px' }}>
               <i className="bi bi-folder-symlink" style={{ marginRight: '8px' }}></i>
               그룹 이동
             </h3>
-            <p style={{ color: '#94a3b8', marginBottom: '16px', fontSize: '14px' }}>
+            <p style={{ color: 'var(--theme-text-tertiary, #94a3b8)', marginBottom: '16px', fontSize: '14px' }}>
               {selectedDevices.length}개의 장비를 이동할 그룹을 선택하세요.
             </p>
 
@@ -2191,8 +2546,8 @@ export default function AssetManagement() {
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                <i className="bi bi-folder2" style={{ color: '#60a5fa' }}></i>
-                <span style={{ color: '#e2e8f0', fontSize: '14px' }}>
+                <i className="bi bi-folder2" style={{ color: 'var(--theme-accent-light, #60a5fa)' }}></i>
+                <span style={{ color: 'var(--theme-text-secondary, #e2e8f0)', fontSize: '14px' }}>
                   선택: <strong>{targetGroup.GROUP_NAME}</strong>
                 </span>
               </div>
@@ -2202,9 +2557,9 @@ export default function AssetManagement() {
             <div style={{
               maxHeight: '300px',
               overflowY: 'auto',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--theme-border-default, rgba(255,255,255,0.1))',
               borderRadius: '8px',
-              background: 'rgba(15, 23, 42, 0.6)',
+              background: 'var(--theme-bg-panel, rgba(15, 23, 42, 0.6))',
               marginBottom: '16px'
             }}>
               <GroupTree
@@ -2277,7 +2632,7 @@ export default function AssetManagement() {
               </div>
             ) : (
               <div id="snmp-v3-fields" style={{ marginTop: '16px' }}>
-                <h4 style={{ marginBottom: '12px', color: '#94a3b8', fontSize: '14px' }}>SNMPv3 설정</h4>
+                <h4 style={{ marginBottom: '12px', color: 'var(--theme-text-tertiary, #94a3b8)', fontSize: '14px' }}>SNMPv3 설정</h4>
                 <div className="form-group" style={{ marginBottom: '12px' }}>
                   <label>사용자명</label>
                   <input
@@ -2426,14 +2781,14 @@ export default function AssetManagement() {
               }}>
                 <i className="bi bi-terminal" style={{ fontSize: 28, color: '#fbbf24' }} />
               </div>
-              <h3 style={{ margin: '0 0 8px', fontSize: 17, color: '#e2e8f0' }}>
+              <h3 style={{ margin: '0 0 8px', fontSize: 17, color: 'var(--theme-text-secondary, #e2e8f0)' }}>
                 SSH 접속 정보 없음
               </h3>
-              <p style={{ margin: 0, color: '#94a3b8', fontSize: 14, lineHeight: 1.6 }}>
-                <strong style={{ color: '#cbd5e1' }}>{sshAlertDevice.DEVICE_NAME}</strong> ({sshAlertDevice.DEVICE_IP})의<br />
+              <p style={{ margin: 0, color: 'var(--theme-text-tertiary, #94a3b8)', fontSize: 14, lineHeight: 1.6 }}>
+                <strong style={{ color: 'var(--theme-text-secondary, #cbd5e1)' }}>{sshAlertDevice.DEVICE_NAME}</strong> ({sshAlertDevice.DEVICE_IP})의<br />
                 SSH 접속 정보가 설정되지 않았습니다.
               </p>
-              <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: 13 }}>
+              <p style={{ margin: '8px 0 0', color: 'var(--theme-text-muted, #64748b)', fontSize: 13 }}>
                 장비 상세 &gt; 설정에서 SSH 정보를 입력해주세요.
               </p>
             </div>
@@ -2523,6 +2878,60 @@ export default function AssetManagement() {
         </div>
       )}
 
+    </div>
+  );
+}
+
+/* ===== 온습도 박스 (장비 정보 탭 내부, CPU/MEM 대체) ===== */
+function EnvironmentBox({ deviceId, metrics }) {
+  const [latest, setLatest] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!deviceId) return;
+    setLoading(true);
+    devicesApi.getEnvironmentLatest(deviceId)
+      .then(r => setLatest(r.data?.data || r.data || []))
+      .catch(() => setLatest([]))
+      .finally(() => setLoading(false));
+  }, [deviceId]);
+
+  const temp = latest.find(d => d.METRIC_CODE === 'TEMPERATURE');
+  const hum = latest.find(d => d.METRIC_CODE === 'HUMIDITY');
+
+  return (
+    <div className="info-box cpu-mem-box">
+      <div className="info-box-header"><i className="bi bi-thermometer-half"></i> 온습도</div>
+      <div className="info-box-body pie-body">
+        {loading ? (
+          <div style={{ padding: 20, color: '#94a3b8', textAlign: 'center', width: '100%' }}>
+            <i className="bi bi-arrow-repeat spinning" /> 로딩 중...
+          </div>
+        ) : (
+          <>
+            {metrics.includes('TEMPERATURE') && (
+              <div className="pie-wrapper">
+                <div className="env-gauge temp">
+                  <i className="bi bi-thermometer-half" />
+                  <span className="env-gauge-value">{temp ? `${temp.VALUE}` : '—'}</span>
+                  <span className="env-gauge-unit">°C</span>
+                </div>
+                <span className="pie-name">온도</span>
+              </div>
+            )}
+            {metrics.includes('HUMIDITY') && (
+              <div className="pie-wrapper">
+                <div className="env-gauge hum">
+                  <i className="bi bi-droplet-half" />
+                  <span className="env-gauge-value">{hum ? `${hum.VALUE}` : '—'}</span>
+                  <span className="env-gauge-unit">%RH</span>
+                </div>
+                <span className="pie-name">습도</span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

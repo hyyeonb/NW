@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { sshSessionApi } from '../api';
 import { DataTable } from '../components';
+import { historyApi } from '../api/history';
 import '../styles/ssh-session.css';
 
 export default function SshSessionHistory() {
@@ -189,6 +190,11 @@ export default function SshSessionHistory() {
   const handleRowClick = useCallback((row) => {
     setSelectedSession(row);
     setViewMode('detail');
+    historyApi.recordPageView('ssh_sessions', '/history/ssh-sessions', {
+      targetType: 'SSH_SESSION',
+      targetName: `${row.userName || ''}@${row.host || ''}`,
+      detail: `SSH 세션 조회 - ${row.userName || ''}@${row.host || ''}`,
+    });
     setDetailTab('commands');
     setCmdPage(1);
     setSftpPage(1);
@@ -563,6 +569,7 @@ export default function SshSessionHistory() {
             columns={columns}
             data={sessions}
             rowKey="sessionId"
+            exportConfig={{ fileName: 'SSH접속이력' }}
             loading={isLoading}
             loadingText="SSH 세션 이력을 불러오는 중..."
             emptyText="조회된 SSH 접속 이력이 없습니다"

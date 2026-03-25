@@ -12,6 +12,7 @@ import ConnectivityCheckModal from '../components/ConnectivityCheckModal';
 import SshTerminalModal from '../components/SshTerminalModal';
 import 'react-datepicker/dist/react-datepicker.css';
 import '../styles/fault-monitoring.css';
+import { historyApi } from '../api/history';
 import '../styles/fault-stats.css';
 
 // 한국어 로케일 등록
@@ -256,7 +257,7 @@ export default function FaultHistory() {
     {
       key: 'ERROR_LEVEL',
       label: '등급',
-      width: '62px',
+      width: '74px',
       sortable: true,
       align: 'center',
       hideable: true,
@@ -293,13 +294,14 @@ export default function FaultHistory() {
     {
       key: 'ERROR_MESSAGE',
       label: '장애 내용',
+      width: '100%',
       sortable: true,
       className: 'cell-truncate',
     },
     {
       key: 'OCCUR_AT',
       label: '발생 시간',
-      width: '155px',
+      width: '148px',
       sortable: true,
       className: 'cell-date',
       hideable: true,
@@ -308,7 +310,7 @@ export default function FaultHistory() {
     {
       key: 'CLEAR_AT',
       label: '해소 시간',
-      width: '155px',
+      width: '148px',
       sortable: true,
       className: 'cell-date',
       hideable: true,
@@ -410,41 +412,6 @@ export default function FaultHistory() {
             </div>
           </div>
           <div className="filter-group">
-            <label>시작일</label>
-            <DatePicker
-              selected={startDate}
-              onChange={(date) => setStartDate(date)}
-              selectsStart
-              startDate={startDate}
-              endDate={endDate}
-              maxDate={endDate || new Date()}
-              locale="ko"
-              dateFormat="yy.M.d"
-              placeholderText="시작일"
-              className="date-picker-input date-picker-sm"
-              isClearable
-              popperProps={{ strategy: 'fixed' }}
-            />
-          </div>
-          <div className="filter-group">
-            <label>종료일</label>
-            <DatePicker
-              selected={endDate}
-              onChange={(date) => setEndDate(date)}
-              selectsEnd
-              startDate={startDate}
-              endDate={endDate}
-              minDate={startDate}
-              maxDate={new Date()}
-              locale="ko"
-              dateFormat="yy.M.d"
-              placeholderText="종료일"
-              className="date-picker-input date-picker-sm"
-              isClearable
-              popperProps={{ strategy: 'fixed' }}
-            />
-          </div>
-          <div className="filter-group">
             <label>장비코드</label>
             <select
               className="filter-select"
@@ -499,6 +466,41 @@ export default function FaultHistory() {
               onChange={(e) => setSearchErrorMessage(e.target.value)}
             />
           </div>
+          <div className="filter-group">
+            <label>시작일</label>
+            <DatePicker
+              selected={startDate}
+              onChange={(date) => setStartDate(date)}
+              selectsStart
+              startDate={startDate}
+              endDate={endDate}
+              maxDate={endDate || new Date()}
+              locale="ko"
+              dateFormat="yy.M.d"
+              placeholderText="시작일"
+              className="date-picker-input date-picker-sm"
+              isClearable
+              popperProps={{ strategy: 'fixed' }}
+            />
+          </div>
+          <div className="filter-group">
+            <label>종료일</label>
+            <DatePicker
+              selected={endDate}
+              onChange={(date) => setEndDate(date)}
+              selectsEnd
+              startDate={startDate}
+              endDate={endDate}
+              minDate={startDate}
+              maxDate={new Date()}
+              locale="ko"
+              dateFormat="yy.M.d"
+              placeholderText="종료일"
+              className="date-picker-input date-picker-sm"
+              isClearable
+              popperProps={{ strategy: 'fixed' }}
+            />
+          </div>
           <div className="filter-actions">
             <button className="btn btn-icon-only" onClick={handleReset} title="초기화">
               <i className="bi bi-arrow-counterclockwise"></i>
@@ -516,7 +518,14 @@ export default function FaultHistory() {
           emptyIcon="bi-inbox"
           sort={{ field: sortConfig.key, order: sortConfig.direction }}
           onSort={handleSort}
-          onRowClick={(row) => setSelectedHistory(row)}
+          onRowClick={(row) => {
+            historyApi.recordPageView('fault_history', '/fault/history', {
+              targetType: 'ERROR',
+              targetName: `${row.DEVICE_NAME || ''}(${row.DEVICE_IP || ''})`,
+              detail: `장애 이력 조회 - ${row.DEVICE_NAME || ''}(${row.DEVICE_IP || ''}) ${row.ERROR_MESSAGE || ''}`,
+            });
+            navigate(`/mgmt/assets?deviceId=${row.DEVICE_ID}&tab=fault-info&errorId=hist_${row.ERROR_HISTORY_ID}`);
+          }}
           rowClassName={(row) => selectedHistory?.ERROR_HISTORY_ID === row.ERROR_HISTORY_ID ? 'selected' : ''}
           pagination={{
             currentPage: page,

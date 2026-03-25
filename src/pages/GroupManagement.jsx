@@ -11,6 +11,7 @@ import {
   useGroupTree,
 } from '../hooks';
 import { groupsApi } from '../api';
+import { historyApi } from '../api/history';
 
 export default function GroupManagement() {
   const { selectedGroup, setSelectedGroup, iconModalGroup, showIconModal, selectGroupById } = useGroupStore();
@@ -71,6 +72,11 @@ export default function GroupManagement() {
   useEffect(() => {
     if (selectedGroup) {
       setViewMode('info');
+      historyApi.recordPageView('group_mgmt', '/mgmt/groups', {
+        targetType: 'GROUP',
+        targetName: selectedGroup.GROUP_NAME || '',
+        detail: `그룹 조회 - ${selectedGroup.GROUP_NAME || ''}`,
+      });
       const children = getAllChildren(selectedGroup);
       setAllChildGroups(children);
       setChildGroupsCurrentPage(1);

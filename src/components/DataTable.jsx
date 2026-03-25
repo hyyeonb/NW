@@ -112,6 +112,7 @@ export default function DataTable({
   maxHeight = 'calc(100vh - 350px)',
   stickyHeader = true,
   rowClassName,
+  rowAttrs, // (row) => ({ 'data-error-id': row.ERROR_ID }) 형태
   // 새로운 props
   tableId = 'default-table', // localStorage 키로 사용
   enableColumnReorder = true, // 컬럼 리오더링 활성화
@@ -658,6 +659,7 @@ export default function DataTable({
                   key={row.id}
                   className={getRowClassName(row)}
                   onClick={() => handleRowClick(row)}
+                  {...(typeof rowAttrs === 'function' ? rowAttrs(row.original) : {})}
                 >
                   {row.getVisibleCells().map((cell) => {
                     // 선택 셀

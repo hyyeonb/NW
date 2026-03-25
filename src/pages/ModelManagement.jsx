@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useVendors, useModels, useCreateModel, useUpdateModel, useDeleteModel, useSnmpMetrics, useModelOids, useSaveModelOids, useDevCodeTree } from '../hooks';
+import { devicesApi } from '../api/devices';
+import { historyApi } from '../api/history';
 import '../styles/model-management.css';
 
 export default function ModelManagement() {
@@ -20,6 +22,11 @@ export default function ModelManagement() {
   const [isOidModalOpen, setIsOidModalOpen] = useState(false);
   const [oidFormValues, setOidFormValues] = useState({}); // { METRIC_ID: OID_VALUE }
 
+  // 수집 데이터 설정
+  const [allMetricTypes, setAllMetricTypes] = useState([]);
+  const [modelMetrics, setModelMetrics] = useState([]);
+  const [metricsSaving, setMetricsSaving] = useState(false);
+
   // 데이터 조회
   const { data: vendors = [], isLoading: vendorsLoading } = useVendors();
   const { data: models = [], isLoading: modelsLoading } = useModels();
@@ -32,6 +39,24 @@ export default function ModelManagement() {
   const updateModelMutation = useUpdateModel();
   const deleteModelMutation = useDeleteModel();
   const saveModelOidsMutation = useSaveModelOids();
+
+  // 메트릭 유형 전체 목록 로드 (1회)
+  useEffect(() => {
+    devicesApi.getMetricTypes().then(r => {
+      setAllMetricTypes(r.data?.data || r.data || []);
+    }).catch(() => {});
+  }, []);
+
+  // 모델 선택 시 수집 메트릭 로드
+  useEffect(() => {
+    if (selectedModel?.MODEL_ID) {
+      devicesApi.getModelMetrics(selectedModel.MODEL_ID).then(r => {
+        setModelMetrics(r.data?.data || r.data || []);
+      }).catch(() => setModelMetrics([]));
+    } else {
+      setModelMetrics([]);
+    }
+  }, [selectedModel?.MODEL_ID]);
 
   // 모델 OID 데이터를 폼 값으로 변환
   useEffect(() => {
@@ -88,13 +113,18 @@ export default function ModelManagement() {
   const metricsByType = useMemo(() => {
     const grouped = {};
     metrics.forEach(metric => {
+      // 모델에 수집 데이터가 설정되어 있으면 해당 메트릭만 표시
+      if (modelMetrics.length > 0) {
+        const metricType = metric.TYPE === 'MEMORY' ? 'MEM' : metric.TYPE;
+        if (!modelMetrics.includes(metricType)) return;
+      }
       if (!grouped[metric.TYPE]) {
         grouped[metric.TYPE] = [];
       }
       grouped[metric.TYPE].push(metric);
     });
     return grouped;
-  }, [metrics]);
+  }, [metrics, modelMetrics]);
 
   // 벤더별 모델 그룹화
   const vendorModelTree = useMemo(() => {
@@ -146,6 +176,11 @@ export default function ModelManagement() {
   const handleModelClick = (model, e) => {
     e.stopPropagation();
     setSelectedModel(model);
+    historyApi.recordPageView('model_mgmt', '/mgmt/models', {
+      targetType: 'MODEL',
+      targetName: `${model.MODEL_NAME || ''}`,
+      detail: `모델 조회 - ${model.VENDOR_NAME || ''} ${model.MODEL_NAME || ''}`,
+    });
   };
 
   // 모델 추가 모달 열기
@@ -203,6 +238,22 @@ export default function ModelManagement() {
       }
     }
     return null;
+  };
+
+  // 수집 메트릭 토글
+  const handleToggleMetric = async (code) => {
+    const newMetrics = modelMetrics.includes(code)
+      ? modelMetrics.filter(c => c !== code)
+      : [...modelMetrics, code];
+    setModelMetrics(newMetrics);
+    setMetricsSaving(true);
+    try {
+      await devicesApi.saveModelMetrics(selectedModel.MODEL_ID, newMetrics);
+    } catch (e) {
+      console.error('메트릭 저장 실패:', e);
+    } finally {
+      setMetricsSaving(false);
+    }
   };
 
   // 폼 변경 핸들러
@@ -417,6 +468,32 @@ export default function ModelManagement() {
               </div>
             </div>
 
+            {/* 수집 데이터 설정 */}
+            {allMetricTypes.length > 0 && (
+              <div className="model-metric-section">
+                <div className="model-metric-title">
+                  <i className="bi bi-collection"></i> 수집 데이터
+                  {metricsSaving && <i className="bi bi-arrow-repeat spinning" style={{ marginLeft: 8, fontSize: 12 }} />}
+                </div>
+                <div className="model-metric-chips">
+                  {allMetricTypes.map(mt => {
+                    const active = modelMetrics.includes(mt.METRIC_CODE);
+                    return (
+                      <button
+                        key={mt.METRIC_CODE}
+                        className={`model-metric-chip ${active ? 'active' : ''}`}
+                        onClick={() => handleToggleMetric(mt.METRIC_CODE)}
+                      >
+                        {active && <i className="bi bi-check2" />}
+                        {mt.METRIC_NAME}
+                        {mt.UNIT && <span className="metric-unit">{mt.UNIT}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* 정보 카드 그리드 */}
             <div className="model-info-grid">
               {/* OID 정보 카드 */}
@@ -586,7 +663,7 @@ export default function ModelManagement() {
                 Object.entries(metricsByType).map(([type, typeMetrics]) => (
                   <div key={type} className="oid-type-group">
                     <h4 className="type-header">
-                      <i className={`bi ${type === 'CPU' ? 'bi-cpu' : 'bi-memory'}`}></i>
+                      <i className={`bi ${type === 'CPU' ? 'bi-cpu' : type === 'MEMORY' ? 'bi-memory' : type === 'TEMPERATURE' ? 'bi-thermometer-half' : type === 'HUMIDITY' ? 'bi-droplet-half' : 'bi-gear'}`}></i>
                       {type}
                     </h4>
                     <div className="oid-items">

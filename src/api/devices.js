@@ -225,4 +225,24 @@ export const devicesApi = {
     if (targetIp != null) body.targetIp = targetIp;
     return apiClient.post('/mgmt/tools/traceroute', body);
   },
+
+  // 메트릭 유형
+  getMetricTypes: () => apiClient.get('/mgmt/metric-types'),
+  getModelMetrics: (modelId) => apiClient.get(`/mgmt/models/${modelId}/metrics`),
+  saveModelMetrics: (modelId, metricCodes) => apiClient.put(`/mgmt/models/${modelId}/metrics`, metricCodes),
+  getDeviceMetrics: (deviceId) => apiClient.get(`/mgmt/devices/${deviceId}/metrics`),
+
+  // 환경 데이터 (온도/습도)
+  getEnvironmentLatest: (deviceId) => apiClient.get(`/mgmt/devices/${deviceId}/environment`),
+  getEnvironmentHistory: (deviceId, metricCode, minutes = 60) =>
+    apiClient.get(`/mgmt/devices/${deviceId}/environment/history?metricCode=${metricCode}&minutes=${minutes}`),
+
+  // 수집 서버(미들웨어) 목록
+  getMiddlewares: () => apiClient.get('/middleware'),
+
+  // 장비별 이력 조회
+  getDeviceChangeHistory: (deviceId, page = 1, size = 20) =>
+    apiClient.get(`/mgmt/devices/${deviceId}/change-history`, { params: { page, size } }),
+  getDeviceSshHistory: (deviceId, page = 1, size = 20) =>
+    apiClient.get(`/mgmt/devices/${deviceId}/ssh-history`, { params: { page, size } }),
 };
