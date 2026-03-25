@@ -4,17 +4,17 @@
    ================== */
 
 :root {
-    /* Primary Color Palette - Blue */
-    --color-primary-50: #eff6ff;
-    --color-primary-100: #dbeafe;
-    --color-primary-200: #bfdbfe;
-    --color-primary-300: #93c5fd;
-    --color-primary-400: #60a5fa;
-    --color-primary-500: #3b82f6;
-    --color-primary-600: #2563eb;
-    --color-primary-700: #1d4ed8;
-    --color-primary-800: #1e40af;
-    --color-primary-900: #1e3a8a;
+    /* Primary Color Palette - Indigo */
+    --color-primary-50: #eef2ff;
+    --color-primary-100: #e0e7ff;
+    --color-primary-200: #c7d2fe;
+    --color-primary-300: #a5b4fc;
+    --color-primary-400: #818cf8;
+    --color-primary-500: #6366f1;
+    --color-primary-600: #4f46e5;
+    --color-primary-700: #4338ca;
+    --color-primary-800: #3730a3;
+    --color-primary-900: #312e81;
 
     /* Accent Colors */
     --color-accent-purple: #8b5cf6;
@@ -41,6 +41,11 @@
     --color-info-light: #60a5fa;
     --color-info-dark: #2563eb;
 
+    /* Secondary Color Palette - Blue (for info/charts) */
+    --color-blue-400: #60a5fa;
+    --color-blue-500: #3b82f6;
+    --color-blue-600: #2563eb;
+
     /* Text Colors */
     --color-text-primary: #ffffff;
     --color-text-secondary: #94a3b8;
@@ -56,7 +61,7 @@
     /* Border Colors */
     --color-border-default: rgba(255, 255, 255, 0.1);
     --color-border-hover: rgba(255, 255, 255, 0.2);
-    --color-border-focus: rgba(59, 130, 246, 0.5);
+    --color-border-focus: rgba(99, 102, 241, 0.5);
 
     /* Glass Effect Colors */
     --glass-bg: rgba(255, 255, 255, 0.05);

@@ -25,6 +25,29 @@ const DIST_RANGES = [
   { label: '80~100%', min: 80, max: 100, color: '#ef4444' },
 ];
 
+// 이용률(%) 추출 — 신규 PERCENT 컬럼 우선, USED 컬럼 폴백
+function getInPercent(r) {
+  if (r.IN_HIGH_USED_PERCENT != null) return Number(r.IN_HIGH_USED_PERCENT);
+  if (r.IN_USED_PERCENT != null) return Number(r.IN_USED_PERCENT);
+  if (r.IN_HIGH_USED != null) return Number(r.IN_HIGH_USED);
+  if (r.IN_USED != null) return Number(r.IN_USED);
+  return 0;
+}
+function getOutPercent(r) {
+  if (r.OUT_HIGH_USED_PERCENT != null) return Number(r.OUT_HIGH_USED_PERCENT);
+  if (r.OUT_USED_PERCENT != null) return Number(r.OUT_USED_PERCENT);
+  if (r.OUT_HIGH_USED != null) return Number(r.OUT_HIGH_USED);
+  if (r.OUT_USED != null) return Number(r.OUT_USED);
+  return 0;
+}
+// % 데이터 존재 여부 (첫 row 기준으로 판단)
+function hasPercentData(rows) {
+  if (!rows || rows.length === 0) return false;
+  const r = rows[0];
+  return r.IN_HIGH_USED_PERCENT != null || r.IN_USED_PERCENT != null
+    || r.IN_HIGH_USED != null || r.IN_USED != null;
+}
+
 function formatMemory(value) {
   if (value == null || value === '' || value === 0) return '-';
   const v = Number(value);
@@ -33,18 +56,26 @@ function formatMemory(value) {
   // SNMP hrStorage 등에서 KB 단위로 올 수 있음
   // 10억 이상: 바이트 단위로 간주
   if (v >= 1e9) {
-    if (v >= 1e12) return (v / 1e12).toFixed(1) + ' TB';
-    return (v / 1e9).toFixed(1) + ' GB';
+    if (v >= 1e12) return (v / 1e12).toFixed(2) + ' TB';
+    return (v / 1e9).toFixed(2) + ' GB';
   }
   // 100만 ~ 10억: KB 단위로 간주 (서버 메모리 1GB~1TB 범위)
   if (v >= 1e6) {
-    return (v / 1e6).toFixed(1) + ' GB';
+    return (v / 1e6).toFixed(2) + ' GB';
   }
   // 1천 ~ 100만: KB 단위 → MB
   if (v >= 1e3) {
-    return (v / 1e3).toFixed(1) + ' MB';
+    return (v / 1e3).toFixed(2) + ' MB';
   }
   return v + ' KB';
+}
+
+function formatBpsValue(bps) {
+  if (bps == null || isNaN(bps)) return '0 bps';
+  if (bps >= 1e9) return (bps / 1e9).toFixed(2) + ' Gbps';
+  if (bps >= 1e6) return (bps / 1e6).toFixed(2) + ' Mbps';
+  if (bps >= 1e3) return (bps / 1e3).toFixed(2) + ' Kbps';
+  return bps.toFixed(0) + ' bps';
 }
 
 // React 19 StrictMode safe wrapper
@@ -75,11 +106,61 @@ function EmptyState({ message }) {
   );
 }
 
+function PortLegendTable({ ports, direction, unit, colors }) {
+  const isBps = unit === 'bps';
+  return (
+    <div style={{ overflowX: 'auto', marginTop: 4 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <th style={thStyle}></th>
+            <th style={{ ...thStyle, textAlign: 'left' }}>장비</th>
+            <th style={{ ...thStyle, textAlign: 'left' }}>포트</th>
+            <th style={{ ...thStyle, textAlign: 'right' }}>Peak BPS</th>
+            <th style={{ ...thStyle, textAlign: 'right' }}>Peak %</th>
+            <th style={{ ...thStyle, textAlign: 'center' }}>시각</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ports.map((p, idx) => {
+            const color = colors[idx % colors.length];
+            const peakBps = direction === 'in' ? p.peakInBps : p.peakOutBps;
+            const peakUsed = direction === 'in' ? p.peakInUsed : p.peakOutUsed;
+            const peakTime = direction === 'in' ? p.peakInTime : p.peakOutTime;
+            return (
+              <tr key={p.key} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <td style={tdStyle}>
+                  <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: color }} />
+                </td>
+                <td style={{ ...tdStyle, color: '#e2e8f0', fontWeight: 500 }}>{p.deviceName}</td>
+                <td style={{ ...tdStyle, color: '#94a3b8' }}>{p.ifName}</td>
+                <td style={{ ...tdStyle, textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#e2e8f0' }}>
+                  {formatBpsValue(peakBps)}
+                </td>
+                <td style={{ ...tdStyle, textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#94a3b8' }}>
+                  {peakUsed != null ? `${Number(peakUsed).toFixed(2)}%` : '-'}
+                </td>
+                <td style={{ ...tdStyle, textAlign: 'center', color: '#64748b', fontSize: 10 }}>
+                  {peakTime ? peakTime.substring(11) : '-'}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const thStyle = { padding: '6px 8px', color: '#64748b', fontWeight: 600, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.5px' };
+const tdStyle = { padding: '5px 8px', fontSize: 11 };
+
 export default function PerformanceTest() {
   const [periodIdx, setPeriodIdx] = useState(2); // 기본 1시간
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [portTopUnit, setPortTopUnit] = useState('percent'); // 'percent' | 'bps'
 
   const currentPeriod = PERIOD_OPTIONS[periodIdx];
   const isCustomMode = currentPeriod?.minutes === null;
@@ -194,10 +275,10 @@ export default function PerformanceTest() {
     const maxMemDevice = deviceMetrics.reduce((max, d) => d.mem > max.mem ? d : max, deviceMetrics[0]);
     return {
       count: devices.length,
-      avgCpu: avgCpu.toFixed(1),
-      avgMem: avgMem.toFixed(1),
-      maxCpu: { value: maxCpuDevice.cpu.toFixed(1), name: maxCpuDevice.DEVICE_NAME },
-      maxMem: { value: maxMemDevice.mem.toFixed(1), name: maxMemDevice.DEVICE_NAME },
+      avgCpu: avgCpu.toFixed(2),
+      avgMem: avgMem.toFixed(2),
+      maxCpu: { value: maxCpuDevice.cpu.toFixed(2), name: maxCpuDevice.DEVICE_NAME },
+      maxMem: { value: maxMemDevice.mem.toFixed(2), name: maxMemDevice.DEVICE_NAME },
     };
   }, [devices, deviceMetrics]);
 
@@ -272,8 +353,8 @@ export default function PerformanceTest() {
       // 가장 최근 시간대의 레코드만 취합
       const latest = rows.reduce((max, r) => (!max || r.COLLECTED_AT > max) ? r.COLLECTED_AT : max, null);
       const latestRows = rows.filter(r => r.COLLECTED_AT === latest);
-      const inUseds = latestRows.map(r => Number(r.IN_HIGH_BPS || r.IN_BPS || 0));
-      const outUseds = latestRows.map(r => Number(r.OUT_HIGH_BPS || r.OUT_BPS || 0));
+      const inUseds = latestRows.map(r => getInPercent(r));
+      const outUseds = latestRows.map(r => getOutPercent(r));
       const maxIn = Math.max(...inUseds, 0);
       const maxOut = Math.max(...outUseds, 0);
       const avgIn = inUseds.length > 0 ? inUseds.reduce((s, v) => s + v, 0) / inUseds.length : 0;
@@ -291,39 +372,56 @@ export default function PerformanceTest() {
     return [...deviceTrafficMetrics].sort((a, b) => b.maxOutUsed - a.maxOutUsed).slice(0, 10);
   }, [deviceTrafficMetrics]);
 
-  // 포트별 TOP 10 (개별 포트 단위 이용률 기준)
-  const portTrafficMetrics = useMemo(() => {
-    const ports = [];
+  // 포트별 시계열 데이터 (전체 기간, 포트별로 시간축 데이터 + 피크값)
+  const portTimeSeriesData = useMemo(() => {
+    const portMap = new Map(); // key: "deviceId_ifIndex"
     validDevices.forEach((d, i) => {
       const rows = trafficQueries[i]?.data || [];
-      if (rows.length === 0) return;
-      const latest = rows.reduce((max, r) => (!max || r.COLLECTED_AT > max) ? r.COLLECTED_AT : max, null);
-      const latestRows = rows.filter(r => r.COLLECTED_AT === latest);
-      latestRows.forEach(r => {
-        const inVal = Number(r.IN_HIGH_BPS || r.IN_BPS || 0);
-        const outVal = Number(r.OUT_HIGH_BPS || r.OUT_BPS || 0);
-        if (inVal > 0 || outVal > 0) {
-          ports.push({
+      rows.forEach(r => {
+        const key = `${d.DEVICE_ID}_${r.IF_INDEX}`;
+        if (!portMap.has(key)) {
+          portMap.set(key, {
+            key,
             deviceName: d.DEVICE_NAME,
             deviceIp: d.DEVICE_IP,
             ifIndex: r.IF_INDEX,
             ifName: r.IF_NAME || r.IF_DESCR || `Port ${r.IF_INDEX}`,
-            inUsed: inVal,
-            outUsed: outVal,
+            series: [],   // { time, inBps, outBps }
+            peakInBps: 0, peakOutBps: 0,
+            peakInTime: null, peakOutTime: null,
+            peakInUsed: 0, peakOutUsed: 0,
           });
         }
+        const entry = portMap.get(key);
+        const t = (r.COLLECTED_AT || '').substring(0, 16);
+        const inBps = Number(r.IN_HIGH_BPS || r.IN_BPS || 0);
+        const outBps = Number(r.OUT_HIGH_BPS || r.OUT_BPS || 0);
+        const inUsed = getInPercent(r);
+        const outUsed = getOutPercent(r);
+        entry.series.push({ time: t, inBps, outBps, inUsed, outUsed });
+        if (inBps > entry.peakInBps) { entry.peakInBps = inBps; entry.peakInTime = t; entry.peakInUsed = inUsed; }
+        if (outBps > entry.peakOutBps) { entry.peakOutBps = outBps; entry.peakOutTime = t; entry.peakOutUsed = outUsed; }
       });
     });
-    return ports;
+    // 각 포트의 시리즈를 시간순 정렬
+    portMap.forEach(p => p.series.sort((a, b) => a.time.localeCompare(b.time)));
+    return [...portMap.values()];
   }, [validDevices, trafficQueries]);
 
+  // TOP 10 포트 (피크 BPS 기준 정렬)
   const topPortIn = useMemo(() => {
-    return [...portTrafficMetrics].sort((a, b) => b.inUsed - a.inUsed).slice(0, 10);
-  }, [portTrafficMetrics]);
+    if (portTopUnit === 'bps') {
+      return [...portTimeSeriesData].sort((a, b) => b.peakInBps - a.peakInBps).slice(0, 10);
+    }
+    return [...portTimeSeriesData].sort((a, b) => b.peakInUsed - a.peakInUsed).slice(0, 10);
+  }, [portTimeSeriesData, portTopUnit]);
 
   const topPortOut = useMemo(() => {
-    return [...portTrafficMetrics].sort((a, b) => b.outUsed - a.outUsed).slice(0, 10);
-  }, [portTrafficMetrics]);
+    if (portTopUnit === 'bps') {
+      return [...portTimeSeriesData].sort((a, b) => b.peakOutBps - a.peakOutBps).slice(0, 10);
+    }
+    return [...portTimeSeriesData].sort((a, b) => b.peakOutUsed - a.peakOutUsed).slice(0, 10);
+  }, [portTimeSeriesData, portTopUnit]);
 
   // 트래픽 이용률 추이 (시간대별 전체 장비 평균)
   const trafficTrendData = useMemo(() => {
@@ -333,19 +431,25 @@ export default function PerformanceTest() {
       rows.forEach(r => {
         const t = (r.COLLECTED_AT || '').substring(0, 16);
         if (!t) return;
-        if (!timeMap.has(t)) timeMap.set(t, { inUseds: [], outUseds: [] });
+        if (!timeMap.has(t)) timeMap.set(t, { inUseds: [], outUseds: [], inBpsList: [], outBpsList: [] });
         const entry = timeMap.get(t);
-        entry.inUseds.push(Number(r.IN_HIGH_BPS || r.IN_BPS || 0));
-        entry.outUseds.push(Number(r.OUT_HIGH_BPS || r.OUT_BPS || 0));
+        entry.inUseds.push(getInPercent(r));
+        entry.outUseds.push(getOutPercent(r));
+        entry.inBpsList.push(Number(r.IN_HIGH_BPS || r.IN_BPS || 0));
+        entry.outBpsList.push(Number(r.OUT_HIGH_BPS || r.OUT_BPS || 0));
       });
     });
     const sorted = [...timeMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-    return sorted.map(([time, { inUseds, outUseds }]) => ({
+    return sorted.map(([time, { inUseds, outUseds, inBpsList, outBpsList }]) => ({
       time: time.substring(11),
       avgIn: inUseds.reduce((s, v) => s + v, 0) / inUseds.length,
       avgOut: outUseds.reduce((s, v) => s + v, 0) / outUseds.length,
       maxIn: Math.max(...inUseds, 0),
       maxOut: Math.max(...outUseds, 0),
+      avgInBps: inBpsList.reduce((s, v) => s + v, 0) / inBpsList.length,
+      avgOutBps: outBpsList.reduce((s, v) => s + v, 0) / outBpsList.length,
+      maxInBps: Math.max(...inBpsList, 0),
+      maxOutBps: Math.max(...outBpsList, 0),
     }));
   }, [validDevices, trafficQueries]);
 
@@ -381,7 +485,7 @@ export default function PerformanceTest() {
         trigger: 'axis',
         formatter: (params) => {
           const d = params[0];
-          return `<b>${d.name}</b><br/>CPU: ${Number(d.value).toFixed(1)}%`;
+          return `<b>${d.name}</b><br/>CPU: ${Number(d.value).toFixed(2)}%`;
         },
       },
       grid: { left: 100, right: 30, top: 8, bottom: 8 },
@@ -410,7 +514,7 @@ export default function PerformanceTest() {
         })),
         label: {
           show: true, position: 'right', color: '#94a3b8', fontSize: 11,
-          formatter: (p) => `${Number(p.value).toFixed(1)}%`,
+          formatter: (p) => `${Number(p.value).toFixed(2)}%`,
         },
       }],
     };
@@ -425,7 +529,7 @@ export default function PerformanceTest() {
         trigger: 'axis',
         formatter: (params) => {
           const d = params[0];
-          return `<b>${d.name}</b><br/>MEM: ${Number(d.value).toFixed(1)}%`;
+          return `<b>${d.name}</b><br/>MEM: ${Number(d.value).toFixed(2)}%`;
         },
       },
       grid: { left: 100, right: 30, top: 8, bottom: 8 },
@@ -454,7 +558,7 @@ export default function PerformanceTest() {
         })),
         label: {
           show: true, position: 'right', color: '#94a3b8', fontSize: 11,
-          formatter: (p) => `${Number(p.value).toFixed(1)}%`,
+          formatter: (p) => `${Number(p.value).toFixed(2)}%`,
         },
       }],
     };
@@ -471,7 +575,7 @@ export default function PerformanceTest() {
           const time = params[0]?.axisValue;
           let html = `<div style="font-weight:600;margin-bottom:4px">${time}</div>`;
           params.forEach(p => {
-            html += `<div>${p.marker} ${p.seriesName}: <b>${Number(p.value).toFixed(1)}%</b></div>`;
+            html += `<div>${p.marker} ${p.seriesName}: <b>${Number(p.value).toFixed(2)}%</b></div>`;
           });
           return html;
         },
@@ -528,7 +632,7 @@ export default function PerformanceTest() {
           const time = params[0]?.axisValue;
           let html = `<div style="font-weight:600;margin-bottom:4px">${time}</div>`;
           params.forEach(p => {
-            html += `<div>${p.marker} ${p.seriesName}: <b>${Number(p.value).toFixed(1)}%</b></div>`;
+            html += `<div>${p.marker} ${p.seriesName}: <b>${Number(p.value).toFixed(2)}%</b></div>`;
           });
           return html;
         },
@@ -641,7 +745,7 @@ export default function PerformanceTest() {
         trigger: 'axis',
         formatter: (params) => {
           const d = params[0];
-          return `<b>${d.name}</b><br/>IN 이용률: ${Number(d.value).toFixed(1)}%`;
+          return `<b>${d.name}</b><br/>IN 이용률: ${Number(d.value).toFixed(2)}%`;
         },
       },
       grid: { left: 100, right: 30, top: 8, bottom: 8 },
@@ -667,7 +771,7 @@ export default function PerformanceTest() {
         })),
         label: {
           show: true, position: 'right', color: '#94a3b8', fontSize: 11,
-          formatter: (p) => `${Number(p.value).toFixed(1)}%`,
+          formatter: (p) => `${Number(p.value).toFixed(2)}%`,
         },
       }],
     };
@@ -682,7 +786,7 @@ export default function PerformanceTest() {
         trigger: 'axis',
         formatter: (params) => {
           const d = params[0];
-          return `<b>${d.name}</b><br/>OUT 이용률: ${Number(d.value).toFixed(1)}%`;
+          return `<b>${d.name}</b><br/>OUT 이용률: ${Number(d.value).toFixed(2)}%`;
         },
       },
       grid: { left: 100, right: 30, top: 8, bottom: 8 },
@@ -708,99 +812,139 @@ export default function PerformanceTest() {
         })),
         label: {
           show: true, position: 'right', color: '#94a3b8', fontSize: 11,
-          formatter: (p) => `${Number(p.value).toFixed(1)}%`,
+          formatter: (p) => `${Number(p.value).toFixed(2)}%`,
         },
       }],
     };
   }, [topTrafficOut]);
 
-  // 포트별 IN TOP 10 바 차트
+  // 포트별 IN TOP 10 라인 차트 (시계열 + 피크 포인트)
+  const PORT_COLORS = ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#ec4899', '#84cc16', '#f97316', '#14b8a6'];
   const portInTopOption = useMemo(() => {
-    const list = [...topPortIn].reverse();
+    if (topPortIn.length === 0) return {};
+    const isBps = portTopUnit === 'bps';
+    // 전체 시간축 통합
+    const allTimes = [...new Set(topPortIn.flatMap(p => p.series.map(s => s.time)))].sort();
+    const series = topPortIn.map((port, idx) => {
+      const color = PORT_COLORS[idx % PORT_COLORS.length];
+      const timeValueMap = new Map(port.series.map(s => [s.time, isBps ? s.inBps : s.inUsed]));
+      const data = allTimes.map(t => timeValueMap.get(t) ?? null);
+      // 피크 포인트 인덱스
+      const peakTime = isBps ? port.peakInTime : port.series.reduce((max, s) => (!max || s.inUsed > max.inUsed) ? s : max, null)?.time;
+      const peakIdx = allTimes.indexOf(peakTime);
+      return {
+        name: `${port.deviceName} - ${port.ifName}`,
+        type: 'line', smooth: true, showSymbol: false,
+        lineStyle: { width: 1.5, color },
+        itemStyle: { color },
+        data: data,
+        markPoint: peakIdx >= 0 ? {
+          symbol: 'circle', symbolSize: 8,
+          itemStyle: { color, borderColor: '#fff', borderWidth: 2 },
+          label: {
+            show: true, position: 'top', fontSize: 10, fontWeight: 600,
+            color,
+            formatter: () => isBps ? formatBpsValue(data[peakIdx]) : `${Number(data[peakIdx]).toFixed(2)}%`,
+          },
+          data: [{ coord: [peakIdx, data[peakIdx]] }],
+        } : undefined,
+      };
+    });
     return {
       tooltip: {
-        ...tooltipStyle,
-        trigger: 'axis',
+        ...tooltipStyle, trigger: 'axis',
         formatter: (params) => {
-          const d = params[0];
-          const item = list[d.dataIndex];
-          return `<b>${item?.deviceName}</b><br/>${d.name}<br/>IN: ${Number(d.value).toFixed(1)}%`;
+          let html = `<div style="font-weight:600;margin-bottom:4px">${params[0]?.axisValue}</div>`;
+          params.forEach(p => {
+            if (p.value != null) {
+              const val = isBps ? formatBpsValue(p.value) : `${Number(p.value).toFixed(2)}%`;
+              html += `<div>${p.marker} ${p.seriesName}: <b>${val}</b></div>`;
+            }
+          });
+          return html;
         },
       },
-      grid: { left: 130, right: 30, top: 8, bottom: 8 },
+      legend: { show: false },
+      grid: { left: isBps ? 70 : 45, right: 16, top: 8, bottom: 24 },
       xAxis: {
-        type: 'value', max: 100,
-        axisLabel: { color: '#64748b', fontSize: 11, formatter: '{value}%' },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
-      },
-      yAxis: {
-        type: 'category',
-        data: list.map(d => `${d.ifName}`),
-        axisLabel: { color: '#94a3b8', fontSize: 10, fontWeight: 500, width: 115, overflow: 'truncate' },
+        type: 'category', data: allTimes.map(t => t.substring(11)),
+        axisLabel: { color: '#64748b', fontSize: 10 },
         axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
       },
-      series: [{
-        type: 'bar', barMaxWidth: 18,
-        data: list.map(d => ({
-          value: d.inUsed,
-          itemStyle: {
-            color: d.inUsed >= 80 ? '#ef4444' : d.inUsed >= 50 ? '#f59e0b' : '#06b6d4',
-            borderRadius: [0, 4, 4, 0],
-          },
-        })),
-        label: {
-          show: true, position: 'right', color: '#94a3b8', fontSize: 11,
-          formatter: (p) => `${Number(p.value).toFixed(1)}%`,
-        },
-      }],
+      yAxis: {
+        type: 'value',
+        max: isBps ? undefined : 100,
+        axisLabel: { color: '#64748b', fontSize: 10, formatter: isBps ? (v) => formatBpsValue(v) : '{value}%' },
+        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
+      },
+      series,
     };
-  }, [topPortIn]);
+  }, [topPortIn, portTopUnit]);
 
-  // 포트별 OUT TOP 10 바 차트
+  // 포트별 OUT TOP 10 라인 차트 (시계열 + 피크 포인트)
   const portOutTopOption = useMemo(() => {
-    const list = [...topPortOut].reverse();
+    if (topPortOut.length === 0) return {};
+    const isBps = portTopUnit === 'bps';
+    const allTimes = [...new Set(topPortOut.flatMap(p => p.series.map(s => s.time)))].sort();
+    const series = topPortOut.map((port, idx) => {
+      const color = PORT_COLORS[idx % PORT_COLORS.length];
+      const timeValueMap = new Map(port.series.map(s => [s.time, isBps ? s.outBps : s.outUsed]));
+      const data = allTimes.map(t => timeValueMap.get(t) ?? null);
+      const peakTime = isBps ? port.peakOutTime : port.series.reduce((max, s) => (!max || s.outUsed > max.outUsed) ? s : max, null)?.time;
+      const peakIdx = allTimes.indexOf(peakTime);
+      return {
+        name: `${port.deviceName} - ${port.ifName}`,
+        type: 'line', smooth: true, showSymbol: false,
+        lineStyle: { width: 1.5, color },
+        itemStyle: { color },
+        data: data,
+        markPoint: peakIdx >= 0 ? {
+          symbol: 'circle', symbolSize: 8,
+          itemStyle: { color, borderColor: '#fff', borderWidth: 2 },
+          label: {
+            show: true, position: 'top', fontSize: 10, fontWeight: 600,
+            color,
+            formatter: () => isBps ? formatBpsValue(data[peakIdx]) : `${Number(data[peakIdx]).toFixed(2)}%`,
+          },
+          data: [{ coord: [peakIdx, data[peakIdx]] }],
+        } : undefined,
+      };
+    });
     return {
       tooltip: {
-        ...tooltipStyle,
-        trigger: 'axis',
+        ...tooltipStyle, trigger: 'axis',
         formatter: (params) => {
-          const d = params[0];
-          const item = list[d.dataIndex];
-          return `<b>${item?.deviceName}</b><br/>${d.name}<br/>OUT: ${Number(d.value).toFixed(1)}%`;
+          let html = `<div style="font-weight:600;margin-bottom:4px">${params[0]?.axisValue}</div>`;
+          params.forEach(p => {
+            if (p.value != null) {
+              const val = isBps ? formatBpsValue(p.value) : `${Number(p.value).toFixed(2)}%`;
+              html += `<div>${p.marker} ${p.seriesName}: <b>${val}</b></div>`;
+            }
+          });
+          return html;
         },
       },
-      grid: { left: 130, right: 30, top: 8, bottom: 8 },
+      legend: { show: false },
+      grid: { left: isBps ? 70 : 45, right: 16, top: 8, bottom: 24 },
       xAxis: {
-        type: 'value', max: 100,
-        axisLabel: { color: '#64748b', fontSize: 11, formatter: '{value}%' },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
-      },
-      yAxis: {
-        type: 'category',
-        data: list.map(d => `${d.ifName}`),
-        axisLabel: { color: '#94a3b8', fontSize: 10, fontWeight: 500, width: 115, overflow: 'truncate' },
+        type: 'category', data: allTimes.map(t => t.substring(11)),
+        axisLabel: { color: '#64748b', fontSize: 10 },
         axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
       },
-      series: [{
-        type: 'bar', barMaxWidth: 18,
-        data: list.map(d => ({
-          value: d.outUsed,
-          itemStyle: {
-            color: d.outUsed >= 80 ? '#ef4444' : d.outUsed >= 50 ? '#f59e0b' : '#8b5cf6',
-            borderRadius: [0, 4, 4, 0],
-          },
-        })),
-        label: {
-          show: true, position: 'right', color: '#94a3b8', fontSize: 11,
-          formatter: (p) => `${Number(p.value).toFixed(1)}%`,
-        },
-      }],
+      yAxis: {
+        type: 'value',
+        max: isBps ? undefined : 100,
+        axisLabel: { color: '#64748b', fontSize: 10, formatter: isBps ? (v) => formatBpsValue(v) : '{value}%' },
+        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
+      },
+      series,
     };
-  }, [topPortOut]);
+  }, [topPortOut, portTopUnit]);
 
   // 트래픽 이용률 추이 라인 차트
   const trafficTrendOption = useMemo(() => {
     if (trafficTrendData.length === 0) return {};
+    const isBps = portTopUnit === 'bps';
     return {
       tooltip: {
         ...tooltipStyle,
@@ -809,7 +953,8 @@ export default function PerformanceTest() {
           const time = params[0]?.axisValue;
           let html = `<div style="font-weight:600;margin-bottom:4px">${time}</div>`;
           params.forEach(p => {
-            html += `<div>${p.marker} ${p.seriesName}: <b>${Number(p.value).toFixed(1)}%</b></div>`;
+            const val = isBps ? formatBpsValue(p.value) : `${Number(p.value).toFixed(2)}%`;
+            html += `<div>${p.marker} ${p.seriesName}: <b>${val}</b></div>`;
           });
           return html;
         },
@@ -819,7 +964,7 @@ export default function PerformanceTest() {
         textStyle: { color: '#94a3b8', fontSize: 11 },
         top: 0,
       },
-      grid: { left: 45, right: 16, top: 36, bottom: 24 },
+      grid: { left: isBps ? 70 : 45, right: 16, top: 36, bottom: 24 },
       xAxis: {
         type: 'category',
         data: trafficTrendData.map(d => d.time),
@@ -827,8 +972,9 @@ export default function PerformanceTest() {
         axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
       },
       yAxis: {
-        type: 'value', max: 100,
-        axisLabel: { color: '#64748b', fontSize: 10, formatter: '{value}%' },
+        type: 'value',
+        max: isBps ? undefined : 100,
+        axisLabel: { color: '#64748b', fontSize: 10, formatter: isBps ? (v) => formatBpsValue(v) : '{value}%' },
         splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
       },
       series: [
@@ -837,30 +983,30 @@ export default function PerformanceTest() {
           lineStyle: { width: 2, color: '#06b6d4' },
           itemStyle: { color: '#06b6d4' },
           areaStyle: { color: 'rgba(6,182,212,0.08)' },
-          data: trafficTrendData.map(d => d.avgIn),
+          data: trafficTrendData.map(d => isBps ? d.avgInBps : d.avgIn),
         },
         {
           name: 'OUT 평균', type: 'line', smooth: true, showSymbol: false,
           lineStyle: { width: 2, color: '#8b5cf6' },
           itemStyle: { color: '#8b5cf6' },
           areaStyle: { color: 'rgba(139,92,246,0.08)' },
-          data: trafficTrendData.map(d => d.avgOut),
+          data: trafficTrendData.map(d => isBps ? d.avgOutBps : d.avgOut),
         },
         {
           name: 'IN 최대', type: 'line', smooth: true, showSymbol: false,
           lineStyle: { width: 1, color: 'rgba(6,182,212,0.4)', type: 'dashed' },
           itemStyle: { color: '#06b6d4' },
-          data: trafficTrendData.map(d => d.maxIn),
+          data: trafficTrendData.map(d => isBps ? d.maxInBps : d.maxIn),
         },
         {
           name: 'OUT 최대', type: 'line', smooth: true, showSymbol: false,
           lineStyle: { width: 1, color: 'rgba(139,92,246,0.4)', type: 'dashed' },
           itemStyle: { color: '#8b5cf6' },
-          data: trafficTrendData.map(d => d.maxOut),
+          data: trafficTrendData.map(d => isBps ? d.maxOutBps : d.maxOut),
         },
       ],
     };
-  }, [trafficTrendData]);
+  }, [trafficTrendData, portTopUnit]);
 
   // 고부하 장비 테이블 컬럼
   const highLoadColumns = useMemo(() => [
@@ -876,7 +1022,7 @@ export default function PerformanceTest() {
       key: 'cpu', label: 'CPU %', width: '100px', sortable: true, align: 'center',
       render: (v) => (
         <span style={{ color: v >= 80 ? '#ef4444' : v >= 50 ? '#f59e0b' : '#3b82f6', fontWeight: 600 }}>
-          {Number(v).toFixed(1)}%
+          {Number(v).toFixed(2)}%
         </span>
       ),
     },
@@ -884,7 +1030,7 @@ export default function PerformanceTest() {
       key: 'mem', label: 'MEM %', width: '100px', sortable: true, align: 'center',
       render: (v) => (
         <span style={{ color: v >= 80 ? '#ef4444' : v >= 50 ? '#f59e0b' : '#10b981', fontWeight: 600 }}>
-          {Number(v).toFixed(1)}%
+          {Number(v).toFixed(2)}%
         </span>
       ),
     },
@@ -1008,7 +1154,7 @@ export default function PerformanceTest() {
             reportData={{
               summary,
               highLoadDevices,
-              portTrafficMetrics: portTrafficMetrics || [],
+              portTrafficMetrics: portTimeSeriesData || [],
               period: currentPeriod,
             }}
           />
@@ -1053,7 +1199,7 @@ export default function PerformanceTest() {
             <div className="stats-card">
               <div className="stats-card-label">최대 IN</div>
               <div className="stats-card-value" style={{ color: '#06b6d4' }}>
-                {isLoadingTraffic ? '-' : topTrafficIn[0] ? `${topTrafficIn[0].maxInUsed.toFixed(1)}%` : '-'}
+                {isLoadingTraffic ? '-' : topTrafficIn[0] ? `${topTrafficIn[0].maxInUsed.toFixed(2)}%` : '-'}
               </div>
               {!isLoadingTraffic && topTrafficIn[0] && (
                 <div className="stats-card-sub">{topTrafficIn[0].DEVICE_NAME}</div>
@@ -1062,7 +1208,7 @@ export default function PerformanceTest() {
             <div className="stats-card">
               <div className="stats-card-label">최대 OUT</div>
               <div className="stats-card-value" style={{ color: '#8b5cf6' }}>
-                {isLoadingTraffic ? '-' : topTrafficOut[0] ? `${topTrafficOut[0].maxOutUsed.toFixed(1)}%` : '-'}
+                {isLoadingTraffic ? '-' : topTrafficOut[0] ? `${topTrafficOut[0].maxOutUsed.toFixed(2)}%` : '-'}
               </div>
               {!isLoadingTraffic && topTrafficOut[0] && (
                 <div className="stats-card-sub">{topTrafficOut[0].DEVICE_NAME}</div>
@@ -1130,7 +1276,7 @@ export default function PerformanceTest() {
                             <span className="snapshot-metric-value" style={{
                               color: card.cpu >= 80 ? '#ef4444' : card.cpu >= 50 ? '#f59e0b' : '#10b981',
                             }}>
-                              {card.cpu.toFixed(1)}%
+                              {card.cpu.toFixed(2)}%
                             </span>
                           </div>
                           <div className="snapshot-metric-row">
@@ -1147,12 +1293,12 @@ export default function PerformanceTest() {
                             <span className="snapshot-metric-value" style={{
                               color: card.mem >= 80 ? '#ef4444' : card.mem >= 50 ? '#f59e0b' : '#3b82f6',
                             }}>
-                              {card.mem.toFixed(1)}%
+                              {card.mem.toFixed(2)}%
                             </span>
                           </div>
                           <div className="snapshot-traffic-row">
-                            <span>IN <b style={{ color: '#06b6d4' }}>{card.inUsed.toFixed(1)}%</b></span>
-                            <span>OUT <b style={{ color: '#8b5cf6' }}>{card.outUsed.toFixed(1)}%</b></span>
+                            <span>IN <b style={{ color: '#06b6d4' }}>{card.inUsed.toFixed(2)}%</b></span>
+                            <span>OUT <b style={{ color: '#8b5cf6' }}>{card.outUsed.toFixed(2)}%</b></span>
                           </div>
                         </div>
                       ))}
@@ -1246,27 +1392,71 @@ export default function PerformanceTest() {
 
             {/* Row 5: 포트별 Traffic IN/OUT TOP 10 */}
             <div className="stats-panel">
-              <div className="stats-panel-header">
-                <i className="bi bi-ethernet"></i>
-                포트별 IN TOP 10
+              <div className="stats-panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span><i className="bi bi-ethernet"></i> 포트별 IN TOP 10</span>
+                <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '2px' }}>
+                  <button
+                    onClick={() => setPortTopUnit('percent')}
+                    style={{
+                      padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                      fontSize: '11px', fontWeight: 600, transition: 'all 0.2s',
+                      background: portTopUnit === 'percent' ? 'rgba(99,102,241,0.8)' : 'transparent',
+                      color: portTopUnit === 'percent' ? '#fff' : '#94a3b8',
+                    }}
+                  >%</button>
+                  <button
+                    onClick={() => setPortTopUnit('bps')}
+                    style={{
+                      padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                      fontSize: '11px', fontWeight: 600, transition: 'all 0.2s',
+                      background: portTopUnit === 'bps' ? 'rgba(99,102,241,0.8)' : 'transparent',
+                      color: portTopUnit === 'bps' ? '#fff' : '#94a3b8',
+                    }}
+                  >BPS</button>
+                </div>
               </div>
-              <div className="stats-panel-body">
+              <div className="stats-panel-body" style={{ minHeight: 320 }}>
                 {isLoadingTraffic ? <LoadingSpinner /> :
                   topPortIn.length === 0 ? <EmptyState message="포트 트래픽 데이터가 없습니다" /> :
-                  <SafeECharts option={portInTopOption} style={{ height: '100%' }} notMerge={false} />
+                  <>
+                    <SafeECharts key={`portIn-${portTopUnit}`} option={portInTopOption} style={{ height: 240 }} notMerge />
+                    <PortLegendTable ports={topPortIn} direction="in" unit={portTopUnit} colors={PORT_COLORS} />
+                  </>
                 }
               </div>
             </div>
 
             <div className="stats-panel">
-              <div className="stats-panel-header">
-                <i className="bi bi-ethernet"></i>
-                포트별 OUT TOP 10
+              <div className="stats-panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span><i className="bi bi-ethernet"></i> 포트별 OUT TOP 10</span>
+                <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '2px' }}>
+                  <button
+                    onClick={() => setPortTopUnit('percent')}
+                    style={{
+                      padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                      fontSize: '11px', fontWeight: 600, transition: 'all 0.2s',
+                      background: portTopUnit === 'percent' ? 'rgba(99,102,241,0.8)' : 'transparent',
+                      color: portTopUnit === 'percent' ? '#fff' : '#94a3b8',
+                    }}
+                  >%</button>
+                  <button
+                    onClick={() => setPortTopUnit('bps')}
+                    style={{
+                      padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                      fontSize: '11px', fontWeight: 600, transition: 'all 0.2s',
+                      background: portTopUnit === 'bps' ? 'rgba(99,102,241,0.8)' : 'transparent',
+                      color: portTopUnit === 'bps' ? '#fff' : '#94a3b8',
+                    }}
+                  >BPS</button>
+                </div>
               </div>
-              <div className="stats-panel-body">
+              <div className="stats-panel-body" style={{ minHeight: 320 }}>
                 {isLoadingTraffic ? <LoadingSpinner /> :
                   topPortOut.length === 0 ? <EmptyState message="포트 트래픽 데이터가 없습니다" /> :
-                  <SafeECharts option={portOutTopOption} style={{ height: '100%' }} notMerge={false} />
+                  <>
+                    <SafeECharts key={`portOut-${portTopUnit}`} option={portOutTopOption} style={{ height: 240 }} notMerge />
+                    <PortLegendTable ports={topPortOut} direction="out" unit={portTopUnit} colors={PORT_COLORS} />
+                  </>
                 }
               </div>
             </div>
@@ -1274,14 +1464,33 @@ export default function PerformanceTest() {
             {/* Row 6: Traffic 추이 (full-width) — 5분 모드에서는 숨김 */}
             {!isSnapshotMode && (
               <div className="stats-panel panel-full-width">
-                <div className="stats-panel-header">
-                  <i className="bi bi-arrow-left-right"></i>
-                  트래픽 추이 ({currentPeriod?.label})
+                <div className="stats-panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span><i className="bi bi-arrow-left-right"></i> 트래픽 추이 ({currentPeriod?.label})</span>
+                  <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '2px' }}>
+                    <button
+                      onClick={() => setPortTopUnit('percent')}
+                      style={{
+                        padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                        fontSize: '11px', fontWeight: 600, transition: 'all 0.2s',
+                        background: portTopUnit === 'percent' ? 'rgba(99,102,241,0.8)' : 'transparent',
+                        color: portTopUnit === 'percent' ? '#fff' : '#94a3b8',
+                      }}
+                    >%</button>
+                    <button
+                      onClick={() => setPortTopUnit('bps')}
+                      style={{
+                        padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                        fontSize: '11px', fontWeight: 600, transition: 'all 0.2s',
+                        background: portTopUnit === 'bps' ? 'rgba(99,102,241,0.8)' : 'transparent',
+                        color: portTopUnit === 'bps' ? '#fff' : '#94a3b8',
+                      }}
+                    >BPS</button>
+                  </div>
                 </div>
                 <div className="stats-panel-body">
                   {isLoadingTraffic ? <LoadingSpinner /> :
                     trafficTrendData.length === 0 ? <EmptyState message="트래픽 추이 데이터가 없습니다" /> :
-                    <SafeECharts option={trafficTrendOption} style={{ height: 300 }} notMerge={false} />
+                    <SafeECharts key={`trend-${portTopUnit}`} option={trafficTrendOption} style={{ height: 300 }} notMerge />
                   }
                 </div>
               </div>

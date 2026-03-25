@@ -7,9 +7,9 @@
 .table-wrapper {
     overflow-x: auto;
     border-radius: var(--radius-xl);
-    background: linear-gradient(135deg, rgba(15, 15, 25, 0.6) 0%, rgba(20, 20, 35, 0.4) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    background: var(--theme-bg-panel);
+    border: 1px solid var(--theme-border-panel);
+    box-shadow: var(--theme-shadow-inner);
 }
 
 /* Base Table */
@@ -26,7 +26,7 @@
 .data-table thead,
 .child-groups-table thead,
 .result-table thead {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+    background: var(--theme-bg-panel-header);
 }
 
 .device-table th,
@@ -40,7 +40,7 @@
     color: var(--color-text-secondary);
     text-transform: uppercase;
     letter-spacing: var(--letter-spacing-wide);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--theme-border-default);
     white-space: nowrap;
 }
 
@@ -49,7 +49,7 @@
 .data-table tbody tr,
 .child-groups-table tbody tr,
 .result-table tbody tr {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--theme-border-subtle);
     transition: all var(--transition-fast);
 }
 
@@ -57,7 +57,7 @@
 .data-table tbody tr:hover,
 .child-groups-table tbody tr:hover,
 .result-table tbody tr:hover {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.04) 100%);
+    background: var(--theme-bg-table-row-hover);
 }
 
 .device-table tbody tr:last-child,
@@ -124,17 +124,17 @@
     width: 100%;
     min-width: 80px;
     padding: 8px 10px;
-    background: rgba(15, 15, 25, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--theme-input-bg);
+    border: 1px solid var(--theme-input-border);
     border-radius: var(--radius-md);
-    color: var(--color-text-primary);
+    color: var(--theme-text-primary);
     font-size: var(--font-size-body-xs);
 }
 
 .device-table td input:focus,
 .device-table td select:focus {
     border-color: var(--color-border-focus);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
 }
 
 /* Port Table */
@@ -174,8 +174,8 @@
     left: 50%;
     transform: translateX(-50%);
     padding: 8px 12px;
-    background: rgba(30, 41, 59, 0.95);
-    color: var(--color-text-primary);
+    background: var(--theme-bg-elevated);
+    color: var(--theme-text-primary);
     font-size: var(--font-size-body-xs);
     border-radius: var(--radius-md);
     white-space: nowrap;
@@ -209,8 +209,8 @@
 .child-groups-table th.sortable:hover,
 .result-table th.sortable:hover,
 .port-table th.sortable:hover {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.08) 100%);
-    color: var(--color-text-primary);
+    background: var(--theme-bg-panel-hover);
+    color: var(--theme-text-primary);
 }
 
 /* Sort Icon */
@@ -241,8 +241,8 @@
     flex-direction: column;
     height: 100%;
     min-height: 0;
-    background: linear-gradient(135deg, rgba(15, 15, 25, 0.6) 0%, rgba(20, 20, 35, 0.4) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--theme-bg-panel);
+    border: 1px solid var(--theme-border-panel);
     border-radius: var(--radius-xl, 16px);
     overflow: hidden;
 }
@@ -259,8 +259,8 @@
 /* 테이블 헤더 고정 영역 */
 .table-container .table-header-fixed {
     flex-shrink: 0;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--theme-bg-panel-header);
+    border-bottom: 1px solid var(--theme-border-default);
 }
 
 .table-container .table-header-fixed table {
@@ -298,12 +298,12 @@
 .table-container .table-body-scroll td {
     padding: 12px 16px;
     font-size: var(--font-size-table-body, 13px);
-    color: var(--color-text-secondary, #e2e8f0);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--theme-text-secondary);
+    border-bottom: 1px solid var(--theme-border-subtle);
 }
 
 .table-container .table-body-scroll tr:hover {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.04) 100%);
+    background: var(--theme-bg-table-row-hover);
 }
 
 .table-container .table-body-scroll tr:last-child td {
@@ -316,16 +316,16 @@
 }
 
 .table-container .table-body-scroll::-webkit-scrollbar-track {
-    background: rgba(15, 23, 42, 0.5);
+    background: var(--theme-scrollbar-track);
 }
 
 .table-container .table-body-scroll::-webkit-scrollbar-thumb {
-    background: rgba(100, 116, 139, 0.4);
+    background: var(--theme-scrollbar-thumb);
     border-radius: 3px;
 }
 
 .table-container .table-body-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(100, 116, 139, 0.6);
+    background: var(--theme-scrollbar-thumb-hover);
 }
 
 /* 페이지네이션 영역 (하단 고정) */
@@ -350,11 +350,11 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%);
+    background: var(--theme-bg-panel-header);
 }
 
 .table-wrapper.scrollable thead th {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.08) 100%);
+    background: var(--theme-bg-panel-header);
 }
 
 /* 빈 상태 메시지 */

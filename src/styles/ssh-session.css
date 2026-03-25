@@ -258,3 +258,357 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================
+   LoginHistory.jsx 전용 스타일
+   ========================================== */
+
+/* 페이지 컨테이너 */
+.ssh-history-page {
+  padding: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--theme-bg-primary);
+  overflow: hidden;
+}
+
+/* 페이지 헤더 */
+.ssh-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.ssh-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ssh-page-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--theme-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ssh-page-title i {
+  color: var(--theme-accent-primary);
+}
+
+.ssh-total-count {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--theme-accent-primary);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+/* 뒤로가기 버튼 */
+.ssh-btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--theme-border-panel);
+  border-radius: 8px;
+  background: var(--theme-bg-secondary);
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.ssh-btn-back i {
+  font-size: 15px;
+}
+
+.ssh-btn-back:hover {
+  background: var(--theme-accent-primary);
+  border-color: var(--theme-accent-primary);
+  color: white;
+}
+
+/* 필터 영역 */
+.ssh-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.ssh-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ssh-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ssh-search-box i {
+  position: absolute;
+  left: 12px;
+  color: var(--theme-text-muted);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.ssh-search-box input {
+  padding: 8px 32px 8px 34px;
+  background: var(--theme-bg-secondary);
+  border: 1px solid var(--theme-border-panel);
+  border-radius: 8px;
+  color: var(--theme-text-primary);
+  font-size: 13px;
+  min-width: 220px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.ssh-search-box input::placeholder {
+  color: var(--theme-text-muted);
+}
+
+.ssh-search-box input:focus {
+  border-color: var(--theme-accent-primary);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+}
+
+.ssh-search-clear {
+  position: absolute;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--theme-text-muted);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ssh-search-clear:hover {
+  background: rgba(148, 163, 184, 0.35);
+  color: var(--theme-text-primary);
+}
+
+.ssh-filter-select {
+  padding: 8px 12px;
+  background: var(--theme-bg-secondary);
+  border: 1px solid var(--theme-border-panel);
+  border-radius: 8px;
+  color: var(--theme-text-primary);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  appearance: auto;
+}
+
+.ssh-filter-select:focus {
+  border-color: var(--theme-accent-primary);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+}
+
+.ssh-filter-date {
+  padding: 8px 12px;
+  background: var(--theme-bg-secondary);
+  border: 1px solid var(--theme-border-panel);
+  border-radius: 8px;
+  color: var(--theme-text-primary);
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.ssh-filter-date:focus {
+  border-color: var(--theme-accent-primary);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+}
+
+.ssh-date-separator {
+  color: var(--theme-text-muted);
+  font-size: 13px;
+  padding: 0 2px;
+}
+
+.ssh-filter-clear {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  border: 1px solid var(--theme-border-panel);
+  border-radius: 8px;
+  background: var(--theme-bg-secondary);
+  color: var(--theme-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ssh-filter-clear:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+/* 범용 뱃지 */
+.ssh-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ssh-badge.badge-info {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.ssh-badge.badge-success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.ssh-badge.badge-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.ssh-badge.badge-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.ssh-badge.badge-muted {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+/* 상세 뷰 - 세션 정보 카드 */
+.ssh-detail-info {
+  margin-bottom: 16px;
+  padding: 16px 20px;
+  background: var(--theme-bg-secondary);
+  border: 1px solid var(--theme-border-panel);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.ssh-detail-info .ssh-info-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px 24px;
+}
+
+.ssh-detail-info .ssh-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* 상세 뷰 - info-label / info-value */
+.ssh-info-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--theme-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ssh-info-value {
+  font-size: 13px;
+  color: var(--theme-text-primary);
+}
+
+/* 상세 뷰 - 섹션 */
+.ssh-detail-section {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ssh-detail-section > .table-panel {
+  flex: 1;
+  min-height: 0;
+}
+
+.ssh-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.ssh-section-header i {
+  color: var(--theme-accent-primary);
+  font-size: 16px;
+}
+
+.ssh-section-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--theme-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ssh-section-header .ssh-total-count {
+  margin-left: 4px;
+}
+
+/* ==================
+   Light Mode Overrides
+   ================== */
+
+/* -- Command Text -- */
+[data-theme="light"] .ssh-command-text {
+    background: rgba(0, 0, 0, 0.03);
+    color: #16a34a;
+}
+
+/* -- Status Badge -- */
+[data-theme="light"] .ssh-status-badge.closed {
+    background: rgba(142, 142, 147, 0.1);
+    color: #8e8e93;
+}
+
+/* -- Detail Tab Count -- */
+[data-theme="light"] .ssh-detail-tab .tab-count {
+    background: rgba(142, 142, 147, 0.1);
+}

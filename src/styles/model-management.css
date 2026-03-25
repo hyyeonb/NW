@@ -48,7 +48,7 @@
     135deg,
     rgba(99, 102, 241, 0.25) 0%,
     rgba(139, 92, 246, 0.12) 25%,
-    rgba(59, 130, 246, 0.18) 50%,
+    rgba(99, 102, 241, 0.18) 50%,
     rgba(139, 92, 246, 0.12) 75%,
     rgba(99, 102, 241, 0.25) 100%
   );
@@ -182,7 +182,7 @@
 
 .vendor-item.selected {
   background: var(--theme-accent-bg-hover);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border: 1px solid rgba(99, 102, 241, 0.3);
 }
 
 .vendor-item .vendor-icon {
@@ -431,14 +431,14 @@
 }
 
 .action-btn.edit {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(99, 102, 241, 0.15);
   color: var(--theme-info-text);
 }
 
 .action-btn.edit:hover {
-  background: rgba(59, 130, 246, 0.25);
+  background: rgba(99, 102, 241, 0.25);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .action-btn.delete {
@@ -450,6 +450,65 @@
   background: rgba(239, 68, 68, 0.25);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* 수집 데이터 칩 */
+.model-metric-section {
+  margin-bottom: 16px;
+}
+
+.model-metric-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--theme-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.model-metric-title i { color: var(--theme-accent-primary, #6366f1); }
+
+.model-metric-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.model-metric-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+  color: var(--theme-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.model-metric-chip:hover {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.15);
+}
+
+.model-metric-chip.active {
+  background: rgba(99,102,241,0.15);
+  border-color: rgba(99,102,241,0.4);
+  color: #818cf8;
+}
+
+.model-metric-chip.active i { font-size: 11px; }
+
+.metric-unit {
+  font-size: 10px;
+  opacity: 0.6;
+  margin-left: 2px;
 }
 
 /* 정보 카드 그리드 */
@@ -570,13 +629,13 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(6, 182, 212, 0.06) 100%);
-  border-color: rgba(59, 130, 246, 0.2);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(6, 182, 212, 0.06) 100%);
+  border-color: rgba(99, 102, 241, 0.2);
 }
 
 .info-card.snmp-card:hover {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.18) 0%, rgba(6, 182, 212, 0.1) 100%);
-  border-color: rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(6, 182, 212, 0.1) 100%);
+  border-color: rgba(99, 102, 241, 0.4);
 }
 
 .snmp-card-visual {
@@ -597,7 +656,7 @@
 
 .snmp-ring .ring-bg {
   fill: none;
-  stroke: rgba(59, 130, 246, 0.15);
+  stroke: rgba(99, 102, 241, 0.15);
   stroke-width: 3;
 }
 
@@ -796,8 +855,8 @@
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: rgba(59, 130, 246, 0.5);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .form-group input.oid-input {
@@ -864,8 +923,8 @@
 /* OID 설정 섹션 */
 .oid-section {
   margin-top: 20px;
-  background: rgba(59, 130, 246, 0.05);
-  border: 1px solid rgba(59, 130, 246, 0.15);
+  background: rgba(99, 102, 241, 0.05);
+  border: 1px solid rgba(99, 102, 241, 0.15);
 }
 
 .oid-section .section-header {
@@ -1018,8 +1077,8 @@
 
 .oid-item .oid-input:focus {
   outline: none;
-  border-color: rgba(59, 130, 246, 0.5);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .oid-item .oid-input::placeholder {
@@ -1047,7 +1106,7 @@
 }
 
 .dev-code-input:hover {
-  border-color: rgba(59, 130, 246, 0.3);
+  border-color: rgba(99, 102, 241, 0.3);
 }
 
 .dev-code-input span.selected {
@@ -1108,7 +1167,7 @@
 }
 
 .dev-code-option:hover {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(99, 102, 241, 0.15);
 }
 
 .dev-code-option.selected {
@@ -1170,4 +1229,236 @@
   .model-detail-panel {
     min-height: 400px;
   }
+}
+
+/* ==================
+   Light Mode Overrides
+   ================== */
+
+/* Panels wrapper glow */
+[data-theme="light"] .model-panels-wrapper {
+  background: linear-gradient(
+    135deg,
+    rgba(79, 70, 229, 0.1) 0%,
+    rgba(139, 92, 246, 0.05) 25%,
+    rgba(79, 70, 229, 0.08) 50%,
+    rgba(139, 92, 246, 0.05) 75%,
+    rgba(79, 70, 229, 0.1) 100%
+  );
+  box-shadow: none;
+}
+
+/* Model hero */
+[data-theme="light"] .model-hero {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.06) 0%, rgba(139, 92, 246, 0.04) 100%);
+  border: 1px solid rgba(79, 70, 229, 0.12);
+}
+
+[data-theme="light"] .model-hero::before {
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.04), transparent);
+}
+
+[data-theme="light"] .model-hero-icon {
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+}
+
+/* Info card top highlight */
+[data-theme="light"] .info-card::before {
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.04), transparent);
+}
+
+[data-theme="light"] .info-card:hover {
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* OID card */
+[data-theme="light"] .info-card.oid-card {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.04) 0%, rgba(79, 70, 229, 0.02) 100%);
+  border-color: rgba(139, 92, 246, 0.12);
+}
+
+[data-theme="light"] .info-card.oid-card:hover {
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+[data-theme="light"] .oid-card-value {
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+[data-theme="light"] .oid-copy-btn {
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+}
+
+[data-theme="light"] .oid-copy-btn:hover {
+  background: rgba(139, 92, 246, 0.15);
+}
+
+/* SNMP card */
+[data-theme="light"] .info-card.snmp-card {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(6, 182, 212, 0.03) 100%);
+  border-color: rgba(79, 70, 229, 0.12);
+}
+
+[data-theme="light"] .info-card.snmp-card:hover {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(6, 182, 212, 0.05) 100%);
+  border-color: rgba(79, 70, 229, 0.25);
+}
+
+[data-theme="light"] .snmp-ring .ring-bg {
+  stroke: rgba(79, 70, 229, 0.1);
+}
+
+/* Date card */
+[data-theme="light"] .info-card.date-card {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.01) 100%);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .info-card.date-card:hover {
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .date-led.created {
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+}
+
+[data-theme="light"] .date-led.modified {
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+}
+
+/* No selection */
+[data-theme="light"] .no-selection-icon {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.02) 100%);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Vendor item */
+[data-theme="light"] .vendor-item.selected {
+  border: 1px solid rgba(79, 70, 229, 0.2);
+}
+
+[data-theme="light"] .vendor-item .model-count {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Model item hover */
+[data-theme="light"] .model-item:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="light"] .model-item.selected {
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+/* Panel header top highlight */
+[data-theme="light"] .model-tree-panel::before,
+[data-theme="light"] .model-detail-panel::before {
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.04), transparent);
+}
+
+/* Action buttons */
+[data-theme="light"] .action-btn.edit {
+  background: rgba(79, 70, 229, 0.08);
+}
+
+[data-theme="light"] .action-btn.edit:hover {
+  background: rgba(79, 70, 229, 0.15);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.15);
+}
+
+[data-theme="light"] .action-btn.delete {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+[data-theme="light"] .action-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.15);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+}
+
+/* Form inputs */
+[data-theme="light"] .form-group input,
+[data-theme="light"] .form-group select {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .form-group input:focus,
+[data-theme="light"] .form-group select:focus {
+  border-color: rgba(79, 70, 229, 0.4);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
+}
+
+[data-theme="light"] .form-group select option {
+  background: #ffffff;
+  color: #3a3a3c;
+}
+
+[data-theme="light"] .form-group select:disabled {
+  background-color: #fafafa;
+}
+
+/* OID section */
+[data-theme="light"] .oid-section {
+  background: rgba(79, 70, 229, 0.02);
+  border: 1px solid rgba(79, 70, 229, 0.08);
+}
+
+/* OID items */
+[data-theme="light"] .oid-item {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .oid-item .oid-input {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .oid-item .oid-input:focus {
+  border-color: rgba(79, 70, 229, 0.4);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
+}
+
+/* DevCode selector */
+[data-theme="light"] .dev-code-input {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .dev-code-input:hover {
+  border-color: rgba(79, 70, 229, 0.2);
+}
+
+/* DevCode options */
+[data-theme="light"] .dev-code-option:hover {
+  background: rgba(79, 70, 229, 0.06);
+}
+
+[data-theme="light"] .dev-code-option.selected {
+  background: rgba(34, 197, 94, 0.08);
+}
+
+[data-theme="light"] .dev-code-option.none-option.selected {
+  background: rgba(34, 197, 94, 0.08);
+}
+
+/* Expand icon hover */
+[data-theme="light"] .dev-code-option .expand-icon:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Danger button */
+[data-theme="light"] .model-management-container .btn-danger {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.08) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+[data-theme="light"] .model-management-container .btn-danger:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.12) 100%);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
 }

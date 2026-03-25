@@ -291,7 +291,7 @@ export default function AssetConfigDetail() {
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
-            color: '#94a3b8'
+            color: 'var(--theme-text-tertiary, #94a3b8)'
           }}>
             <i className="bi bi-arrow-repeat spinning" style={{ fontSize: '32px', marginBottom: '16px' }}></i>
             <span>Config 정보를 불러오는 중...</span>
@@ -1033,6 +1033,93 @@ export default function AssetConfigDetail() {
             min-height: 150px;
             max-height: 200px;
           }
+        }
+
+        /* ── 라이트 모드 오버라이드 ── */
+        [data-theme="light"] .config-panel-header {
+          background: #fafafa;
+          border-bottom-color: rgba(0, 0, 0, 0.06);
+        }
+        [data-theme="light"] .config-panel-title {
+          color: #1d1d1f;
+        }
+        [data-theme="light"] .config-panel-title i {
+          color: #4f46e5;
+        }
+        [data-theme="light"] .date-badge {
+          background: rgba(79, 70, 229, 0.08);
+          color: #4f46e5;
+        }
+        [data-theme="light"] .date-badge.previous {
+          background: rgba(5, 150, 105, 0.08);
+          color: #059669;
+        }
+        [data-theme="light"] .date-badge.today {
+          background: rgba(217, 119, 6, 0.08);
+          color: #d97706;
+        }
+        [data-theme="light"] .config-diff-header {
+          background: #fafafa;
+          border-bottom-color: rgba(0, 0, 0, 0.06);
+        }
+        [data-theme="light"] .config-diff-title {
+          color: #1d1d1f;
+        }
+        [data-theme="light"] .config-diff-title i {
+          color: #d97706;
+        }
+        [data-theme="light"] .diff-summary {
+          color: #8e8e93;
+          border-left-color: rgba(0, 0, 0, 0.08);
+        }
+        [data-theme="light"] .diff-line-number {
+          color: #aeaeb2;
+          background: #f5f5f7;
+          border-right-color: rgba(0, 0, 0, 0.06);
+        }
+        [data-theme="light"] .diff-line.added {
+          background: rgba(5, 150, 105, 0.06);
+        }
+        [data-theme="light"] .diff-line.removed {
+          background: rgba(220, 38, 38, 0.06);
+        }
+        [data-theme="light"] .diff-line-content {
+          color: #3a3a3c;
+        }
+        [data-theme="light"] .diff-stat.added {
+          background: rgba(5, 150, 105, 0.10);
+          color: #059669;
+        }
+        [data-theme="light"] .diff-stat.removed {
+          background: rgba(220, 38, 38, 0.10);
+          color: #dc2626;
+        }
+        [data-theme="light"] .config-empty-state p {
+          color: #8e8e93;
+        }
+        [data-theme="light"] .sync-scroll-btn {
+          background: rgba(0, 0, 0, 0.04);
+          border-color: rgba(0, 0, 0, 0.08);
+          color: #8e8e93;
+        }
+        [data-theme="light"] .sync-scroll-btn:hover {
+          background: rgba(0, 0, 0, 0.06);
+          color: #3a3a3c;
+        }
+        [data-theme="light"] .sync-scroll-btn.active {
+          background: rgba(79, 70, 229, 0.08);
+          border-color: rgba(79, 70, 229, 0.20);
+          color: #4f46e5;
+        }
+        [data-theme="light"] .sync-scroll-btn.active:hover {
+          background: rgba(79, 70, 229, 0.12);
+        }
+        [data-theme="light"] .diff-table-header {
+          background: #f5f5f7;
+          border-bottom-color: rgba(0, 0, 0, 0.06);
+        }
+        [data-theme="light"] .diff-table-header span {
+          color: #8e8e93;
         }
       `}</style>
     </div>

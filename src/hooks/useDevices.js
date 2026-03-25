@@ -275,19 +275,6 @@ export const usePortTraffic = (deviceId, ifIndex, minutes = 60) => {
   });
 };
 
-// 차트 표시 포트 조회 (없으면 TOP 5 자동 설정)
-export const useChartEnabledPorts = (deviceId) => {
-  return useQuery({
-    queryKey: ['chartEnabledPorts', deviceId],
-    queryFn: async () => {
-      const response = await devicesApi.getChartEnabledPorts(deviceId);
-      return response.data?.data || response.data || [];
-    },
-    enabled: !!deviceId,
-    staleTime: 30000,
-  });
-};
-
 // ==================== DevCode (장비군) Hooks ====================
 
 // 장비군 트리 조회

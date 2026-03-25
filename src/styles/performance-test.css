@@ -236,3 +236,64 @@
         grid-template-columns: repeat(2, 1fr) !important;
     }
 }
+
+/* ==================
+   Light Mode Overrides
+   ================== */
+
+/* -- Custom Range Picker -- */
+[data-theme="light"] .custom-range-input {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    color: #1d1d1f;
+}
+
+[data-theme="light"] .custom-range-input:focus {
+    border-color: rgba(79, 70, 229, 0.5);
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+[data-theme="light"] .custom-range-input::-webkit-calendar-picker-indicator {
+    filter: none;
+}
+
+[data-theme="light"] .custom-range-separator {
+    color: #aeaeb2;
+}
+
+/* -- Snapshot Cards -- */
+[data-theme="light"] .snapshot-card {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .snapshot-card:hover {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .snapshot-card-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .snapshot-card-name {
+    color: #1d1d1f;
+}
+
+[data-theme="light"] .snapshot-card-ip {
+    color: #aeaeb2;
+}
+
+[data-theme="light"] .snapshot-metric-label {
+    color: #8e8e93;
+}
+
+[data-theme="light"] .snapshot-progress {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .snapshot-traffic-row {
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+    color: #8e8e93;
+}

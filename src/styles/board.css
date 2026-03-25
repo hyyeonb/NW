@@ -37,7 +37,7 @@
     135deg,
     rgba(99, 102, 241, 0.25) 0%,
     rgba(139, 92, 246, 0.12) 25%,
-    rgba(59, 130, 246, 0.18) 50%,
+    rgba(99, 102, 241, 0.18) 50%,
     rgba(139, 92, 246, 0.12) 75%,
     rgba(99, 102, 241, 0.25) 100%
   );
@@ -1037,11 +1037,11 @@
   background: var(--theme-info-bg);
   color: var(--theme-info-text);
   border: 1px solid var(--theme-info-border);
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
 }
 
 .board-modal-icon-confirm::after {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(99, 102, 241, 0.15);
 }
 
 /* 본문 */

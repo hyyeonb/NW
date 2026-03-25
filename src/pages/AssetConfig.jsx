@@ -125,7 +125,7 @@ export default function AssetConfig() {
       className: 'cell-truncate',
       hideable: true,
       render: (value) => (
-        <span style={{ color: '#94a3b8' }}>{value || '-'}</span>
+        <span style={{ color: 'var(--theme-text-tertiary, #94a3b8)' }}>{value || '-'}</span>
       ),
     },
     {
@@ -153,7 +153,7 @@ export default function AssetConfig() {
       className: 'cell-date',
       hideable: true,
       render: (value) => {
-        if (!value) return <span style={{ color: '#64748b' }}>미수집</span>;
+        if (!value) return <span style={{ color: 'var(--theme-text-muted, #64748b)' }}>미수집</span>;
         return (
           <span style={{ color: '#4ade80' }}>
             {formatDate(value)}
@@ -208,7 +208,7 @@ export default function AssetConfig() {
         {!selectedGroup ? (
           <p id="welcome-message">그룹을 선택하여 해당 그룹의 장비 설정 목록을 확인하세요.</p>
         ) : isLoading ? (
-          <p style={{ color: '#94a3b8' }}>로딩 중...</p>
+          <p style={{ color: 'var(--theme-text-tertiary, #94a3b8)' }}>로딩 중...</p>
         ) : (
           <div id="device-list-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             {/* 검색 필터 바 + 테이블 통합 */}
@@ -246,6 +246,7 @@ export default function AssetConfig() {
               data={pagedDevices}
               rowKey="deviceId"
               loading={isLoading}
+              exportConfig={{ fileName: '자산Config' }}
               loadingText="장비 정보를 불러오는 중..."
               emptyText="등록된 장비가 없습니다"
               emptyIcon="bi-hdd-rack"

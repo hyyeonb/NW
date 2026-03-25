@@ -18,8 +18,8 @@
     --glass-shadow-inset-bottom: inset 0 -1px 0 rgba(0, 0, 0, 0.1);
 
     /* Color Shadows */
-    --shadow-primary: 0 4px 15px rgba(59, 130, 246, 0.4);
-    --shadow-primary-lg: 0 8px 25px rgba(59, 130, 246, 0.5);
+    --shadow-primary: 0 4px 15px rgba(99, 102, 241, 0.4);
+    --shadow-primary-lg: 0 8px 25px rgba(99, 102, 241, 0.5);
     --shadow-success: 0 4px 15px rgba(34, 197, 94, 0.4);
     --shadow-success-lg: 0 8px 25px rgba(34, 197, 94, 0.5);
     --shadow-error: 0 4px 15px rgba(239, 68, 68, 0.3);

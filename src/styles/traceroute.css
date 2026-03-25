@@ -377,8 +377,7 @@
 /* 설정 패널 — 가로 1줄 배치 (endpoint + options) */
 .traceroute-config-panel {
   padding: 10px 14px;
-  flex: 2;
-  min-height: 0;
+  flex: none;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1116,4 +1115,350 @@
   border: 1px solid rgba(255,255,255,.08);
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0,0,0,.22);
+}
+
+/* ==================
+   Light Mode Overrides
+   ================== */
+
+/* -- Header -- */
+[data-theme="light"] .traceroute-title {
+    color: #1d1d1f;
+}
+
+[data-theme="light"] .traceroute-subtitle {
+    color: #aeaeb2;
+}
+
+/* -- Tree Panel Headers -- */
+[data-theme="light"] .traceroute-tree-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .traceroute-tree-header--source {
+    background: rgba(16, 185, 129, 0.03);
+}
+
+[data-theme="light"] .traceroute-tree-header--target {
+    background: rgba(139, 92, 246, 0.03);
+}
+
+[data-theme="light"] .traceroute-tree-header-top {
+    color: #8e8e93;
+}
+
+[data-theme="light"] .traceroute-tree-header-sub {
+    color: #aeaeb2;
+}
+
+/* -- Mode Tabs -- */
+[data-theme="light"] .traceroute-mode-tabs {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .traceroute-mode-tab {
+    color: #aeaeb2;
+}
+
+[data-theme="light"] .traceroute-mode-tab:hover {
+    color: #8e8e93;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="light"] .traceroute-mode-tab.active {
+    color: #1d1d1f;
+    background: rgba(79, 70, 229, 0.04);
+}
+
+/* -- Search -- */
+[data-theme="light"] .traceroute-search-wrap {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .traceroute-search-icon {
+    color: #aeaeb2;
+}
+
+[data-theme="light"] .traceroute-search-input {
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    color: #3a3a3c;
+}
+
+[data-theme="light"] .traceroute-search-input:focus {
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+[data-theme="light"] .traceroute-search-input::placeholder {
+    color: #c7c7cc;
+}
+
+[data-theme="light"] .traceroute-search-clear {
+    color: #aeaeb2;
+}
+
+/* -- Tree Scroll -- */
+[data-theme="light"] .traceroute-tree-scroll {
+    scrollbar-color: rgba(139, 92, 246, 0.15) transparent;
+}
+
+[data-theme="light"] .traceroute-tree-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .traceroute-tree-loading,
+[data-theme="light"] .traceroute-tree-err {
+    color: #aeaeb2;
+}
+
+/* -- Tree Device Rows -- */
+[data-theme="light"] .tree-device-row:hover {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="light"] .tree-device-icon {
+    color: #aeaeb2;
+}
+
+[data-theme="light"] .tree-device-name {
+    color: #3a3a3c;
+}
+
+[data-theme="light"] .tree-device-ip {
+    color: #aeaeb2;
+}
+
+/* -- Device Cards -- */
+[data-theme="light"] .traceroute-device-card {
+    border: 1px dashed rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.01);
+}
+
+[data-theme="light"] .traceroute-device-card:hover {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .traceroute-device-card--active {
+    border-color: rgba(139, 92, 246, 0.35);
+    background: rgba(139, 92, 246, 0.04);
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.06);
+}
+
+[data-theme="light"] .traceroute-card-label {
+    color: #aeaeb2;
+}
+
+[data-theme="light"] .traceroute-card-device-name {
+    color: #1d1d1f;
+}
+
+[data-theme="light"] .traceroute-card-device-ip {
+    color: #8e8e93;
+}
+
+[data-theme="light"] .traceroute-card-clear {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    color: #aeaeb2;
+}
+
+[data-theme="light"] .traceroute-card-clear:hover {
+    background: rgba(239, 68, 68, 0.08);
+    color: #ef4444;
+}
+
+[data-theme="light"] .traceroute-card-empty-icon {
+    color: #c7c7cc;
+}
+
+[data-theme="light"] .traceroute-card-placeholder {
+    color: #aeaeb2;
+}
+
+[data-theme="light"] .traceroute-card-hint {
+    color: #c7c7cc;
+}
+
+/* -- Target Mode Toggle -- */
+[data-theme="light"] .traceroute-target-mode-btn {
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    background: rgba(0, 0, 0, 0.01);
+    color: #aeaeb2;
+}
+
+[data-theme="light"] .traceroute-target-mode-btn:hover {
+    color: #8e8e93;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="light"] .traceroute-target-mode-btn.active {
+    background: rgba(139, 92, 246, 0.06);
+    border-color: rgba(139, 92, 246, 0.25);
+    color: #7c3aed;
+}
+
+/* -- IP Input -- */
+[data-theme="light"] .traceroute-ip-input-card {
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    background: rgba(139, 92, 246, 0.02);
+}
+
+[data-theme="light"] .traceroute-ip-input {
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    color: #1d1d1f;
+}
+
+[data-theme="light"] .traceroute-ip-input:focus {
+    border-color: rgba(139, 92, 246, 0.4);
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.06);
+}
+
+[data-theme="light"] .traceroute-ip-input::placeholder {
+    color: #c7c7cc;
+}
+
+/* -- Options -- */
+[data-theme="light"] .traceroute-opt-label {
+    color: #aeaeb2;
+}
+
+[data-theme="light"] .traceroute-opt-input {
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    color: #1d1d1f;
+}
+
+[data-theme="light"] .traceroute-opt-input:focus {
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+/* -- Run Button -- */
+[data-theme="light"] .traceroute-run-btn {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2);
+}
+
+[data-theme="light"] .traceroute-run-btn:hover:not(:disabled) {
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+}
+
+/* -- Flow Panel -- */
+[data-theme="light"] .traceroute-flow-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .traceroute-flow-title {
+    color: #aeaeb2;
+}
+
+[data-theme="light"] .traceroute-flow-meta {
+    color: #aeaeb2;
+}
+
+[data-theme="light"] .traceroute-flow-scroll {
+    scrollbar-color: rgba(139, 92, 246, 0.15) transparent;
+}
+
+[data-theme="light"] .traceroute-flow-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+}
+
+/* -- Nodes -- */
+[data-theme="light"] .traceroute-node-hop-num {
+    color: #aeaeb2;
+}
+
+[data-theme="light"] .traceroute-node-name {
+    color: #3a3a3c;
+}
+
+[data-theme="light"] .traceroute-node-ip {
+    color: #8e8e93;
+}
+
+[data-theme="light"] .traceroute-node-rtt {
+    color: #aeaeb2;
+}
+
+[data-theme="light"] .traceroute-node--unknown {
+    background: rgba(100, 116, 139, 0.04);
+    border-color: rgba(100, 116, 139, 0.15);
+}
+
+/* -- Summary Cards -- */
+[data-theme="light"] .traceroute-summary-card {
+    background: rgba(0, 0, 0, 0.01);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .traceroute-summary-value {
+    color: #1d1d1f;
+}
+
+[data-theme="light"] .traceroute-summary-label {
+    color: #aeaeb2;
+}
+
+/* -- Table -- */
+[data-theme="light"] .traceroute-table-header {
+    color: #aeaeb2;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .traceroute-table th {
+    background: rgba(0, 0, 0, 0.01);
+    color: #aeaeb2;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .traceroute-table td {
+    color: #3a3a3c;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="light"] .traceroute-table tr:hover td {
+    background: rgba(0, 0, 0, 0.01);
+}
+
+[data-theme="light"] .traceroute-td-hop { color: #aeaeb2 !important; }
+[data-theme="light"] .traceroute-na { color: #c7c7cc; }
+[data-theme="light"] .traceroute-td-rtt { color: #aeaeb2 !important; }
+
+/* -- Empty State -- */
+[data-theme="light"] .traceroute-empty-icon {
+    color: #c7c7cc;
+}
+
+[data-theme="light"] .traceroute-empty-title {
+    color: #8e8e93;
+}
+
+[data-theme="light"] .traceroute-empty-step {
+    color: #8e8e93;
+}
+
+[data-theme="light"] .traceroute-empty-step strong {
+    color: #3a3a3c;
+}
+
+[data-theme="light"] .traceroute-empty-hint {
+    color: #aeaeb2;
+}
+
+/* -- Result Scroll -- */
+[data-theme="light"] .traceroute-result-scroll {
+    scrollbar-color: rgba(139, 92, 246, 0.15) transparent;
+}
+
+[data-theme="light"] .traceroute-result-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+}
+
+/* -- Glass Panel -- */
+[data-theme="light"] .traceroute-page .glass-panel {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }

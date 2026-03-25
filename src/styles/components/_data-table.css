@@ -46,7 +46,7 @@
 /* 테이블 래퍼 - 스크롤 영역 */
 .data-table-wrapper {
     flex: 1 1 0%;
-    min-height: 0;
+    min-height: 200px;
     overflow-y: auto;
     overflow-x: hidden;
 }
@@ -195,6 +195,9 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    height: 48px;
+    max-height: 48px;
+    box-sizing: border-box;
 }
 
 /* 선택 체크박스 셀 */
@@ -248,12 +251,18 @@
 }
 
 /* 빈 상태 */
+.empty-row td {
+    height: 100%;
+    vertical-align: middle;
+}
+
 .table-empty {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 70px 20px;
+    min-height: 300px;
     gap: 14px;
     color: var(--theme-text-disabled);
 }
@@ -404,9 +413,9 @@
 }
 
 .data-table .severity-badge.warning {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.2) 100%);
-    color: #3b82f6;
-    border: 1px solid rgba(59, 130, 246, 0.35);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(79, 70, 229, 0.2) 100%);
+    color: #6366f1;
+    border: 1px solid rgba(99, 102, 241, 0.35);
 }
 
 /* 포트 수 뱃지 */
@@ -456,8 +465,8 @@
 
 .data-table .fault-led-W,
 .fault-led-W {
-    background: #3b82f6;
-    box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
+    background: #6366f1;
+    box-shadow: 0 0 6px rgba(99, 102, 241, 0.6);
 }
 
 @keyframes pulse-critical {

@@ -9,3 +9,7 @@ export { faultApi } from './fault';
 export { boardApi } from './board';
 export { noticeApi } from './notice';
 export { sshSessionApi, sftpApi } from './sshSession';
+export { adminApi } from './admin';
+export { historyApi } from './history';
+export { accountApi } from './account';
+export { notificationsApi } from './notifications';

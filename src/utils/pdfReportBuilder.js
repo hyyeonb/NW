@@ -29,6 +29,14 @@ const COLORS = {
   success: '#10b981',
 };
 
+function formatBpsForPdf(bps) {
+  if (bps == null || isNaN(bps) || bps === 0) return '-';
+  if (bps >= 1e9) return (bps / 1e9).toFixed(2) + ' Gbps';
+  if (bps >= 1e6) return (bps / 1e6).toFixed(2) + ' Mbps';
+  if (bps >= 1e3) return (bps / 1e3).toFixed(2) + ' Kbps';
+  return bps.toFixed(0) + ' bps';
+}
+
 // ─── 한글 폰트 로드 ───
 
 async function loadKoreanFont(pdf) {
@@ -87,6 +95,32 @@ function toLightTheme(option) {
   (light.series || []).forEach(s => {
     if (s.label?.color === '#e2e8f0') s.label.color = '#334155';
     if (s.label?.color === '#94a3b8') s.label.color = '#475569';
+    // 함수 formatter가 JSON.stringify로 제거되었으므로, 숫자 값을 소수점 2자리로 포맷하는 문자열 formatter 복원
+    if (s.label && !s.label.formatter) {
+      s.label.formatter = '{c}';
+    }
+  });
+
+  // xAxis/yAxis formatter 복원 (% 표시)
+  const restoreAxisFormatter = (axis) => {
+    if (!axis) return;
+    if (axis.axisLabel && !axis.axisLabel.formatter) {
+      if (axis.max === 100) {
+        axis.axisLabel.formatter = '{value}%';
+      }
+    }
+  };
+  restoreAxisFormatter(light.xAxis);
+  restoreAxisFormatter(light.yAxis);
+
+  // series label formatter: 값을 소수점 2자리 % 로 표시 (bar 차트)
+  (light.series || []).forEach(s => {
+    if (s.type === 'bar' && s.label) {
+      s.label.formatter = (p) => {
+        const v = Number(p.value);
+        return isNaN(v) ? p.value : `${v.toFixed(2)}%`;
+      };
+    }
   });
 
   light.backgroundColor = '#ffffff';
@@ -402,16 +436,77 @@ export function buildPerfReport(pdf, { chartOptions, reportData }) {
   addChartImage(pdf, trafficOutImg, MARGIN + halfW + 6, y, halfW, chartH);
   y += chartH + 6;
 
-  // 포트별 트래픽 IN / OUT Top 10
-  y = checkPageBreak(pdf, 90, y);
+  // 포트별 트래픽 IN / OUT Top 10 (차트 + 범례 테이블)
+  y = checkPageBreak(pdf, 120, y);
   y = addSectionTitle(pdf, '포트별 트래픽 IN / OUT Top 10', y);
 
-  const portInImg = renderChartToImage(chartOptions.portInTop, 560, 320);
-  const portOutImg = renderChartToImage(chartOptions.portOutTop, 560, 320);
+  // 차트 이미지 (legend 없는 버전 — 원본에서 legend.show=false)
+  const portInImg = renderChartToImage(chartOptions.portInTop, 560, 260);
+  const portOutImg = renderChartToImage(chartOptions.portOutTop, 560, 260);
 
-  addChartImage(pdf, portInImg, MARGIN, y, halfW, chartH);
-  addChartImage(pdf, portOutImg, MARGIN + halfW + 6, y, halfW, chartH);
-  y += chartH + 6;
+  addChartImage(pdf, portInImg, MARGIN, y, halfW, 56);
+  addChartImage(pdf, portOutImg, MARGIN + halfW + 6, y, halfW, 56);
+  y += 58;
+
+  // IN 범례 테이블 (좌측 절반)
+  if (portTrafficMetrics && portTrafficMetrics.length > 0) {
+    const inSorted = [...portTrafficMetrics].sort((a, b) => b.peakInBps - a.peakInBps).slice(0, 10);
+    const outSorted = [...portTrafficMetrics].sort((a, b) => b.peakOutBps - a.peakOutBps).slice(0, 10);
+
+    const legendTableStyle = {
+      font: FONT_NAME, fontSize: 6, cellPadding: 1.5,
+      lineColor: [226, 232, 240], lineWidth: 0.15,
+    };
+    const legendHeadStyle = {
+      fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: 'bold', fontSize: 6,
+    };
+
+    // IN 테이블
+    autoTable(pdf, {
+      startY: y,
+      margin: { left: MARGIN, right: MARGIN + halfW + 6 },
+      head: [['#', '장비 / 포트', 'Peak BPS', '%']],
+      body: inSorted.map((d, i) => [
+        i + 1,
+        `${d.deviceName} - ${d.ifName}`,
+        formatBpsForPdf(d.peakInBps),
+        d.peakInUsed != null ? `${Number(d.peakInUsed).toFixed(2)}%` : '-',
+      ]),
+      styles: legendTableStyle,
+      headStyles: legendHeadStyle,
+      bodyStyles: { textColor: [51, 65, 85] },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 6 },
+        2: { halign: 'right', cellWidth: 22 },
+        3: { halign: 'right', cellWidth: 16 },
+      },
+    });
+
+    // OUT 테이블 (우측 절반, 같은 y 위치)
+    autoTable(pdf, {
+      startY: y,
+      margin: { left: MARGIN + halfW + 6, right: MARGIN },
+      head: [['#', '장비 / 포트', 'Peak BPS', '%']],
+      body: outSorted.map((d, i) => [
+        i + 1,
+        `${d.deviceName} - ${d.ifName}`,
+        formatBpsForPdf(d.peakOutBps),
+        d.peakOutUsed != null ? `${Number(d.peakOutUsed).toFixed(2)}%` : '-',
+      ]),
+      styles: legendTableStyle,
+      headStyles: legendHeadStyle,
+      bodyStyles: { textColor: [51, 65, 85] },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 6 },
+        2: { halign: 'right', cellWidth: 22 },
+        3: { halign: 'right', cellWidth: 16 },
+      },
+    });
+
+    y = pdf.lastAutoTable.finalY + 6;
+  }
 
   // 트래픽 추이
   if (chartOptions.trafficTrend?.series) {
@@ -435,8 +530,8 @@ export function buildPerfReport(pdf, { chartOptions, reportData }) {
       body: highLoadDevices.map(d => [
         d.DEVICE_NAME || '-',
         d.DEVICE_IP || '-',
-        `${Number(d.cpu).toFixed(1)}%`,
-        `${Number(d.mem).toFixed(1)}%`,
+        `${Number(d.cpu).toFixed(2)}%`,
+        `${Number(d.mem).toFixed(2)}%`,
       ]),
       styles: {
         font: FONT_NAME,

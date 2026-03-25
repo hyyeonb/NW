@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authApi } from '../api';
+import { usePermissionStore } from './permissionStore';
 
 export const useAuthStore = create(
   persist(
@@ -19,6 +20,12 @@ export const useAuthStore = create(
         try {
           const response = await authApi.getCurrentUser();
           const userData = response.data?.data || response.data;
+
+          // /me 응답에 permissions가 포함됨
+          if (userData?.permissions) {
+            usePermissionStore.getState().setPermissions(userData.permissions);
+          }
+
           set({
             user: userData,
             isAuthenticated: true,
@@ -32,6 +39,7 @@ export const useAuthStore = create(
             isLoading: false,
             error: error.response?.data?.message || '사용자 정보 조회 실패',
           });
+          usePermissionStore.getState().clearPermissions();
           throw error;
         }
       },
@@ -41,19 +49,20 @@ export const useAuthStore = create(
           await authApi.logout();
         } finally {
           set({ user: null, isAuthenticated: false, error: null });
+          usePermissionStore.getState().clearPermissions();
         }
       },
 
       // 소셜 로그인 URL로 리다이렉트
       socialLogin: async (provider) => {
         try {
-          // 기존 세션 클리어 (공용 환경에서 다른 계정으로 로그인 가능하도록)
           try {
             await authApi.logout();
           } catch (e) {
             // 로그아웃 실패해도 계속 진행
           }
           set({ user: null, isAuthenticated: false, error: null });
+          usePermissionStore.getState().clearPermissions();
 
           const response = authApi.getSocialLoginUrl(provider);
           window.location.href = response.data.url;
@@ -76,6 +85,12 @@ export const useAuthStore = create(
           });
 
           const loginData = response.data?.data || response.data;
+
+          // 로그인 응답에 permissions 포함
+          if (loginData?.permissions) {
+            usePermissionStore.getState().setPermissions(loginData.permissions);
+          }
+
           set({
             user: loginData,
             isAuthenticated: true,
@@ -101,10 +116,12 @@ export const useAuthStore = create(
           const isValid = response.data?.data;
           if (!isValid) {
             set({ user: null, isAuthenticated: false });
+            usePermissionStore.getState().clearPermissions();
           }
           return isValid;
         } catch {
           set({ user: null, isAuthenticated: false });
+          usePermissionStore.getState().clearPermissions();
           return false;
         }
       },
@@ -119,6 +136,12 @@ export const useAuthStore = create(
           });
 
           const loginData = response.data?.data || response.data;
+
+          // 로그인 응답에 permissions 포함
+          if (loginData?.permissions) {
+            usePermissionStore.getState().setPermissions(loginData.permissions);
+          }
+
           set({
             user: loginData,
             isAuthenticated: true,

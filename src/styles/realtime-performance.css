@@ -42,7 +42,7 @@
         135deg,
         rgba(99, 102, 241, 0.25) 0%,
         rgba(139, 92, 246, 0.12) 25%,
-        rgba(59, 130, 246, 0.18) 50%,
+        rgba(99, 102, 241, 0.18) 50%,
         rgba(139, 92, 246, 0.12) 75%,
         rgba(99, 102, 241, 0.25) 100%
     );
@@ -481,6 +481,8 @@
 .device-metric-card.expanded .device-metric-card-body {
     display: block;
     animation: expandIn 0.3s ease;
+    max-height: 580px;
+    overflow-y: auto;
 }
 
 @keyframes expandIn {
@@ -1752,7 +1754,7 @@
 }
 
 .port-traffic-preview .stat-value.in {
-    color: #3b82f6;
+    color: #6366f1;
 }
 
 .port-traffic-preview .stat-value.out {
@@ -2095,7 +2097,7 @@
 }
 
 .card-header-mini .device-stats .cpu {
-    color: #3b82f6;
+    color: #6366f1;
 }
 
 .card-header-mini .device-stats .mem {
@@ -2256,8 +2258,8 @@
 
 /* Chart Accent - Glassmorphism Border */
 .chart-accent-cpu {
-    border: 1px solid rgba(59, 130, 246, 0.25);
-    box-shadow: 0 0 8px rgba(59, 130, 246, 0.08), inset 0 0 12px rgba(59, 130, 246, 0.04);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.08), inset 0 0 12px rgba(99, 102, 241, 0.04);
 }
 
 .chart-accent-traffic {
@@ -2298,8 +2300,8 @@
 }
 
 .legend-cpu .legend-dot {
-    background: rgba(59, 130, 246, 0.7);
-    box-shadow: 0 0 4px rgba(59, 130, 246, 0.3);
+    background: rgba(99, 102, 241, 0.7);
+    box-shadow: 0 0 4px rgba(99, 102, 241, 0.3);
 }
 
 .legend-traffic .legend-dot {
@@ -3152,5 +3154,22 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
+}
+
+/* =============================================
+   Light Theme Overrides (traffic-unit-hint)
+   ============================================= */
+[data-theme="light"] .card-header-mini .device-stats .traffic-unit-hint {
+    color: #aeaeb2;
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .card-header-mini .device-stats .cpu {
+    color: #4f46e5;
+}
+
+[data-theme="light"] .card-header-mini .device-stats .mem {
+    color: #7c3aed;
 }
 

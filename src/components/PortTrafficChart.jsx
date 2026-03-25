@@ -1,5 +1,6 @@
 import { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
+import { useThemeStore } from '../stores';
 
 const CHART_COLORS = [
   '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6',
@@ -46,6 +47,8 @@ const formatCount = (val) => {
 
 export default function PortTrafficChart({ rawData, chartPortsSet, portsData, settings = {}, loading = false }) {
   const { counterType = '64bit', trafficUnit = 'bit', showError = false, showDiscard = false } = settings;
+  const resolvedTheme = useThemeStore(s => s.resolvedTheme);
+  const isDark = resolvedTheme === 'dark';
 
   const portColorMap = useMemo(() => {
     const map = {};
@@ -108,22 +111,37 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
     const { nameMap, speedMap } = portLookup;
 
     const getInValue = (r) => {
+      if (trafficUnit === 'bps') {
+        // 사용률(%) — 신규 컬럼 우선, 기존 BPS(=%) 폴백
+        return counterType === '64bit'
+          ? (r.IN_HIGH_USED_PERCENT ?? r.IN_USED_PERCENT ?? r.IN_HIGH_BPS ?? r.IN_BPS ?? 0)
+          : (r.IN_USED_PERCENT ?? r.IN_BPS ?? 0);
+      }
+      // 실제 bps
       let val = counterType === '64bit' ? (r.IN_HIGH_BPS ?? r.IN_BPS ?? 0) : (r.IN_BPS ?? 0);
-      if (trafficUnit === 'bps') return val;  // 이미 % 값
-      // % → raw bps 역산
-      const speed = speedMap[r.IF_INDEX] || 0;
-      const rawBps = speed > 0 ? (val / 100) * speed : 0;
-      if (trafficUnit === 'byte') return rawBps / 8;
-      return rawBps;
+      // 하위호환: % 컬럼 없으면 구 데이터 → 역산
+      if (r.IN_USED_PERCENT == null && r.IN_HIGH_USED_PERCENT == null && val > 0 && val <= 100) {
+        const speed = speedMap[r.IF_INDEX] || 0;
+        val = speed > 0 ? (val / 100) * speed : 0;
+      }
+      return trafficUnit === 'byte' ? val / 8 : val;
     };
     const getOutValue = (r) => {
+      if (trafficUnit === 'bps') {
+        // 사용률(%) — 신규 컬럼 우선, 기존 BPS(=%) 폴백
+        const pct = counterType === '64bit'
+          ? (r.OUT_HIGH_USED_PERCENT ?? r.OUT_USED_PERCENT ?? r.OUT_HIGH_BPS ?? r.OUT_BPS ?? 0)
+          : (r.OUT_USED_PERCENT ?? r.OUT_BPS ?? 0);
+        return -pct;
+      }
+      // 실제 bps
       let val = counterType === '64bit' ? (r.OUT_HIGH_BPS ?? r.OUT_BPS ?? 0) : (r.OUT_BPS ?? 0);
-      if (trafficUnit === 'bps') return -val;  // 이미 % 값
-      // % → raw bps 역산
-      const speed = speedMap[r.IF_INDEX] || 0;
-      const rawBps = speed > 0 ? (val / 100) * speed : 0;
-      if (trafficUnit === 'byte') return -(rawBps / 8);
-      return -rawBps;
+      // 하위호환: % 컬럼 없으면 구 데이터 → 역산
+      if (r.OUT_USED_PERCENT == null && r.OUT_HIGH_USED_PERCENT == null && val > 0 && val <= 100) {
+        const speed = speedMap[r.IF_INDEX] || 0;
+        val = speed > 0 ? (val / 100) * speed : 0;
+      }
+      return trafficUnit === 'byte' ? -(val / 8) : -val;
     };
 
     const inSeries = [];
@@ -223,7 +241,7 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
           type: 'text', left: 'center', top: 'center',
           style: {
             text: loading ? '' : (chartPortsSet.size === 0 ? '포트를 클릭하여 차트에 추가하세요' : '선택된 포트의 트래픽 데이터가 없습니다'),
-            fill: '#64748b', fontSize: 13,
+            fill: isDark ? '#64748b' : '#94a3b8', fontSize: 13,
           },
         },
       };
@@ -232,10 +250,10 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
     return {
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(30, 41, 59, 0.98)',
-        borderColor: '#334155',
+        backgroundColor: isDark ? 'rgba(30, 41, 59, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+        borderColor: isDark ? '#334155' : '#e2e8f0',
         borderWidth: 2,
-        textStyle: { color: '#f1f5f9', fontSize: 11 },
+        textStyle: { color: isDark ? '#f1f5f9' : '#1e293b', fontSize: 11 },
         confine: true,
         enterable: true,
         formatter: (params) => {
@@ -258,7 +276,7 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
       },
       legend: {
         data: chartData.inSeries.map(s => s.name),
-        textStyle: { color: '#94a3b8', fontSize: 10, overflow: 'truncate', width: 100 },
+        textStyle: { color: isDark ? '#94a3b8' : '#64748b', fontSize: 10, overflow: 'truncate', width: 100 },
         bottom: 0, left: 'center', type: 'scroll', orient: 'horizontal',
         pageIconColor: '#3b82f6', pageIconInactiveColor: '#475569',
         pageTextStyle: { color: '#94a3b8' },
@@ -281,26 +299,26 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
       xAxis: {
         type: 'category', boundaryGap: false, data: chartData.timeLabels,
         axisLabel: { color: '#94a3b8', fontSize: 9 },
-        axisLine: { lineStyle: { color: '#334155' } },
+        axisLine: { lineStyle: { color: isDark ? '#334155' : '#e2e8f0' } },
       },
       yAxis: {
         type: 'value',
         axisLabel: { color: '#94a3b8', fontSize: 9, formatter: (v) => trafficUnit === 'bps' ? Math.abs(v).toFixed(0) + '%' : formatAxisValue(Math.abs(v)) },
-        axisLine: { lineStyle: { color: '#334155' } },
-        splitLine: { lineStyle: { color: '#1e293b' } },
+        axisLine: { lineStyle: { color: isDark ? '#334155' : '#e2e8f0' } },
+        splitLine: { lineStyle: { color: isDark ? '#1e293b' : '#f1f5f9' } },
       },
       series: allSeries,
     };
-  }, [chartData, trafficUnit]);
+  }, [chartData, trafficUnit, resolvedTheme]);
 
   const qualityOption = useMemo(() => {
     if (!hasQuality || qualitySeries.length === 0) return null;
     return {
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(30, 41, 59, 0.98)',
-        borderColor: '#334155', borderWidth: 2,
-        textStyle: { color: '#f1f5f9', fontSize: 11 }, confine: true,
+        backgroundColor: isDark ? 'rgba(30, 41, 59, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+        borderColor: isDark ? '#334155' : '#e2e8f0', borderWidth: 2,
+        textStyle: { color: isDark ? '#f1f5f9' : '#1e293b', fontSize: 11 }, confine: true,
         formatter: (params) => {
           if (!params || params.length === 0) return '';
           let result = `<div style="font-weight:bold;margin-bottom:4px;border-bottom:1px solid #334155;padding-bottom:4px">${params[0].axisValue}</div>`;
@@ -313,7 +331,7 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
       },
       legend: {
         type: 'scroll', show: true, bottom: 0, left: 'center', width: '90%',
-        textStyle: { color: '#94a3b8', fontSize: 10 }, itemWidth: 12, itemHeight: 8,
+        textStyle: { color: isDark ? '#94a3b8' : '#64748b', fontSize: 10 }, itemWidth: 12, itemHeight: 8,
         pageIconColor: '#3b82f6', pageIconInactiveColor: '#475569',
         pageTextStyle: { color: '#94a3b8', fontSize: 10 },
       },
@@ -321,17 +339,17 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
       xAxis: {
         type: 'category', boundaryGap: true, data: chartData.timeLabels,
         axisLabel: { color: '#94a3b8', fontSize: 9 },
-        axisLine: { lineStyle: { color: '#334155' } },
+        axisLine: { lineStyle: { color: isDark ? '#334155' : '#e2e8f0' } },
       },
       yAxis: {
         type: 'value',
         axisLabel: { color: '#94a3b8', fontSize: 9, formatter: (v) => formatCount(v) },
-        axisLine: { lineStyle: { color: '#334155' } },
-        splitLine: { lineStyle: { color: '#1e293b' } },
+        axisLine: { lineStyle: { color: isDark ? '#334155' : '#e2e8f0' } },
+        splitLine: { lineStyle: { color: isDark ? '#1e293b' : '#f1f5f9' } },
       },
       series: qualitySeries,
     };
-  }, [hasQuality, qualitySeries, chartData.timeLabels]);
+  }, [hasQuality, qualitySeries, chartData.timeLabels, resolvedTheme]);
 
   return (
     <div className="port-traffic-chart">

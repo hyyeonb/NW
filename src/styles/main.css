@@ -12,10 +12,10 @@
     --primary-100: #dbeafe;
     --primary-200: #bfdbfe;
     --primary-300: #93c5fd;
-    --primary-400: #60a5fa;
-    --primary-500: #3b82f6;
-    --primary-600: #2563eb;
-    --primary-700: #1d4ed8;
+    --primary-400: #818cf8;
+    --primary-500: #6366f1;
+    --primary-600: #4f46e5;
+    --primary-700: #4338ca;
 
     /* Accent Colors */
     --accent-purple: #8b5cf6;
@@ -76,7 +76,7 @@ body::before {
     right: 0;
     bottom: 0;
     background:
-        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
         radial-gradient(ellipse 60% 40% at 80% 20%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
         radial-gradient(ellipse 50% 50% at 50% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
         linear-gradient(180deg, #0a0a0f 0%, #0f0f1a 50%, #0a0a0f 100%);
@@ -405,7 +405,7 @@ h2::after {
 }
 
 .dropdown-menu a:hover {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.1));
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.1));
     color: var(--text-primary);
 }
 
@@ -449,7 +449,7 @@ h2::after {
 }
 
 .profile-section:hover .profile-pic {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
 }
 
 .username {
@@ -623,7 +623,7 @@ textarea:focus {
     border-color: var(--primary-500);
     background: linear-gradient(135deg, rgba(15, 15, 25, 0.9) 0%, rgba(20, 20, 35, 0.8) 100%);
     box-shadow:
-        0 0 0 3px rgba(59, 130, 246, 0.15),
+        0 0 0 3px rgba(99, 102, 241, 0.15),
         0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
@@ -641,7 +641,7 @@ select option {
 
 select option:hover,
 select option:checked {
-    background: #3b82f6;
+    background: #6366f1;
     color: #ffffff;
 }
 
@@ -696,11 +696,11 @@ select:disabled {
 .btn-primary {
     background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
     color: #ffffff;
-    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
 }
 
 .btn-primary:hover {
-    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
 }
 
 .btn-secondary {
@@ -768,7 +768,7 @@ select:disabled {
 
 .device-table thead,
 .child-groups-table thead {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
 }
 
 .device-table th,
@@ -792,7 +792,7 @@ select:disabled {
 
 .device-table tbody tr:hover,
 .child-groups-table tbody tr:hover {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.04) 100%);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.04) 100%);
 }
 
 .device-table tbody tr.empty-state td,
@@ -825,7 +825,7 @@ select:disabled {
 .device-table td input:focus,
 .device-table td select:focus {
     border-color: var(--primary-500);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
 }
 
 /* Delete Button in Table */
@@ -895,8 +895,8 @@ select:disabled {
 }
 
 .pagination button:hover:not(:disabled) {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%);
-    border-color: rgba(59, 130, 246, 0.3);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%);
+    border-color: rgba(99, 102, 241, 0.3);
     color: var(--text-primary);
 }
 
@@ -1019,12 +1019,12 @@ select:disabled {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(139, 92, 246, 0.3));
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.4), rgba(139, 92, 246, 0.3));
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.6), rgba(139, 92, 246, 0.5));
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.6), rgba(139, 92, 246, 0.5));
 }
 
 /* ==================
@@ -1158,7 +1158,7 @@ select:disabled {
 
 /* Glow Effects */
 .glow-blue {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
 }
 
 .glow-purple {
@@ -1243,12 +1243,12 @@ select:disabled {
     font-size: 12px;
     transition: all var(--transition-normal);
     z-index: 100;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
 }
 
 .sidebar-toggle:hover {
     transform: translateY(-50%) scale(1.1);
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
 }
 
 /* Sidebar Logo */
@@ -1280,7 +1280,7 @@ select:disabled {
     justify-content: center;
     font-size: 20px;
     color: #ffffff;
-    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
     flex-shrink: 0;
 }
 
@@ -1664,7 +1664,7 @@ select:disabled {
     border-radius: 50%;
     flex-shrink: 0;
     object-fit: cover;
-    border: 2px solid rgba(59, 130, 246, 0.5);
+    border: 2px solid rgba(99, 102, 241, 0.5);
 }
 
 .profile-avatar.default {
@@ -1973,4 +1973,44 @@ table td[title]:hover::after {
     opacity: 1;
     visibility: visible;
     transition-delay: 0.5s;
+}
+
+/* =============================================
+   Light Theme Overrides (h1 gradient & select option)
+   ============================================= */
+
+/* --- h1 gradient text --- */
+[data-theme="light"] h1 {
+    background: linear-gradient(135deg, #1d1d1f 0%, #8e8e93 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* --- Select dropdown options --- */
+[data-theme="light"] select option {
+    background: #ffffff;
+    color: #3a3a3c;
+}
+
+[data-theme="light"] select option:hover,
+[data-theme="light"] select option:checked {
+    background: #4f46e5;
+    color: #ffffff;
+}
+
+/* --- Input focus state --- */
+[data-theme="light"] input:focus,
+[data-theme="light"] select:focus,
+[data-theme="light"] textarea:focus {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow:
+        0 0 0 3px rgba(79, 70, 229, 0.12),
+        0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* --- Disabled input --- */
+[data-theme="light"] input:disabled,
+[data-theme="light"] select:disabled {
+    background: rgba(0, 0, 0, 0.03);
 }

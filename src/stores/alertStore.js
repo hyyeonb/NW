@@ -26,6 +26,63 @@ export const useAlertStore = create((set, get) => ({
   // 알림 음소거 상태
   isMuted: false,
 
+  // 접근 가능 장비 ID (null = 전체, [] = 없음)
+  accessibleDeviceIds: null,
+  setAccessibleDeviceIds: (ids) => set({ accessibleDeviceIds: ids }),
+
+  // 알림 환경설정
+  notificationPrefs: null,
+  setNotificationPrefs: (prefs) => set({ notificationPrefs: prefs }),
+
+  // 알림 필터 확인 (유형 AND 등급 모두 ON이어야 true)
+  isAlertEnabled: (alertType, severity) => {
+    const { notificationPrefs } = get();
+    if (!notificationPrefs) return true;
+
+    // 1. 유형 체크
+    const typeMap = {
+      SNMP_FAIL: 'NOTIFY_SNMP', SNMP_CLEAR: 'NOTIFY_SNMP',
+      PING_FAIL: 'NOTIFY_ICMP', PING_CLEAR: 'NOTIFY_ICMP',
+      PORT_DOWN: 'NOTIFY_PORT', PORT_UP: 'NOTIFY_PORT',
+      CPU_THRESHOLD: 'NOTIFY_CPU_MEM', MEM_THRESHOLD: 'NOTIFY_CPU_MEM', THRESHOLD_CLEAR: 'NOTIFY_CPU_MEM',
+      TRAFFIC_THRESHOLD: 'NOTIFY_TRAFFIC', TRAFFIC_CLEAR: 'NOTIFY_TRAFFIC',
+      URGENT: 'NOTIFY_URGENT',
+    };
+    const typePref = typeMap[alertType];
+    if (typePref && notificationPrefs[typePref] === false) return false;
+
+    // 2. 등급 체크
+    const sevMap = {
+      CRITICAL: 'NOTIFY_CRITICAL', C: 'NOTIFY_CRITICAL',
+      MAJOR: 'NOTIFY_MAJOR', M: 'NOTIFY_MAJOR',
+      MINOR: 'NOTIFY_MINOR', N: 'NOTIFY_MINOR',
+      WARNING: 'NOTIFY_WARNING', W: 'NOTIFY_WARNING',
+    };
+    const sevPref = sevMap[severity];
+    if (sevPref && notificationPrefs[sevPref] === false) return false;
+
+    return true;
+  },
+
+  // 방해금지 시간대 여부
+  isInQuietHours: () => {
+    const { notificationPrefs } = get();
+    if (!notificationPrefs?.QUIET_ENABLED) return false;
+    const now = new Date();
+    const h = now.getHours();
+    const m = now.getMinutes();
+    const current = h * 60 + m;
+    const parse = (t) => {
+      if (!t) return 0;
+      const [hh, mm] = t.split(':').map(Number);
+      return hh * 60 + (mm || 0);
+    };
+    const start = parse(notificationPrefs.QUIET_START_TIME);
+    const end = parse(notificationPrefs.QUIET_END_TIME);
+    if (start <= end) return current >= start && current <= end;
+    return current >= start || current <= end;
+  },
+
   // 새 알림 추가
   addAlert: (alert) =>
     set((state) => {

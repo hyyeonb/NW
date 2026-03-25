@@ -155,7 +155,7 @@
 /* Sidebar Scrollbar */
 .sidebar-menu {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    scrollbar-color: var(--theme-scrollbar-thumb) transparent;
 }
 
 .sidebar-menu::-webkit-scrollbar {
@@ -167,12 +167,12 @@
 }
 
 .sidebar-menu::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15) !important;
+    background: var(--theme-scrollbar-thumb) !important;
     border-radius: 3px;
 }
 
 .sidebar-menu::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.25) !important;
+    background: var(--theme-scrollbar-thumb-hover) !important;
 }
 
 .sidebar-menu ul {
@@ -379,7 +379,7 @@
     border-radius: var(--radius-full);
     flex-shrink: 0;
     object-fit: cover;
-    border: 2px solid rgba(59, 130, 246, 0.5);
+    border: 2px solid rgba(99, 102, 241, 0.5);
 }
 
 .profile-avatar.default {
@@ -540,8 +540,8 @@
 }
 
 .profile-dropdown-item.logout:hover {
-    background: rgba(248, 113, 113, 0.15);
-    color: #fca5a5;
+    background: var(--theme-danger-bg, rgba(248, 113, 113, 0.15));
+    color: var(--theme-danger-text, #fca5a5);
 }
 
 .profile-dropdown-item i {
@@ -620,6 +620,58 @@
     .app-sidebar.expanded {
         transform: translateX(0);
     }
+}
+
+/* ==================
+   Light Mode - 사이드바 깊이 분리
+   ================== */
+[data-theme="light"] .app-sidebar {
+    background: #ffffff;
+    border-right: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.06), 1px 0 6px rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="light"] .app-sidebar::before {
+    background: none;
+}
+
+[data-theme="light"] .menu-link::before {
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.12), rgba(124, 58, 237, 0.08));
+}
+
+[data-theme="light"] .menu-link:hover::before,
+[data-theme="light"] .menu-link.active::before {
+    opacity: 1;
+}
+
+[data-theme="light"] .menu-link.active::after {
+    background: linear-gradient(180deg, #4f46e5, #7c3aed);
+}
+
+[data-theme="light"] .submenu-link:hover,
+[data-theme="light"] .submenu-link.active {
+    background: rgba(79, 70, 229, 0.06);
+}
+
+[data-theme="light"] .submenu-link:hover::before,
+[data-theme="light"] .submenu-link.active::before {
+    background: #4f46e5;
+    box-shadow: 0 0 6px rgba(79, 70, 229, 0.4);
+}
+
+[data-theme="light"] .profile-dropdown {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .profile-dropdown-item.logout {
+    color: #dc2626;
+}
+
+[data-theme="light"] .profile-dropdown-item.logout:hover {
+    background: rgba(220, 38, 38, 0.06);
+    color: #b91c1c;
 }
 
 /* ==================

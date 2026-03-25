@@ -1,60 +1,67 @@
 import { useState, useRef, useEffect, memo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuthStore, useThemeStore } from '../stores';
+import { useAuthStore, useThemeStore, usePermissionStore } from '../stores';
 
-// 메뉴 구조 — 변하지 않으므로 모듈 레벨 상수
+// 메뉴 구조 — pageCode 추가
 const MENU_ITEMS = [
   {
     icon: 'bi-speedometer2',
     label: '대시보드',
     children: [
-      { label: '통합 대시보드', path: '/dashboard', icon: 'bi-grid-1x2' },
-      { label: '토폴로지', path: '/topology', icon: 'bi-diagram-3' },
-      { label: '사용자 토폴로지', path: '/user-topology', icon: 'bi-person-workspace' },
+      { label: '통합 대시보드', path: '/dashboard', icon: 'bi-grid-1x2', pageCode: 'dashboard' },
+      { label: '토폴로지', path: '/topology', icon: 'bi-diagram-3', pageCode: 'topology' },
+      { label: '사용자 토폴로지', path: '/user-topology', icon: 'bi-person-workspace', pageCode: 'user_topology' },
     ],
   },
   {
     icon: 'bi-activity',
     label: '성능감시',
     children: [
-      { label: '실시간 성능감시', path: '/watch/realtime', icon: 'bi-speedometer' },
-      { label: '성능 통계', path: '/perf/stats', icon: 'bi-bar-chart-line' },
+      { label: '실시간 성능감시', path: '/watch/realtime', icon: 'bi-speedometer', pageCode: 'watch_realtime' },
+      { label: '성능 통계', path: '/perf/stats', icon: 'bi-bar-chart-line', pageCode: 'perf_stats' },
     ],
   },
   {
     icon: 'bi-exclamation-triangle',
     label: '장애감시',
     children: [
-      { label: '실시간 장애감시', path: '/fault/realtime', icon: 'bi-broadcast' },
-      { label: '장애이력', path: '/fault/history', icon: 'bi-clock-history' },
-      { label: '장애통계', path: '/fault/stats', icon: 'bi-bar-chart-line' },
+      { label: '실시간 장애감시', path: '/fault/realtime', icon: 'bi-broadcast', pageCode: 'fault_realtime' },
+      { label: '장애이력', path: '/fault/history', icon: 'bi-clock-history', pageCode: 'fault_history' },
+      { label: '장애통계', path: '/fault/stats', icon: 'bi-bar-chart-line', pageCode: 'fault_stats' },
     ],
   },
   {
     icon: 'bi-gear',
     label: '종합분석',
     children: [
-      { label: '그룹 관리', path: '/mgmt/groups', icon: 'bi-folder' },
-      { label: '자산 관리', path: '/mgmt/assets', icon: 'bi-hdd-network' },
-      { label: '자산 Config 관리', path: '/mgmt/asset-config', icon: 'bi-sliders' },
-      { label: '신규 자산 관리', path: '/mgmt/new-assets', icon: 'bi-plus-circle' },
-      { label: '모델 관리', path: '/mgmt/models', icon: 'bi-cpu' },
-      { label: 'SSH 접속 이력', path: '/mgmt/ssh-sessions', icon: 'bi-terminal' },
+      { label: '그룹 관리', path: '/mgmt/groups', icon: 'bi-folder', pageCode: 'group_mgmt' },
+      { label: '자산 관리', path: '/mgmt/assets', icon: 'bi-hdd-network', pageCode: 'asset_mgmt' },
+      { label: '자산 Config 관리', path: '/mgmt/asset-config', icon: 'bi-sliders', pageCode: 'asset_config' },
+      { label: '신규 자산 관리', path: '/mgmt/new-assets', icon: 'bi-plus-circle', pageCode: 'new_asset_mgmt' },
+      { label: '모델 관리', path: '/mgmt/models', icon: 'bi-cpu', pageCode: 'model_mgmt' },
+    ],
+  },
+  {
+    icon: 'bi-clock-history',
+    label: '이력 관리',
+    children: [
+      { label: '로그인 이력', path: '/history/login', icon: 'bi-box-arrow-in-right', pageCode: 'login_history' },
+      { label: 'SSH 접속 이력', path: '/history/ssh-sessions', icon: 'bi-terminal', pageCode: 'ssh_sessions' },
     ],
   },
   {
     icon: 'bi-tools',
     label: '네트워크 도구',
     children: [
-      { label: 'Traceroute', path: '/tools/traceroute', icon: 'bi-signpost-split' },
+      { label: 'Traceroute', path: '/tools/traceroute', icon: 'bi-signpost-split', pageCode: 'traceroute' },
     ],
   },
   {
     icon: 'bi-clipboard2-data',
     label: '게시판',
     children: [
-      { label: '자료실', path: '/board/files', icon: 'bi-folder2-open' },
-      { label: '공지사항', path: '/board/notices', icon: 'bi-megaphone' },
+      { label: '자료실', path: '/board/files', icon: 'bi-folder2-open', pageCode: 'board_files' },
+      { label: '공지사항', path: '/board/notices', icon: 'bi-megaphone', pageCode: 'board_notices' },
     ],
   },
   {
@@ -64,6 +71,8 @@ const MENU_ITEMS = [
       { label: '테마 설정', icon: 'bi-palette', isThemeToggle: true },
       { label: '계정 설정', path: '/settings/account', icon: 'bi-person-gear' },
       { label: '알림 설정', path: '/settings/notifications', icon: 'bi-bell' },
+      { label: '사용자 관리', path: '/settings/admin', icon: 'bi-shield-lock', pageCode: 'system_admin' },
+      { label: '임계치 관리', path: '/settings/threshold', icon: 'bi-speedometer2', pageCode: 'system_admin' },
     ],
   },
 ];
@@ -72,16 +81,15 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
   const { user, logout } = useAuthStore();
   const { resolvedTheme, toggleTheme, initTheme } = useThemeStore();
+  const { canView, isAdmin } = usePermissionStore();
   const [expandedMenus, setExpandedMenus] = useState({});
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileRef = useRef(null);
 
-  // 테마 초기화
   useEffect(() => {
     initTheme();
   }, [initTheme]);
 
-  // 프로필 메뉴 외부 클릭 시 닫기
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
@@ -104,12 +112,10 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
     }));
   };
 
-  // 접힌 상태에서 메뉴 클릭 시 사이드바 열기
   const handleMenuClick = (index, hasChildren) => {
     if (collapsed) {
-      onToggle(); // 사이드바 열기
+      onToggle();
       if (hasChildren) {
-        // 약간의 딜레이 후 서브메뉴도 열기
         setTimeout(() => {
           setExpandedMenus((prev) => ({ ...prev, [index]: true }));
         }, 100);
@@ -122,14 +128,24 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
   const isActive = (path) => location.pathname === path;
   const isChildActive = (children) => children?.some((c) => location.pathname === c.path);
 
+  // 권한 기반 메뉴 필터링
+  const filterChildren = (children) => {
+    if (!children) return [];
+    return children.filter((child) => {
+      // adminOnly 메뉴는 isAdmin일 때만 표시
+      if (child.adminOnly && !isAdmin) return false;
+      // pageCode가 있으면 canView 체크
+      if (child.pageCode && !isAdmin && !canView(child.pageCode)) return false;
+      return true;
+    });
+  };
+
   return (
     <aside className={`app-sidebar ${collapsed ? 'collapsed' : ''}`}>
-      {/* 토글 버튼 */}
       <button className="sidebar-toggle" onClick={onToggle} title={collapsed ? '메뉴 펼치기' : '메뉴 접기'}>
         <i className={`bi ${collapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`}></i>
       </button>
 
-      {/* 로고 */}
       <div className="sidebar-logo">
         <Link to="/dashboard">
           <img src="/logo-single.svg" alt="Logo" className="logo-single logo-animated" />
@@ -139,11 +155,15 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
         </Link>
       </div>
 
-      {/* 메뉴 */}
       <nav className="sidebar-menu">
         <ul>
-          {MENU_ITEMS.map((item, index) => (
-            <li key={index} className={`menu-item ${item.children ? 'has-children' : ''} ${isChildActive(item.children) ? 'child-active' : ''}`}>
+          {MENU_ITEMS.map((item, index) => {
+            const visibleChildren = filterChildren(item.children);
+            // 하위 메뉴가 모두 숨겨지면 상위 메뉴도 숨김
+            if (item.children && visibleChildren.length === 0) return null;
+
+            return (
+            <li key={index} className={`menu-item ${visibleChildren.length > 0 ? 'has-children' : ''} ${isChildActive(visibleChildren) ? 'child-active' : ''}`}>
               {item.path ? (
                 <Link
                   to={item.path}
@@ -156,7 +176,7 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
               ) : (
                 <>
                   <div
-                    className={`menu-link ${isChildActive(item.children) ? 'active' : ''}`}
+                    className={`menu-link ${isChildActive(visibleChildren) ? 'active' : ''}`}
                     onClick={() => handleMenuClick(index, true)}
                     title={collapsed ? item.label : ''}
                   >
@@ -169,13 +189,11 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
                     )}
                   </div>
 
-                  {/* 서브메뉴 */}
-                  {item.children && !collapsed && (
+                  {visibleChildren.length > 0 && !collapsed && (
                     <ul className={`submenu ${expandedMenus[index] ? 'expanded' : ''}`}>
-                      {item.children.map((child, childIndex) => (
+                      {visibleChildren.map((child, childIndex) => (
                         <li key={childIndex}>
                           {child.isThemeToggle ? (
-                            // 테마 토글 항목
                             <div
                               className="submenu-link theme-toggle-item"
                               onClick={toggleTheme}
@@ -188,7 +206,6 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
                               </div>
                             </div>
                           ) : (
-                            // 일반 링크 항목
                             <Link
                               to={child.path}
                               className={`submenu-link ${isActive(child.path) ? 'active' : ''}`}
@@ -201,15 +218,14 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
                       ))}
                     </ul>
                   )}
-
                 </>
               )}
             </li>
-          ))}
+          );
+          })}
         </ul>
       </nav>
 
-      {/* 사용자 프로필 영역 */}
       <div className="sidebar-profile" ref={profileRef}>
         <div
           className={`profile-trigger ${showProfileMenu ? 'active' : ''}`}
@@ -217,11 +233,7 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
           title={collapsed ? user?.NAME || '사용자' : ''}
         >
           {user?.PROFILE_IMAGE ? (
-            <img
-              src={user.PROFILE_IMAGE}
-              alt="프로필"
-              className="profile-avatar"
-            />
+            <img src={user.PROFILE_IMAGE} alt="프로필" className="profile-avatar" />
           ) : (
             <div className="profile-avatar default">
               {user?.NAME?.charAt(0) || 'U'}
@@ -238,7 +250,6 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
           )}
         </div>
 
-        {/* 프로필 드롭다운 메뉴 */}
         {showProfileMenu && (
           <div className="profile-dropdown">
             <div className="profile-dropdown-header">

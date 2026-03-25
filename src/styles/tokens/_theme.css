@@ -140,6 +140,20 @@
     --theme-widget-bg: rgba(12, 12, 20, 0.75);
     --theme-widget-border: rgba(255, 255, 255, 0.05);
     --theme-widget-header-bg: rgba(15, 15, 25, 0.5);
+
+    /* 액센트 그라데이션 */
+    --theme-accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    --theme-accent-gradient-hover: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
+    --theme-accent-hover: #4f46e5;
+    --theme-accent-darker: #4338ca;
+    --theme-accent-secondary: #8b5cf6;
+
+    /* 글래스 그라데이션 배경 (레거시 CSS 대체용) */
+    --theme-glass-bg-dark: rgba(15, 23, 42, 0.8);
+    --theme-glass-bg-medium: rgba(30, 41, 59, 0.6);
+    --theme-glass-bg-input: rgba(30, 41, 59, 0.5);
+    --theme-glass-bg-input-hover: rgba(30, 41, 59, 0.7);
+    --theme-glass-bg-input-focus: rgba(30, 41, 59, 0.8);
 }
 
 /* 라이트 모드 - 깔끔하고 세련된 UI */

@@ -5,3 +5,5 @@ export { default as GroupTree } from './GroupTree';
 export { default as GlobalTooltip } from './GlobalTooltip';
 export { default as PortTrafficChart } from './PortTrafficChart';
 export { default as ExportModal } from './ExportModal';
+export { default as PermissionGuard } from './PermissionGuard';
+export { default as EditGuard } from './EditGuard';

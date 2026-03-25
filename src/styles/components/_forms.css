@@ -92,6 +92,116 @@ select option {
     padding: 10px 12px;
 }
 
+/* Date / Time Inputs */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+    width: auto;
+    padding: var(--spacing-input-sm-y) var(--spacing-input-sm-x);
+    font-size: var(--font-size-input-sm);
+    color: var(--theme-text-primary);
+    background: var(--theme-bg-input);
+    border: 1px solid var(--theme-border-default);
+    border-radius: var(--radius-lg);
+    outline: none;
+    transition: all var(--transition-normal);
+    color-scheme: dark;
+}
+
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="datetime-local"]:focus {
+    border-color: var(--theme-accent-primary);
+    box-shadow: 0 0 0 3px var(--theme-accent-bg);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.7);
+    cursor: pointer;
+}
+
+[data-theme="light"] input[type="date"],
+[data-theme="light"] input[type="time"],
+[data-theme="light"] input[type="datetime-local"] {
+    color-scheme: light;
+}
+
+[data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="light"] input[type="time"]::-webkit-calendar-picker-indicator,
+[data-theme="light"] input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: none;
+}
+
+/* ===== Toggle Switch (공통) ===== */
+.toggle-switch {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+    display: inline-block;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-switch-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--theme-border-default, rgba(255, 255, 255, 0.1));
+    border-radius: 22px;
+    transition: all 0.25s;
+}
+
+.toggle-switch-slider::before {
+    content: '';
+    position: absolute;
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.25s;
+}
+
+.toggle-switch input:checked + .toggle-switch-slider {
+    background: var(--theme-accent-primary, #6366f1);
+}
+
+.toggle-switch input:checked + .toggle-switch-slider::before {
+    transform: translateX(18px);
+}
+
+/* ===== Scrollable List (공통) ===== */
+.scrollable-list {
+    max-height: 280px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.scrollable-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.scrollable-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scrollable-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.scrollable-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 select option:hover,
 select option:checked {
     background: var(--theme-accent-primary);
