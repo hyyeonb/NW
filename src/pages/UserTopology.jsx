@@ -234,15 +234,12 @@ export default function UserTopology() {
   }, [deviceErrorMap, groupErrorMap, groupTree]);
 
   // 장애 펄스 애니메이션 - 장애 노드가 있을 때만 주기적 re-render
+  const [pulseKey, setPulseKey] = useState(0);
   useEffect(() => {
     const hasFaults = deviceErrorMap.size > 0 || groupErrorMap.size > 0;
     if (!hasFaults) return;
-    const timer = setInterval(() => {
-      if (graphRef.current) {
-        graphRef.current.d3ReheatSimulation();
-      }
-    }, 50);
-    return () => clearInterval(timer);
+    const interval = setInterval(() => setPulseKey(k => k + 1), 80);
+    return () => clearInterval(interval);
   }, [deviceErrorMap, groupErrorMap]);
 
   useEffect(() => { selectedNodesRef.current = selectedNodes; }, [selectedNodes]);
@@ -710,10 +707,55 @@ export default function UserTopology() {
       dragEndTimeRef.current = Date.now();
     };
 
+    // 커스텀 클릭 핸들러: force-graph 내부의 1px 드래그 판정 우회
+    let pointerDownPos = null;
+    let pointerDownTime = 0;
+    const CLICK_THRESHOLD = 6;
+    const CLICK_TIME_LIMIT = 500;
+
+    const handlePointerDown = (e) => {
+      if (e.button !== 0) return;
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+      pointerDownTime = Date.now();
+    };
+
+    const handlePointerUp = (e) => {
+      if (e.button !== 0 || !pointerDownPos) return;
+      const pdx = Math.abs(e.clientX - pointerDownPos.x);
+      const pdy = Math.abs(e.clientY - pointerDownPos.y);
+      const elapsed = Date.now() - pointerDownTime;
+      pointerDownPos = null;
+
+      if (pdx > CLICK_THRESHOLD || pdy > CLICK_THRESHOLD || elapsed > CLICK_TIME_LIMIT) return;
+      if (Date.now() - lastNodeClickTimeRef.current < 100) return;
+
+      if (!graphRef.current) return;
+      const rect = canvas.getBoundingClientRect();
+      const graphCoords = graphRef.current.screen2GraphCoords(e.clientX - rect.left, e.clientY - rect.top);
+
+      const clickedNode = data.nodes.find(n => {
+        const ndx = (n.x || 0) - graphCoords.x;
+        const ndy = (n.y || 0) - graphCoords.y;
+        const isGroup = n.nodeType === 'group' || n.type === 'group' || String(n.id).startsWith('G');
+        const hitSize = (isGroup ? NODE_SIZE * 1.2 : NODE_SIZE) / 2 + 6;
+        return Math.sqrt(ndx * ndx + ndy * ndy) < hitSize;
+      });
+
+      if (clickedNode) {
+        handleNodeClick(clickedNode, e);
+      } else {
+        handleBackgroundClick();
+      }
+    };
+
+    canvas.addEventListener('pointerdown', handlePointerDown, true);
+    canvas.addEventListener('pointerup', handlePointerUp, true);
     canvas.addEventListener('mousedown', handleCanvasMouseDown, true);
     canvas.addEventListener('mouseup', handleCanvasMouseUp, true);
     document.addEventListener('mouseup', handleCanvasMouseUp, true);
     return () => {
+      canvas.removeEventListener('pointerdown', handlePointerDown, true);
+      canvas.removeEventListener('pointerup', handlePointerUp, true);
       canvas.removeEventListener('mousedown', handleCanvasMouseDown, true);
       canvas.removeEventListener('mouseup', handleCanvasMouseUp, true);
       document.removeEventListener('mouseup', handleCanvasMouseUp, true);
@@ -1125,7 +1167,7 @@ export default function UserTopology() {
       }
     }
     const fc = errorLevel ? FAULT_COLORS[errorLevel] : null;
-    const pulse = fc ? 0.6 + 0.4 * Math.sin(Date.now() / 500) : 0;
+    const pulse = fc ? 0.6 + 0.4 * Math.sin(Date.now() / 400) : 0;
 
     // 다중 선택된 노드 표시
     if (isMultiSelected && isEditMode) {
@@ -1276,6 +1318,21 @@ export default function UserTopology() {
         ctx.lineWidth = 1.5 / globalScale;
       }
       ctx.stroke();
+
+      // 장애 노드 중심부 펄스 오버레이
+      if (fc) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(drawX - half, drawY - half, size, size, radius);
+        ctx.clip();
+        const pulseGrad = ctx.createRadialGradient(drawX, drawY, 0, drawX, drawY, half);
+        pulseGrad.addColorStop(0, `rgba(${fc.r}, ${fc.g}, ${fc.b}, ${0.4 * pulse})`);
+        pulseGrad.addColorStop(0.6, `rgba(${fc.r}, ${fc.g}, ${fc.b}, ${0.15 * pulse})`);
+        pulseGrad.addColorStop(1, `rgba(${fc.r}, ${fc.g}, ${fc.b}, 0)`);
+        ctx.fillStyle = pulseGrad;
+        ctx.fillRect(drawX - half, drawY - half, size, size);
+        ctx.restore();
+      }
     } else {
       // 장비 노드 그리기 (글래스모피즘)
       const deviceIconData = node.iconData;
@@ -1397,6 +1454,21 @@ export default function UserTopology() {
         ctx.lineWidth = 1.5 / globalScale;
       }
       ctx.stroke();
+
+      // 장애 노드 중심부 펄스 오버레이 (장비 노드)
+      if (fc) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(drawX, drawY, half, 0, 2 * Math.PI);
+        ctx.clip();
+        const pulseGrad = ctx.createRadialGradient(drawX, drawY, 0, drawX, drawY, half);
+        pulseGrad.addColorStop(0, `rgba(${fc.r}, ${fc.g}, ${fc.b}, ${0.4 * pulse})`);
+        pulseGrad.addColorStop(0.6, `rgba(${fc.r}, ${fc.g}, ${fc.b}, ${0.15 * pulse})`);
+        pulseGrad.addColorStop(1, `rgba(${fc.r}, ${fc.g}, ${fc.b}, 0)`);
+        ctx.fillStyle = pulseGrad;
+        ctx.fill();
+        ctx.restore();
+      }
     }
 
     // 라벨
@@ -1585,10 +1657,13 @@ export default function UserTopology() {
             nodeCanvasObject={paintNode}
             nodeCanvasObjectMode={() => 'replace'}
             nodePointerAreaPaint={(node, color, ctx) => {
-              const half = NODE_SIZE / 2;
+              const isGroupNode = node.nodeType === 'group' || node.type === 'group';
+              const size = isGroupNode ? NODE_SIZE * 1.2 : NODE_SIZE;
+              const half = size / 2;
+              const labelPadding = 14;
               ctx.fillStyle = color;
               ctx.beginPath();
-              ctx.rect(node.x - half, node.y - half, NODE_SIZE, NODE_SIZE);
+              ctx.rect(node.x - half - 4, node.y - half - 4, size + 8, size + 8 + labelPadding);
               ctx.fill();
             }}
             linkCanvasObject={paintLink}

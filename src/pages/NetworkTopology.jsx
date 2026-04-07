@@ -72,15 +72,14 @@ export default function NetworkTopology() {
   }, [deviceErrorMap, groupErrorMap, groupTree]);
 
   // 장애 펄스 애니메이션 - 장애 노드가 있을 때만 주기적 re-render
+  const [pulseKey, setPulseKey] = useState(0);
   useEffect(() => {
     const hasFaults = deviceErrorMap.size > 0 || groupErrorMap.size > 0;
     if (!hasFaults) return;
-    const timer = setInterval(() => {
-      if (graphRef.current) {
-        graphRef.current.d3ReheatSimulation();
-      }
-    }, 50);
-    return () => clearInterval(timer);
+    // d3ReheatSimulation 대신 React 상태 갱신으로 캔버스 다시 그리기
+    // 물리 시뮬레이션을 건드리지 않아 클릭 감지에 영향 없음
+    const interval = setInterval(() => setPulseKey(k => k + 1), 80);
+    return () => clearInterval(interval);
   }, [deviceErrorMap, groupErrorMap]);
 
   const [data, setData] = useState({ nodes: [], links: [] });
@@ -793,12 +792,65 @@ export default function NetworkTopology() {
       dragEndTimeRef.current = Date.now();
     };
 
+    // 커스텀 클릭 핸들러: force-graph 내부의 1px 드래그 판정 우회
+    // force-graph는 마우스가 1px만 움직여도 드래그로 판정하여 onNodeClick이 발생하지 않음
+    let pointerDownPos = null;
+    let pointerDownTime = 0;
+    const CLICK_THRESHOLD = 6; // 6px 이내 움직임은 클릭으로 판정
+    const CLICK_TIME_LIMIT = 500; // 500ms 이내만 클릭으로 판정
+
+    const handlePointerDown = (e) => {
+      if (e.button !== 0) return;
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+      pointerDownTime = Date.now();
+    };
+
+    const handlePointerUp = (e) => {
+      if (e.button !== 0 || !pointerDownPos) return;
+      const dx = Math.abs(e.clientX - pointerDownPos.x);
+      const dy = Math.abs(e.clientY - pointerDownPos.y);
+      const elapsed = Date.now() - pointerDownTime;
+      pointerDownPos = null;
+
+      // 움직임이 임계값 이내이고 시간도 적당하면 클릭으로 판정
+      if (dx > CLICK_THRESHOLD || dy > CLICK_THRESHOLD || elapsed > CLICK_TIME_LIMIT) return;
+
+      // force-graph의 onNodeClick이 이미 처리했으면 스킵
+      if (Date.now() - lastNodeClickTimeRef.current < 100) return;
+
+      if (!graphRef.current) return;
+      const rect = canvas.getBoundingClientRect();
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
+      const graphCoords = graphRef.current.screen2GraphCoords(screenX, screenY);
+
+      // 노드 찾기
+      const clickedNode = data.nodes.find(node => {
+        const ndx = (node.x || 0) - graphCoords.x;
+        const ndy = (node.y || 0) - graphCoords.y;
+        const isGroup = node.nodeType === 'group' || node.type === 'group';
+        const hitSize = (isGroup ? NODE_SIZE * 1.2 : NODE_SIZE) / 2 + 6;
+        return Math.sqrt(ndx * ndx + ndy * ndy) < hitSize;
+      });
+
+      if (clickedNode) {
+        handleNodeClick(clickedNode);
+      } else {
+        // 배경 클릭
+        handleBackgroundClick();
+      }
+    };
+
+    canvas.addEventListener('pointerdown', handlePointerDown, true);
+    canvas.addEventListener('pointerup', handlePointerUp, true);
     canvas.addEventListener('mousedown', handleCanvasMouseDown, true);
     canvas.addEventListener('mousemove', handleCanvasMouseMove, true);
     canvas.addEventListener('mouseup', handleCanvasMouseUp, true);
     document.addEventListener('mouseup', handleCanvasMouseUp, true);
 
     return () => {
+      canvas.removeEventListener('pointerdown', handlePointerDown, true);
+      canvas.removeEventListener('pointerup', handlePointerUp, true);
       canvas.removeEventListener('mousedown', handleCanvasMouseDown, true);
       canvas.removeEventListener('mousemove', handleCanvasMouseMove, true);
       canvas.removeEventListener('mouseup', handleCanvasMouseUp, true);
@@ -1010,6 +1062,13 @@ export default function NetworkTopology() {
     document.addEventListener('mouseup', handleGlobalMouseUp);
   };
 
+
+  // 배경 클릭 핸들러
+  const handleBackgroundClick = useCallback(() => {
+    setSelectedNode(null);
+    setSelectedLink(null);
+    setSelectedNodes(new Set());
+  }, []);
 
   // 노드 클릭 -> 그룹 노드는 해당 그룹 토폴로지로 이동, 장비 노드는 상세 모달 표시
   const handleNodeClick = (node) => {
@@ -1762,7 +1821,7 @@ export default function NetworkTopology() {
       }
     }
     const fc = errorLevel ? FAULT_COLORS[errorLevel] : null;
-    const pulse = fc ? 0.6 + 0.4 * Math.sin(Date.now() / 500) : 0;
+    const pulse = fc ? 0.6 + 0.4 * Math.sin(Date.now() / 400) : 0;
 
     // 다중 선택된 노드 표시 (초록색 테두리)
     if (isMultiSelected && isEditMode) {
@@ -1926,6 +1985,21 @@ export default function NetworkTopology() {
         ctx.lineWidth = 1.5 / globalScale;
       }
       ctx.stroke();
+
+      // 장애 노드 중심부 펄스 오버레이
+      if (fc) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(drawX - half, drawY - half, size, size, radius);
+        ctx.clip();
+        const pulseGrad = ctx.createRadialGradient(drawX, drawY, 0, drawX, drawY, half);
+        pulseGrad.addColorStop(0, `rgba(${fc.r}, ${fc.g}, ${fc.b}, ${0.4 * pulse})`);
+        pulseGrad.addColorStop(0.6, `rgba(${fc.r}, ${fc.g}, ${fc.b}, ${0.15 * pulse})`);
+        pulseGrad.addColorStop(1, `rgba(${fc.r}, ${fc.g}, ${fc.b}, 0)`);
+        ctx.fillStyle = pulseGrad;
+        ctx.fillRect(drawX - half, drawY - half, size, size);
+        ctx.restore();
+      }
     } else {
       // 장비 노드 그리기 (글래스모피즘)
       const deviceIconData = node.iconData || node.ICON_DATA;
@@ -2040,6 +2114,21 @@ export default function NetworkTopology() {
         ctx.lineWidth = 1.5 / globalScale;
       }
       ctx.stroke();
+
+      // 장애 노드 중심부 펄스 오버레이
+      if (fc) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(drawX, drawY, half, 0, 2 * Math.PI);
+        ctx.clip();
+        const pulseGrad = ctx.createRadialGradient(drawX, drawY, 0, drawX, drawY, half);
+        pulseGrad.addColorStop(0, `rgba(${fc.r}, ${fc.g}, ${fc.b}, ${0.4 * pulse})`);
+        pulseGrad.addColorStop(0.6, `rgba(${fc.r}, ${fc.g}, ${fc.b}, ${0.15 * pulse})`);
+        pulseGrad.addColorStop(1, `rgba(${fc.r}, ${fc.g}, ${fc.b}, 0)`);
+        ctx.fillStyle = pulseGrad;
+        ctx.fill();
+        ctx.restore();
+      }
     }
 
     // 라벨
@@ -2058,11 +2147,13 @@ export default function NetworkTopology() {
 
   // 노드 클릭 영역
   const paintNodePointerArea = (node, color, ctx) => {
-    const size = NODE_SIZE;
+    const isGroupNode = node.nodeType === 'group' || node.type === 'group';
+    const size = isGroupNode ? NODE_SIZE * 1.2 : NODE_SIZE;
     const half = size / 2;
+    const labelPadding = 14; // 라벨 텍스트 영역 포함
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.rect(node.x - half, node.y - half, size, size);
+    ctx.rect(node.x - half - 4, node.y - half - 4, size + 8, size + 8 + labelPadding);
     ctx.fill();
   };
 
@@ -3133,11 +3224,7 @@ export default function NetworkTopology() {
             onNodeDrag={handleNodeDrag}
             onNodeDragEnd={handleNodeDragEnd}
             onLinkClick={handleLinkClick}
-            onBackgroundClick={() => {
-              setSelectedNode(null);
-              setSelectedLink(null);
-              setSelectedNodes(new Set());
-            }}
+            onBackgroundClick={handleBackgroundClick}
             onRenderFramePre={(ctx, globalScale) => {
               // 배경 이미지 그리기 (축소된 크기, 그래프 좌표계 기준)
               if (backgroundImageRef.current && backgroundImageRef.current.complete) {

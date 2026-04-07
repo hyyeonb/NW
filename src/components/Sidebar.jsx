@@ -10,7 +10,6 @@ const MENU_ITEMS = [
     children: [
       { label: '통합 대시보드', path: '/dashboard', icon: 'bi-grid-1x2', pageCode: 'dashboard' },
       { label: '토폴로지', path: '/topology', icon: 'bi-diagram-3', pageCode: 'topology' },
-      { label: '사용자 토폴로지', path: '/user-topology', icon: 'bi-person-workspace', pageCode: 'user_topology' },
     ],
   },
   {

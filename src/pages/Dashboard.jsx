@@ -556,7 +556,7 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
     const faultColor = errorLevel ? FAULT_COLORS[errorLevel] : null;
 
     // 펄스 애니메이션 (장애 시)
-    const pulse = faultColor ? 0.6 + 0.4 * Math.sin(Date.now() / 500) : 0;
+    const pulse = faultColor ? 0.6 + 0.4 * Math.sin(Date.now() / 400) : 0;
 
     if (isGroupNode) {
       const radius = 10;
@@ -635,6 +635,21 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
         ctx.lineWidth = 1.5 / globalScale;
       }
       ctx.stroke();
+
+      // 장애 노드 중심부 펄스 오버레이 (그룹 노드)
+      if (faultColor) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(drawX - half, drawY - half, size, size, radius);
+        ctx.clip();
+        const pulseGrad = ctx.createRadialGradient(drawX, drawY, 0, drawX, drawY, half);
+        pulseGrad.addColorStop(0, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, ${0.4 * pulse})`);
+        pulseGrad.addColorStop(0.6, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, ${0.15 * pulse})`);
+        pulseGrad.addColorStop(1, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, 0)`);
+        ctx.fillStyle = pulseGrad;
+        ctx.fillRect(drawX - half, drawY - half, size, size);
+        ctx.restore();
+      }
     } else {
       const deviceIconData = node.iconData || node.ICON_DATA;
 
@@ -710,6 +725,21 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
         ctx.lineWidth = 1.5 / globalScale;
       }
       ctx.stroke();
+
+      // 장애 노드 중심부 펄스 오버레이 (장비 노드)
+      if (faultColor) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(drawX, drawY, half, 0, 2 * Math.PI);
+        ctx.clip();
+        const pulseGrad = ctx.createRadialGradient(drawX, drawY, 0, drawX, drawY, half);
+        pulseGrad.addColorStop(0, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, ${0.4 * pulse})`);
+        pulseGrad.addColorStop(0.6, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, ${0.15 * pulse})`);
+        pulseGrad.addColorStop(1, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, 0)`);
+        ctx.fillStyle = pulseGrad;
+        ctx.fill();
+        ctx.restore();
+      }
     }
 
     // 라벨
@@ -727,22 +757,13 @@ function TopologyWidget({ onExpand, onDeviceClick }) {
     ctx.fillText(label, drawX, textY);
   }, []);
 
-  // 장애 존재 시 펄스 애니메이션을 위한 주기적 re-render (~20fps)
+  // 장애 존재 시 펄스 애니메이션을 위한 주기적 re-render
   const hasFaults = deviceErrorMap.size > 0 || groupErrorMap.size > 0;
+  const [pulseKey, setPulseKey] = useState(0);
   useEffect(() => {
-    if (!hasFaults) {
-      // 장애가 해제되었을 때 마지막 repaint (색상 복원)
-      if (graphRef.current) {
-        graphRef.current.d3ReheatSimulation?.();
-      }
-      return;
-    }
-    const timer = setInterval(() => {
-      if (graphRef.current) {
-        graphRef.current.d3ReheatSimulation?.();
-      }
-    }, 50);
-    return () => clearInterval(timer);
+    if (!hasFaults) return;
+    const interval = setInterval(() => setPulseKey(k => k + 1), 80);
+    return () => clearInterval(interval);
   }, [hasFaults]);
 
   const handleNodeClick = useCallback((node) => {
@@ -1394,7 +1415,7 @@ function UserTopologyWidget({ onExpand, onDeviceClick }) {
       }
     }
     const faultColor = errorLevel ? FAULT_COLORS[errorLevel] : null;
-    const pulse = faultColor ? 0.6 + 0.4 * Math.sin(Date.now() / 500) : 0;
+    const pulse = faultColor ? 0.6 + 0.4 * Math.sin(Date.now() / 400) : 0;
 
     if (isGroupNode) {
       const radius = 10;
@@ -1469,6 +1490,21 @@ function UserTopologyWidget({ onExpand, onDeviceClick }) {
         ctx.lineWidth = 1.5 / globalScale;
       }
       ctx.stroke();
+
+      // 장애 노드 중심부 펄스 오버레이 (그룹 노드)
+      if (faultColor) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(drawX - half, drawY - half, size, size, radius);
+        ctx.clip();
+        const pulseGrad = ctx.createRadialGradient(drawX, drawY, 0, drawX, drawY, half);
+        pulseGrad.addColorStop(0, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, ${0.4 * pulse})`);
+        pulseGrad.addColorStop(0.6, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, ${0.15 * pulse})`);
+        pulseGrad.addColorStop(1, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, 0)`);
+        ctx.fillStyle = pulseGrad;
+        ctx.fillRect(drawX - half, drawY - half, size, size);
+        ctx.restore();
+      }
     } else {
       const deviceIconData = node.iconData || node.ICON_DATA;
 
@@ -1540,6 +1576,21 @@ function UserTopologyWidget({ onExpand, onDeviceClick }) {
         ctx.lineWidth = 1.5 / globalScale;
       }
       ctx.stroke();
+
+      // 장애 노드 중심부 펄스 오버레이 (장비 노드)
+      if (faultColor) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(drawX, drawY, half, 0, 2 * Math.PI);
+        ctx.clip();
+        const pulseGrad = ctx.createRadialGradient(drawX, drawY, 0, drawX, drawY, half);
+        pulseGrad.addColorStop(0, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, ${0.4 * pulse})`);
+        pulseGrad.addColorStop(0.6, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, ${0.15 * pulse})`);
+        pulseGrad.addColorStop(1, `rgba(${faultColor.r}, ${faultColor.g}, ${faultColor.b}, 0)`);
+        ctx.fillStyle = pulseGrad;
+        ctx.fill();
+        ctx.restore();
+      }
     }
 
     const fontSize = 11 / globalScale;
@@ -1558,15 +1609,11 @@ function UserTopologyWidget({ onExpand, onDeviceClick }) {
 
   // 장애 펄스 애니메이션
   const hasFaults = deviceErrorMap.size > 0 || groupErrorMap.size > 0;
+  const [pulseKey2, setPulseKey2] = useState(0);
   useEffect(() => {
-    if (!hasFaults) {
-      if (graphRef.current) graphRef.current.d3ReheatSimulation?.();
-      return;
-    }
-    const timer = setInterval(() => {
-      if (graphRef.current) graphRef.current.d3ReheatSimulation?.();
-    }, 50);
-    return () => clearInterval(timer);
+    if (!hasFaults) return;
+    const interval = setInterval(() => setPulseKey2(k => k + 1), 80);
+    return () => clearInterval(interval);
   }, [hasFaults]);
 
   // 그룹 클릭 → 드릴다운
@@ -2369,16 +2416,12 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
     : [];
 
   // ECharts 옵션 생성
-  // 초기 로드 후에는 update 애니메이션만 사용 (데이터 갱신 시 처음부터 다시 그리는 현상 방지)
-  const hasRenderedRef = useRef(false);
-  useEffect(() => {
-    if (rawChartData.length > 0) hasRenderedRef.current = true;
-  }, [rawChartData]);
+  // 데이터 갱신 시 차트를 clear 후 새로 그리면서 등장 애니메이션 재생
+  const prevRefreshedAtRef = useRef(widget._refreshedAt);
 
   const CHART_ANIMATION = {
-    animation: !hasRenderedRef.current,
+    animation: true,
     animationDuration: 600,
-    animationDurationUpdate: 0,
     animationEasing: 'cubicOut',
   };
 
@@ -2618,11 +2661,12 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
               if (params.data.name === '데이터 없음') return '';
               return `<span style="font-size:11px">${params.seriesName}<br/>${params.name}: ${params.percent}%</span>`;
             },
+            transitionDuration: 0,
             backgroundColor: '#1e293b',
             borderColor: '#334155',
             padding: [4, 8],
             textStyle: { color: '#f1f5f9', fontSize: 11 },
-            extraCssText: 'max-width:200px; box-shadow:0 2px 8px rgba(0,0,0,0.3);'
+            extraCssText: 'max-width:200px; box-shadow:0 2px 8px rgba(0,0,0,0.3); transition:none !important;'
           },
           series: [...series, ...emptySeries]
         };
@@ -2684,11 +2728,12 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
           trigger: 'item',
           confine: true,
           formatter: '{b}: {d}%',
+          transitionDuration: 0,
           backgroundColor: '#1e293b',
           borderColor: '#334155',
           padding: [4, 8],
           textStyle: { color: '#f1f5f9', fontSize: 11 },
-          extraCssText: 'max-width:200px; box-shadow:0 2px 8px rgba(0,0,0,0.3);'
+          extraCssText: 'max-width:200px; box-shadow:0 2px 8px rgba(0,0,0,0.3); transition:none !important;'
         },
         legend: {
           orient: 'vertical',
@@ -2803,11 +2848,12 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
             trigger: 'axis',
             confine: true,
             axisPointer: { type: 'shadow' },
+            transitionDuration: 0,
             backgroundColor: '#1e293b',
             borderColor: '#334155',
             padding: [4, 8],
             textStyle: { color: '#f1f5f9', fontSize: 11 },
-            extraCssText: 'max-width:220px; box-shadow:0 2px 8px rgba(0,0,0,0.3);',
+            extraCssText: 'max-width:220px; box-shadow:0 2px 8px rgba(0,0,0,0.3); transition:none !important;',
             formatter: (params) => {
               if (!params || params.length === 0) return '';
               let result = `<div style="font-weight:bold; margin-bottom:2px; font-size:11px">${params[0].name}</div>`;
@@ -2881,11 +2927,12 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
           trigger: 'axis',
           confine: true,
           axisPointer: { type: 'shadow' },
+          transitionDuration: 0,
           backgroundColor: '#1e293b',
           borderColor: '#334155',
           padding: [4, 8],
           textStyle: { color: '#f1f5f9', fontSize: 11 },
-          extraCssText: 'max-width:200px; box-shadow:0 2px 8px rgba(0,0,0,0.3);',
+          extraCssText: 'max-width:200px; box-shadow:0 2px 8px rgba(0,0,0,0.3); transition:none !important;',
           formatter: (params) => {
             const param = params[0];
             if (!param) return '';
@@ -2946,6 +2993,7 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
         backgroundColor: 'transparent',
         tooltip: {
           trigger: 'axis',
+          transitionDuration: 0,
           backgroundColor: 'rgba(30, 41, 59, 0.98)',
           borderColor: '#334155',
           borderWidth: 2,
@@ -2956,7 +3004,7 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
           appendToBody: true,
           alwaysShowContent: false,
           triggerOn: 'mousemove|click',
-          extraCssText: 'max-width: 300px; max-height: 60vh; box-shadow: 0 4px 20px rgba(0,0,0,0.5); pointer-events: auto;',
+          extraCssText: 'max-width: 300px; max-height: 60vh; box-shadow: 0 4px 20px rgba(0,0,0,0.5); pointer-events: auto; transition:none !important;',
           // 고정 위치: 컴포넌트에서 계산한 위치 사용 (안정적)
           position: function (point, params, dom, rect, size) {
             const tooltipWidth = size.contentSize[0];
@@ -3145,8 +3193,8 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
               symbolSize: 4,
               lineStyle: { color: item.color, width: 2 },
               itemStyle: { color: item.color },
-              animationDuration: hasRenderedRef.current ? 0 : 600,
-              animationDurationUpdate: 0,
+              animationDuration: 600,
+              animationEasing: 'cubicOut',
               areaStyle: {
                 color: {
                   type: 'linear',
@@ -3172,6 +3220,20 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
   };
 
   const chartRef = useRef(null);
+
+  // 데이터 갱신 시 ECharts를 clear 후 다시 그리기 (등장 애니메이션 재생)
+  useEffect(() => {
+    if (widget._refreshedAt && widget._refreshedAt !== prevRefreshedAtRef.current) {
+      prevRefreshedAtRef.current = widget._refreshedAt;
+      if (chartRef.current) {
+        const chart = chartRef.current.getEchartsInstance?.();
+        if (chart && !chart.isDisposed?.()) {
+          chart.clear();
+          chart.setOption(getChartOption(tooltipOnLeft));
+        }
+      }
+    }
+  }, [widget._refreshedAt]);
 
   // 컨테이너 리사이즈 시 ECharts 강제 resize (GridLayout 리렌더 대응)
   useEffect(() => {
@@ -3516,6 +3578,7 @@ const MemoizedCustomWidgetContent = memo(CustomWidgetContent, (prevProps, nextPr
   // chartData나 cntData가 변경되면 리렌더링
   if (prevProps.widget.chartData !== nextProps.widget.chartData) return false;
   if (prevProps.widget.cntData !== nextProps.widget.cntData) return false;
+  if (prevProps.widget._refreshedAt !== nextProps.widget._refreshedAt) return false;
   if (prevProps.widget.id !== nextProps.widget.id) return false;
   if (prevProps.widget.config !== nextProps.widget.config) return false;
   if (prevProps.isEditMode !== nextProps.isEditMode) return false;
@@ -4646,6 +4709,7 @@ export default function Dashboard() {
             return {
               ...w,
               chartData: data.list || [],
+              _refreshedAt: Date.now(),
             };
           }
           return w;
@@ -4680,6 +4744,7 @@ export default function Dashboard() {
               ...w,
               chartData: 'chartData' in newData ? newData.chartData : w.chartData,
               cntData: 'cntData' in newData ? newData.cntData : w.cntData,
+              _refreshedAt: Date.now(),
             };
           }
           return w;
@@ -5227,7 +5292,6 @@ export default function Dashboard() {
   // 허용할 위젯 코드 목록 (화이트리스트)
   const ALLOWED_WIDGET_CODES = [
     'TOPOLOGY',
-    'USER_TOPOLOGY',
     'CPU_MEM_TOPN',
     'TRAFFIC_TOPN',
     'FILESYSTEM_TOPN',
