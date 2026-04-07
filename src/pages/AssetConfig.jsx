@@ -161,27 +161,6 @@ export default function AssetConfig() {
         );
       },
     },
-    {
-      key: 'actions',
-      label: '',
-      width: '60px',
-      className: 'cell-actions',
-      hideable: true,
-      render: (_, row) => (
-        <button
-          className="btn btn-icon-only btn-sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/mgmt/asset-config/${row.deviceId}`, {
-              state: { deviceName: row.deviceNm, deviceIp: row.deviceIp }
-            });
-          }}
-          title="설정 비교"
-        >
-          <i className="bi bi-file-diff"></i>
-        </button>
-      ),
-    },
   ], [navigate]);
 
   return (

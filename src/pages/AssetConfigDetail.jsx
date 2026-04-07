@@ -14,6 +14,37 @@ export default function AssetConfigDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showOnlyChanges, setShowOnlyChanges] = useState(false);
+  const [collecting, setCollecting] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [collectResult, setCollectResult] = useState(null); // { success, message }
+  const isRefreshing = useRef(false);
+
+  // Config 수집 요청 (포트 8085 직접 호출)
+  const handleCollectConfig = async () => {
+    if (collecting) return;
+    setCollecting(true);
+    setCollectResult(null);
+    try {
+      const res = await fetch(`http://${window.location.hostname}:8085/api/device-config/collect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRightDate(new Date().toISOString().split('T')[0]);
+        isRefreshing.current = true;
+        setRefreshKey(k => k + 1);
+        setCollectResult({ success: true, message: data.message || 'Config 수집 완료' });
+      } else {
+        setCollectResult({ success: false, message: data.message || '알 수 없는 오류' });
+      }
+    } catch (err) {
+      setCollectResult({ success: false, message: err.message || 'Config 수집 요청 실패' });
+    } finally {
+      setCollecting(false);
+    }
+  };
 
   // 날짜 선택 상태 (오늘 수집이 없고 최근 수집일이 있으면 해당 날짜, 아니면 어제)
   const [leftDate, setLeftDate] = useState(() => {
@@ -80,7 +111,7 @@ export default function AssetConfigDetail() {
     let isCancelled = false;
 
     const fetchConfigData = async () => {
-      setIsLoading(true);
+      if (!isRefreshing.current) setIsLoading(true);
       setError(null);
 
       try {
@@ -108,6 +139,7 @@ export default function AssetConfigDetail() {
       } finally {
         if (!isCancelled) {
           setIsLoading(false);
+          isRefreshing.current = false;
         }
       }
     };
@@ -120,7 +152,7 @@ export default function AssetConfigDetail() {
       isCancelled = true;
       abortController.abort();
     };
-  }, [deviceId, leftDate, rightDate]);
+  }, [deviceId, leftDate, rightDate, refreshKey]);
 
   // 설정 비교 결과 계산
   const configDiff = useMemo(() => {
@@ -391,6 +423,18 @@ export default function AssetConfigDetail() {
                     <i className="bi bi-file-text"></i>
                     <span>오늘 설정</span>
                     <span className="date-badge">{formatDateLabel(rightDate)}</span>
+                    <button
+                      className="btn btn-icon-only btn-sm"
+                      onClick={handleCollectConfig}
+                      disabled={collecting}
+                      title="Config 수집"
+                      style={{ marginLeft: '4px', opacity: collecting ? 0.6 : 1 }}
+                    >
+                      <i
+                        className={`bi ${collecting ? 'bi-arrow-repeat' : 'bi-arrow-clockwise'}`}
+                        style={collecting ? { display: 'inline-block', animation: 'spin 1s linear infinite' } : undefined}
+                      ></i>
+                    </button>
                   </div>
                   <input
                     ref={rightDateRef}
@@ -1122,6 +1166,58 @@ export default function AssetConfigDetail() {
           color: #8e8e93;
         }
       `}</style>
+
+      {/* Config 수집 모달 (로딩 → 결과 전환) */}
+      {(collecting || collectResult) && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }} onClick={() => !collecting && setCollectResult(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
+            maxWidth: '400px', padding: '32px', textAlign: 'center',
+            background: 'var(--theme-bg-secondary, #1e293b)',
+            borderRadius: '12px', border: '1px solid var(--theme-border, rgba(255,255,255,0.1))',
+            transition: 'all 0.3s ease',
+          }}>
+            {collecting ? (
+              <>
+                <div style={{ marginBottom: '16px' }}>
+                  <i className="bi bi-arrow-repeat" style={{
+                    fontSize: '32px', color: '#3b82f6',
+                    display: 'inline-block', animation: 'spin 1s linear infinite',
+                  }}></i>
+                </div>
+                <h3 style={{ margin: '0 0 8px', fontSize: '16px', color: 'var(--theme-text-primary, #f1f5f9)' }}>
+                  Config 수집 중
+                </h3>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--theme-text-secondary, #94a3b8)' }}>
+                  {deviceName || deviceId} 장비의 Config를 수집하고 있습니다.<br />
+                  장비 상태에 따라 최대 30초 소요될 수 있습니다.
+                </p>
+              </>
+            ) : collectResult && (
+              <>
+                <div style={{ marginBottom: '16px' }}>
+                  <i className={`bi ${collectResult.success ? 'bi-check-circle-fill' : 'bi-x-circle-fill'}`} style={{
+                    fontSize: '36px',
+                    color: collectResult.success ? '#22c55e' : '#ef4444',
+                  }}></i>
+                </div>
+                <h3 style={{ margin: '0 0 8px', fontSize: '16px', color: 'var(--theme-text-primary, #f1f5f9)' }}>
+                  {collectResult.success ? 'Config 수집 완료' : 'Config 수집 실패'}
+                </h3>
+                <p style={{ margin: '0 0 20px', fontSize: '13px', color: 'var(--theme-text-secondary, #94a3b8)' }}>
+                  {collectResult.message}
+                </p>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setCollectResult(null)}
+                  style={{ minWidth: '80px' }}
+                >
+                  확인
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -72,14 +72,11 @@ function SftpPanel({ sessionId, connected, externalPath, sshUser }) {
     return err.response?.data?.message || err.response?.data?.error || fallback;
   };
 
-  // sessionId 대기 타임아웃 (5초)
+  // SSH 연결됐는데 sessionId 없으면 즉시 SFTP 미지원 처리
   useEffect(() => {
     if (sessionId) { setSftpUnavailable(false); return; }
-    if (!connected) { setSftpUnavailable(false); return; }
-    const timer = setTimeout(() => {
-      if (!sessionId) setSftpUnavailable(true);
-    }, 5000);
-    return () => clearTimeout(timer);
+    if (connected && !sessionId) { setSftpUnavailable(true); return; }
+    setSftpUnavailable(false);
   }, [connected, sessionId]);
 
   // 디렉토리 조회
@@ -118,12 +115,23 @@ function SftpPanel({ sessionId, connected, externalPath, sshUser }) {
     }
   }, [externalPath]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 연결 시 홈 디렉토리 조회
+  // 연결 시 홈 디렉토리 조회 (실패 시 SFTP 미지원 처리)
   useEffect(() => {
     if (connected && sessionId) {
-      fetchFiles(homePath);
+      sftpApi.list(sessionId, homePath).then((res) => {
+        const data = res.data?.data || res.data || {};
+        const list = Array.isArray(data.entries) ? data.entries : (Array.isArray(data) ? data : []);
+        list.sort((a, b) => {
+          if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+          return (a.name || '').localeCompare(b.name || '');
+        });
+        setFiles(list);
+        setCurrentPath(homePath);
+      }).catch(() => {
+        setSftpUnavailable(true);
+      });
     }
-  }, [connected, sessionId, fetchFiles]);
+  }, [connected, sessionId]);
 
   // 폴더 클릭
   const handleNavigate = useCallback((name, isDir) => {
@@ -409,6 +417,7 @@ export default function SshTerminalModal({ device, sshInfo, onClose }) {
   const fitRef = useRef(null);
   const [status, setStatus] = useState('disconnected');
   const [sessionId, setSessionId] = useState(null);
+
   const [sftpOpen, setSftpOpen] = useState(true);
   const [syncPath, setSyncPath] = useState(false);
   const syncPathRef = useRef(false);
@@ -480,7 +489,7 @@ export default function SshTerminalModal({ device, sshInfo, onClose }) {
     };
 
     ws.onopen = () => {
-      setStatus('connected');
+      setStatus('connecting');
       ws.send(JSON.stringify({
         type: 'connect',
         data: {
@@ -505,6 +514,7 @@ export default function SshTerminalModal({ device, sshInfo, onClose }) {
             console.log('[SSH] connected 이벤트 전체:', JSON.stringify(msg));
             const d = msg.data || {};
             term.writeln(`\r\n[CONNECTED] ${d.user || ''}@${d.host || ''}\r\n`);
+            setStatus('connected');
             // sessionId 저장 (SFTP용) - 다양한 키 이름 대응
             const sid = d.sessionId || d.session_id || d.sshSessionId || d.id;
             if (sid) {
@@ -592,10 +602,6 @@ export default function SshTerminalModal({ device, sshInfo, onClose }) {
       // 명령어 감지
       if (data === '\r' || data === '\n') {
         const cmd = inputBufRef.current.trim();
-        // exit/logout 명령어 → 모달 자동 닫기
-        if (cmd === 'exit' || cmd === 'logout') {
-          setTimeout(() => { if (!disposed) onClose(); }, 1500);
-        }
         // cd 명령어 감지 (경로 동기화용)
         if (syncPathRef.current && (cmd.startsWith('cd') || cmd === 'cd')) {
           // cd 실행 후 pwd로 실제 경로 확인
@@ -668,8 +674,8 @@ export default function SshTerminalModal({ device, sshInfo, onClose }) {
     if (e.key === 'Escape' && e.shiftKey) onClose();
   };
 
-  const statusColor = status === 'connected' ? '#22c55e' : status === 'error' ? '#ef4444' : '#94a3b8';
-  const statusLabel = status === 'connected' ? '연결됨' : status === 'error' ? '오류' : '연결 해제';
+  const statusColor = status === 'connected' ? '#22c55e' : status === 'connecting' ? '#fbbf24' : status === 'error' ? '#ef4444' : '#94a3b8';
+  const statusLabel = status === 'connected' ? '연결됨' : status === 'connecting' ? '연결 중...' : status === 'error' ? '오류' : '연결 해제';
 
   return (
     <div className="modal-overlay" onKeyDown={handleKeyDown} style={{ zIndex: 10000 }}>
