@@ -18,8 +18,11 @@ import {
 import { devicesApi } from '../api/devices';
 import { faultApi } from '../api/fault';
 import { historyApi } from '../api/history';
+import { useAlert } from '../components/CustomAlert';
+import { isValidIPv4 } from '../utils/validation';
 
 export default function AssetManagement() {
+  const { alert: showAlert, success: showSuccess, error: showError, warning: showWarning, confirm: showConfirm } = useAlert();
   const [urlParams, setUrlParams] = useSearchParams();
   const { selectedGroup } = useGroupStore();
   const [page, setPage] = useState(1);
@@ -269,6 +272,7 @@ export default function AssetManagement() {
     selectedGroup?.GROUP_ID, page, pageSize, deviceSortField, deviceSortOrder, searchParams
   );
   const { data: portsDataRaw, isLoading: portsLoading } = useDevicePorts(detailDevice?.DEVICE_ID);
+  const { data: allPortsDataRaw, isLoading: allPortsLoading } = useDevicePorts(detailDevice?.DEVICE_ID, 'all');
   const { data: deviceScope, isLoading: scopeLoading } = useDeviceScope(detailDevice?.DEVICE_ID);
   const { data: trafficRawData, isLoading: trafficLoading } = useDeviceTrafficRaw(detailDevice?.DEVICE_ID, 60);
 
@@ -309,7 +313,18 @@ export default function AssetManagement() {
     const fetchCpuMem = async () => {
       try {
         const response = await devicesApi.getDeviceCpuMem(detailDevice.DEVICE_ID);
-        setCpuMemData(response.data?.data || null);
+        const data = response.data?.data || null;
+        // 수집 시각이 2분 이내가 아니면 스테일 데이터 → null 처리
+        if (data?.COLLECTED_AT) {
+          const collectedAt = new Date(data.COLLECTED_AT);
+          const now = new Date();
+          const diffMs = now.getTime() - collectedAt.getTime();
+          if (diffMs > 2 * 60 * 1000) {
+            setCpuMemData(null);
+            return;
+          }
+        }
+        setCpuMemData(data);
       } catch (error) {
         console.error('CPU/MEM 데이터 조회 실패:', error);
         setCpuMemData(null);
@@ -710,7 +725,7 @@ export default function AssetManagement() {
       });
     } catch (error) {
       console.error('수집 설정 업데이트 오류:', error);
-      alert('수집 설정 업데이트에 실패했습니다.');
+      showError('수집 설정 업데이트에 실패했습니다.');
     }
   };
 
@@ -844,15 +859,27 @@ export default function AssetManagement() {
       if (sshConfig.SSH_USER) {
         await devicesApi.saveDeviceSsh(detailDevice.DEVICE_ID, sshConfig);
       }
-      // 임계치 저장
+      // 임계치 검증 + 저장
       if (deviceThresholds.length > 0) {
+        for (const t of deviceThresholds) {
+          const max = t.MAX_VALUE || 100;
+          const unit = t.TYPE === 'TEMPERATURE' ? '°C' : t.TYPE === 'HUMIDITY' ? '%RH' : '%';
+          const vals = [t.CRITICAL, t.MAJOR, t.MINOR, t.WARNING];
+          for (const v of vals) {
+            if (v < 0) { showWarning(`${t.TYPE}: 임계치 값은 0 미만일 수 없습니다.`); setSidebarSaving(false); return; }
+            if (v > max) { showWarning(`${t.TYPE}: 임계치 값은 최대 ${max}${unit}을(를) 초과할 수 없습니다.`); setSidebarSaving(false); return; }
+          }
+          if (t.CRITICAL < t.MAJOR || t.MAJOR < t.MINOR || t.MINOR < t.WARNING) {
+            showWarning(`${t.TYPE}: Critical > Major > Minor > Warning 순서여야 합니다.`); setSidebarSaving(false); return;
+          }
+        }
         const { adminApi } = await import('../api/admin');
         await adminApi.upsertDeviceThresholds(String(detailDevice.DEVICE_ID), deviceThresholds);
       }
       setShowSettingsSidebar(false);
     } catch (error) {
       console.error('설정 저장 실패:', error);
-      alert('설정 저장에 실패했습니다: ' + (error.response?.data?.message || error.message));
+      showError('설정 저장에 실패했습니다: ' + (error.response?.data?.message || error.message));
     } finally {
       setSidebarSaving(false);
     }
@@ -875,7 +902,7 @@ export default function AssetManagement() {
       });
       setSshTerminalDevice(device);
     } catch {
-      alert('SSH 접속 정보를 불러오지 못했습니다.');
+      showError('SSH 접속 정보를 불러오지 못했습니다.');
     }
   }, []);
 
@@ -901,19 +928,23 @@ export default function AssetManagement() {
   // 장비 수정 저장
   const handleSaveDevice = async () => {
     if (!detailDevice || !hasEditChanges) return;
+    if (editFormData.DEVICE_IP && !isValidIPv4(editFormData.DEVICE_IP)) {
+      showWarning('유효한 IP 주소 형식이 아닙니다. (예: 192.168.1.1)');
+      return;
+    }
     setEditSaving(true);
     try {
       await updateDeviceMutation.mutateAsync({
         deviceId: detailDevice.DEVICE_ID,
         data: editFormData
       });
-      alert('장비 정보가 저장되었습니다.');
+      showSuccess('장비 정보가 저장되었습니다.');
       // detailDevice를 저장된 값으로 갱신 → hasEditChanges = false → 기어 아이콘 복원
       const updated = { ...detailDevice, ...editFormData };
       setDetailDevice(updated);
     } catch (error) {
       console.error('장비 수정 오류:', error);
-      alert('장비 수정에 실패했습니다: ' + (error.response?.data?.message || error.message));
+      showError('장비 수정에 실패했습니다: ' + (error.response?.data?.message || error.message));
     } finally {
       setEditSaving(false);
     }
@@ -933,7 +964,7 @@ export default function AssetManagement() {
       });
     } catch (error) {
       console.error('포트 업데이트 오류:', error);
-      alert('포트 정보 업데이트에 실패했습니다.');
+      showError('포트 정보 업데이트에 실패했습니다.');
     }
   };
 
@@ -955,8 +986,9 @@ export default function AssetManagement() {
 
   // 포트 테이블 정렬 로직 (모든 포트 - 가상 포함)
   const sortedPorts = useMemo(() => {
-    if (!portsDataRaw?.length) return [];
-    return [...portsDataRaw].sort((a, b) => {
+    const portSource = allPortsDataRaw?.length ? allPortsDataRaw : portsDataRaw;
+    if (!portSource?.length) return [];
+    return [...portSource].sort((a, b) => {
       let aVal = a[portSortField];
       let bVal = b[portSortField];
 
@@ -974,7 +1006,7 @@ export default function AssetManagement() {
       }
       return strB.localeCompare(strA, 'ko');
     });
-  }, [portsDataRaw, portSortField, portSortOrder]);
+  }, [allPortsDataRaw, portsDataRaw, portSortField, portSortOrder]);
 
   // 포트 테이블 정렬 핸들러
   const handlePortSort = (field) => {
@@ -1020,24 +1052,25 @@ export default function AssetManagement() {
   };
 
   const handleDeleteSelected = async () => {
-    if (!confirm(`${selectedDevices.length}개의 장비를 삭제하시겠습니까?`)) return;
+    const ok = await showConfirm(`${selectedDevices.length}개의 장비를 삭제하시겠습니까?`);
+    if (!ok) return;
     try {
       await deleteDevicesMutation.mutateAsync(selectedDevices);
       setSelectedDevices([]);
     } catch (error) {
       console.error('Delete error:', error);
-      alert('삭제 중 오류가 발생했습니다.');
+      showError('삭제 중 오류가 발생했습니다.');
     }
   };
 
   // 그룹 이동 핸들러
   const handleMoveToGroup = async () => {
     if (!targetGroup) {
-      alert('이동할 그룹을 선택해주세요.');
+      showWarning('이동할 그룹을 선택해주세요.');
       return;
     }
     if (targetGroup.GROUP_ID === selectedGroup?.GROUP_ID) {
-      alert('현재 그룹과 동일한 그룹입니다.');
+      showWarning('현재 그룹과 동일한 그룹입니다.');
       return;
     }
 
@@ -1049,13 +1082,13 @@ export default function AssetManagement() {
           data: { GROUP_ID: targetGroup.GROUP_ID }
         });
       }
-      alert(`${selectedDevices.length}개의 장비가 "${targetGroup.GROUP_NAME}" 그룹으로 이동되었습니다.`);
+      showSuccess(`${selectedDevices.length}개의 장비가 "${targetGroup.GROUP_NAME}" 그룹으로 이동되었습니다.`);
       setSelectedDevices([]);
       setShowMoveGroupModal(false);
       setTargetGroup(null);
     } catch (error) {
       console.error('Move error:', error);
-      alert('그룹 이동 중 오류가 발생했습니다.');
+      showError('그룹 이동 중 오류가 발생했습니다.');
     }
   };
 
@@ -1301,7 +1334,7 @@ export default function AssetManagement() {
       setFaultLoading(false);
     } catch (error) {
       console.error('인지 처리 실패:', error);
-      alert('인지 처리에 실패했습니다.');
+      showError('인지 처리에 실패했습니다.');
       setFaultLoading(false);
     }
   };
@@ -1348,6 +1381,8 @@ export default function AssetManagement() {
       width: '100px',
       sortable: true,
       hideable: true,
+      filterable: true,
+      filterLabel: (val) => getPortTypeText(val),
       render: (value, row) => (
         <span className={`port-type-badge ${getPortTypeBadgeClass(value)}`}>
           {row.ifTypeText || getPortTypeText(value)}
@@ -1416,6 +1451,8 @@ export default function AssetManagement() {
       sortable: true,
       align: 'center',
       hideable: true,
+      filterable: true,
+      filterLabel: (val) => val === 1 ? 'Up' : 'Down',
       render: (value) => (
         <span className={`status-badge ${value === 1 ? 'up' : 'down'}`}>
           {value === 1 ? 'Up' : 'Down'}
@@ -1429,6 +1466,8 @@ export default function AssetManagement() {
       sortable: true,
       align: 'center',
       hideable: true,
+      filterable: true,
+      filterLabel: (val) => val === 1 ? 'Up' : 'Down',
       render: (value) => (
         <span className={`status-badge ${value === 1 ? 'up' : 'down'}`}>
           {value === 1 ? 'Up' : 'Down'}
@@ -1931,7 +1970,7 @@ export default function AssetManagement() {
                                   <div key={sev} className="sthr-cell">
                                     <span className={`sthr-badge ${cls}`}>{label}</span>
                                     <input
-                                      type="number" min={0} max={100}
+                                      type="number" min={0} max={t.MAX_VALUE || 100}
                                       value={t[sev] ?? ''}
                                       onChange={e => {
                                         setDeviceThresholds(prev => {
@@ -2291,7 +2330,7 @@ export default function AssetManagement() {
                   columns={portColumns}
                   data={sortedPorts}
                   rowKey="IF_INDEX"
-                  loading={portsLoading}
+                  loading={portsLoading || allPortsLoading}
                   loadingText="포트 정보를 불러오는 중..."
                   emptyText="등록된 포트가 없습니다"
                   emptyIcon="bi-ethernet"

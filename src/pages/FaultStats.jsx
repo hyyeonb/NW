@@ -59,10 +59,12 @@ export default function FaultStats() {
   const deviceIdsParam = useMemo(() => {
     if (!selectedGroup) return undefined;
     if (selectedGroup.type === 'regular') {
-      return regularDevices?.length ? regularDevices.map(d => d.DEVICE_ID) : undefined;
+      if (!regularDevices) return [];
+      return regularDevices.map(d => d.DEVICE_ID);
     }
-    if (selectedGroup.watchGroupId && groupDetail?.devices?.length) {
-      return groupDetail.devices.map(d => d.deviceId);
+    if (selectedGroup.watchGroupId) {
+      if (!groupDetail) return [];
+      return (groupDetail.devices || []).map(d => d.deviceId);
     }
     return undefined;
   }, [selectedGroup, groupDetail, regularDevices]);
@@ -86,31 +88,39 @@ export default function FaultStats() {
   const dateParams = { startDate, endDate };
 
   // API 호출 (groupIds 필터 적용)
-  // queryKey에 deviceIdsParam만 포함 — 연동 그룹 변경 시 자동 refetch, 비연동 그룹은 동일 데이터이므로 캐시 사용
+  // 빈 배열 = 그룹 선택됐지만 장비 없음 or 로딩 중 → 쿼리 비활성화
+  const canFetch = !Array.isArray(deviceIdsParam) || deviceIdsParam.length > 0;
+  const effectiveDeviceIds = canFetch ? deviceIdsParam : undefined;
+
   const { data: summaryData, isLoading: summaryLoading } = useQuery({
-    queryKey: ['faultStats', 'summary', deviceIdsParam],
-    queryFn: () => faultApi.getStatsSummary({ deviceIds: deviceIdsParam }).then(r => r.data?.data),
+    queryKey: ['faultStats', 'summary', effectiveDeviceIds],
+    queryFn: () => faultApi.getStatsSummary({ deviceIds: effectiveDeviceIds }).then(r => r.data?.data),
+    enabled: canFetch,
     refetchInterval: 60000,
   });
 
   const { data: trendData, isLoading: trendLoading } = useQuery({
-    queryKey: ['faultStats', 'trend', startDate, endDate, trendPeriod, deviceIdsParam],
-    queryFn: () => faultApi.getStatsTrend({ ...dateParams, period: trendPeriod, deviceIds: deviceIdsParam }).then(r => r.data?.data),
+    queryKey: ['faultStats', 'trend', startDate, endDate, trendPeriod, effectiveDeviceIds],
+    queryFn: () => faultApi.getStatsTrend({ ...dateParams, period: trendPeriod, deviceIds: effectiveDeviceIds }).then(r => r.data?.data),
+    enabled: canFetch,
   });
 
   const { data: mttrData } = useQuery({
-    queryKey: ['faultStats', 'mttr', startDate, endDate, deviceIdsParam],
-    queryFn: () => faultApi.getStatsMttr({ ...dateParams, deviceIds: deviceIdsParam }).then(r => r.data?.data),
+    queryKey: ['faultStats', 'mttr', startDate, endDate, effectiveDeviceIds],
+    queryFn: () => faultApi.getStatsMttr({ ...dateParams, deviceIds: effectiveDeviceIds }).then(r => r.data?.data),
+    enabled: canFetch,
   });
 
   const { data: topDevices } = useQuery({
-    queryKey: ['faultStats', 'topDevices', startDate, endDate, deviceIdsParam],
-    queryFn: () => faultApi.getStatsTopDevices({ ...dateParams, limit: 10, deviceIds: deviceIdsParam }).then(r => r.data?.data),
+    queryKey: ['faultStats', 'topDevices', startDate, endDate, effectiveDeviceIds],
+    queryFn: () => faultApi.getStatsTopDevices({ ...dateParams, limit: 10, deviceIds: effectiveDeviceIds }).then(r => r.data?.data),
+    enabled: canFetch,
   });
 
   const { data: patternData, isLoading: patternLoading } = useQuery({
-    queryKey: ['faultStats', 'pattern', startDate, endDate, deviceIdsParam],
-    queryFn: () => faultApi.getStatsPattern({ ...dateParams, deviceIds: deviceIdsParam }).then(r => r.data?.data),
+    queryKey: ['faultStats', 'pattern', startDate, endDate, effectiveDeviceIds],
+    queryFn: () => faultApi.getStatsPattern({ ...dateParams, deviceIds: effectiveDeviceIds }).then(r => r.data?.data),
+    enabled: canFetch,
   });
 
   // 등급별 카운트

@@ -122,3 +122,43 @@ export function useDeleteDeviceThresholds() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'thresholds'] }),
   });
 }
+
+// === 미들웨어(수집 서버) 관리 ===
+export function useMiddlewares() {
+  return useQuery({
+    queryKey: ['admin', 'middlewares'],
+    queryFn: () => adminApi.getMiddlewares().then(r => r.data?.data || r.data),
+  });
+}
+
+export function useCreateMiddleware() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => adminApi.createMiddleware(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'middlewares'] }),
+  });
+}
+
+export function useUpdateMiddleware() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => adminApi.updateMiddleware(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'middlewares'] }),
+  });
+}
+
+export function useDeleteMiddleware() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => adminApi.deleteMiddleware(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'middlewares'] }),
+  });
+}
+
+export function useHealthCheckMiddleware() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => adminApi.healthCheckMiddleware(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'middlewares'] }),
+  });
+}

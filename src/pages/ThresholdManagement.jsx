@@ -40,6 +40,26 @@ export default function ThresholdManagement() {
 
   const handleSave = async () => {
     setMsg(null);
+    // 프론트 검증: MAX_VALUE 초과, 음수, 순서
+    for (const t of form) {
+      const max = t.MAX_VALUE || 100;
+      const vals = [t.CRITICAL, t.MAJOR, t.MINOR, t.WARNING];
+      const unit = t.TYPE === 'TEMPERATURE' ? '°C' : t.TYPE === 'HUMIDITY' ? '%RH' : '%';
+      for (const v of vals) {
+        if (v < 0) {
+          setMsg({ type: 'error', text: `${t.TYPE}: 임계치 값은 0 미만일 수 없습니다.` });
+          return;
+        }
+        if (v > max) {
+          setMsg({ type: 'error', text: `${t.TYPE}: 임계치 값은 최대 ${max}${unit}을(를) 초과할 수 없습니다.` });
+          return;
+        }
+      }
+      if (t.CRITICAL < t.MAJOR || t.MAJOR < t.MINOR || t.MINOR < t.WARNING) {
+        setMsg({ type: 'error', text: `${t.TYPE}: Critical > Major > Minor > Warning 순서여야 합니다.` });
+        return;
+      }
+    }
     try {
       await updateMut.mutateAsync(form);
       setMsg({ type: 'success', text: '시스템 임계치가 저장되었습니다.' });
@@ -92,8 +112,10 @@ export default function ThresholdManagement() {
                     <td className="thr-td-type"><i className={`bi ${meta.icon}`} />{meta.label}</td>
                     {SEVERITIES.map(s => (
                       <td key={s} className="thr-td-input">
-                        <input type="number" min={0} max={100} value={t[s] ?? ''} onChange={e => setVal(idx, s, e.target.value)} />
-                        <span>%</span>
+                        <div className="thr-input-wrap">
+                          <input type="number" min={0} max={t.MAX_VALUE || 100} value={t[s] ?? ''} onChange={e => setVal(idx, s, e.target.value)} />
+                          <span className="thr-unit">{t.TYPE === 'TEMPERATURE' ? '°C' : t.TYPE === 'HUMIDITY' ? '%RH' : '%'}</span>
+                        </div>
                       </td>
                     ))}
                   </tr>

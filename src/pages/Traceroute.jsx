@@ -3,6 +3,7 @@ import { devicesApi } from '../api/devices';
 import { groupsApi } from '../api/groups';
 import { historyApi } from '../api/history';
 import '../styles/traceroute.css';
+import IpInput from '../components/IpInput';
 
 export default function Traceroute() {
   // 트리 데이터
@@ -206,13 +207,12 @@ export default function Traceroute() {
   return (
     <div className="traceroute-page">
       {/* 헤더 */}
-      <div className="traceroute-header">
-        <div className="traceroute-title-area">
-          <i className="bi bi-signpost-split traceroute-icon"></i>
-          <div>
-            <h1 className="traceroute-title">네트워크 경로 추적</h1>
-            <p className="traceroute-subtitle">Traceroute — 두 장비 사이의 홉(Hop) 경로를 추적합니다</p>
-          </div>
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">
+            <i className="bi bi-signpost-split"></i> 네트워크 경로 추적
+          </h1>
+          <span className="page-subtitle">두 장비 사이의 홉(Hop) 경로를 추적합니다</span>
         </div>
       </div>
 
@@ -302,118 +302,75 @@ export default function Traceroute() {
 
         {/* ── 오른쪽 ── */}
         <div className="traceroute-right">
-          {/* 설정 패널 */}
-          <div className="traceroute-config-panel glass-panel">
-            <div className="traceroute-endpoint-row">
-              <DeviceCard
-                label="출발지"
-                icon="bi-geo-alt"
-                iconColor="#10b981"
-                device={sourceDevice}
-                onClear={clearSource}
-                placeholder="왼쪽 트리에서 선택"
-                hint="미선택 시 Middleware 서버에서 직접 실행"
-                active={selectMode === 'source'}
-                onClick={() => { setSelectMode('source'); setSearchText(''); }}
-              />
-              <div className="traceroute-arrow-between">
-                <div className="traceroute-arrow-line-v"></div>
-                <i className="bi bi-arrow-down-circle traceroute-arrow-icon"></i>
-                <div className="traceroute-arrow-line-v"></div>
-              </div>
-              <div className="traceroute-target-section">
-                {/* 목적지 모드 토글 */}
-                <div className="traceroute-target-mode-toggle">
-                  <button
-                    className={`traceroute-target-mode-btn${targetMode === 'device' ? ' active' : ''}`}
-                    onClick={() => handleTargetModeChange('device')}
-                  >
-                    <i className="bi bi-hdd-network"></i> 장비 선택
-                  </button>
-                  <button
-                    className={`traceroute-target-mode-btn${targetMode === 'ip' ? ' active' : ''}`}
-                    onClick={() => handleTargetModeChange('ip')}
-                  >
-                    <i className="bi bi-input-cursor-text"></i> IP 직접 입력
-                  </button>
-                </div>
-
-                {targetMode === 'device' ? (
-                  <DeviceCard
-                    label="목적지 *"
-                    icon="bi-geo-alt-fill"
-                    iconColor="#8b5cf6"
-                    device={targetDevice}
-                    onClear={clearTarget}
-                    placeholder="왼쪽 트리에서 선택"
-                    hint="필수 선택"
-                    active={selectMode === 'target'}
-                    onClick={() => { setSelectMode('target'); setSearchText(''); }}
-                    required
-                  />
+          {/* 설정 카드 */}
+          <div className="tr-config-card">
+            {/* Row 1: 출발지 → 목적지 */}
+            <div className="tr-route-row">
+              {/* 출발지 chip */}
+              <div className={`tr-chip tr-chip-source${selectMode === 'source' ? ' tr-chip-active' : ''}`} onClick={() => { setSelectMode('source'); setSearchText(''); }}>
+                <i className="bi bi-geo-alt" />
+                {sourceDevice ? (
+                  <>
+                    <span className="tr-chip-name">{sourceDevice.DEVICE_NAME || sourceDevice.name}</span>
+                    <span className="tr-chip-ip">{sourceDevice.DEVICE_IP || sourceDevice.ip}</span>
+                    <i className="bi bi-x tr-chip-x" onClick={(e) => { e.stopPropagation(); clearSource(); }} />
+                  </>
                 ) : (
-                  <div className="traceroute-ip-input-card">
-                    <div className="traceroute-card-label">
-                      <i className="bi bi-geo-alt-fill" style={{ color: '#8b5cf6' }}></i>
-                      목적지 IP *
-                    </div>
-                    <div className="traceroute-ip-input-wrap">
-                      <input
-                        type="text"
-                        className="traceroute-ip-input"
-                        placeholder="예: 192.168.1.1"
-                        value={targetIpInput}
-                        onChange={e => { setTargetIpInput(e.target.value); setError(''); setResult(null); }}
-                        disabled={loading}
-                      />
-                      {targetIpInput && isValidIpv4(targetIpInput.trim()) && (
-                        <i className="bi bi-check-circle-fill traceroute-ip-valid-icon"></i>
-                      )}
-                      {targetIpInput && !isValidIpv4(targetIpInput.trim()) && (
-                        <i className="bi bi-exclamation-circle traceroute-ip-invalid-icon"></i>
-                      )}
-                    </div>
+                  <span className="tr-chip-empty">Middleware 서버 (기본)</span>
+                )}
+              </div>
+
+              <i className="bi bi-arrow-right tr-route-arrow" />
+
+              {/* 목적지 chip */}
+              <div className={`tr-chip tr-chip-target${selectMode === 'target' ? ' tr-chip-active' : ''}`}>
+                <i className="bi bi-geo-alt-fill" />
+                {/* 모드 토글 */}
+                <div className="tr-mode-toggle">
+                  <button className={targetMode === 'device' ? 'active' : ''} onClick={() => handleTargetModeChange('device')}>장비</button>
+                  <button className={targetMode === 'ip' ? 'active' : ''} onClick={() => handleTargetModeChange('ip')}>IP</button>
+                </div>
+                {targetMode === 'device' ? (
+                  targetDevice ? (
+                    <>
+                      <span className="tr-chip-name">{targetDevice.DEVICE_NAME || targetDevice.name}</span>
+                      <span className="tr-chip-ip">{targetDevice.DEVICE_IP || targetDevice.ip}</span>
+                      <i className="bi bi-x tr-chip-x" onClick={(e) => { e.stopPropagation(); clearTarget(); }} />
+                    </>
+                  ) : (
+                    <span className="tr-chip-empty" onClick={() => { setSelectMode('target'); setSearchText(''); }}>트리에서 선택 *</span>
+                  )
+                ) : (
+                  <div className="tr-ip-wrap">
+                    <IpInput
+                      value={targetIpInput}
+                      onChange={(v) => { setTargetIpInput(v); setError(''); setResult(null); }}
+                      disabled={loading}
+                    />
+                    {targetIpInput && isValidIpv4(targetIpInput.trim()) && <i className="bi bi-check-circle-fill tr-ip-ok" />}
+                    {targetIpInput && !isValidIpv4(targetIpInput.trim()) && targetIpInput.replace(/\./g, '').length > 0 && <i className="bi bi-exclamation-circle tr-ip-err" />}
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="traceroute-options-row">
-              <div className="traceroute-opt-group">
-                <label className="traceroute-opt-label">최대 홉</label>
-                <input type="number" min={1} max={64}
-                  className="traceroute-opt-input"
-                  value={maxHops}
-                  onChange={e => setMaxHops(Number(e.target.value))}
-                  disabled={loading}
-                />
+            {/* Row 2: 설정 + 버튼 */}
+            <div className="tr-action-row">
+              <div className="tr-settings">
+                <span className="tr-setting"><label>최대 홉</label><input type="number" min={1} max={64} value={maxHops} onChange={e => setMaxHops(Number(e.target.value))} disabled={loading} /></span>
+                <span className="tr-setting"><label>타임아웃</label><input type="number" min={200} max={10000} step={100} value={timeout} onChange={e => setTimeout_(Number(e.target.value))} disabled={loading} /><small>ms</small></span>
               </div>
-              <div className="traceroute-opt-group">
-                <label className="traceroute-opt-label">타임아웃 (ms)</label>
-                <input type="number" min={200} max={10000} step={100}
-                  className="traceroute-opt-input"
-                  value={timeout}
-                  onChange={e => setTimeout_(Number(e.target.value))}
-                  disabled={loading}
-                />
-              </div>
-              <button
-                className="traceroute-run-btn"
-                onClick={handleRun}
-                disabled={loading || (targetMode === 'device' ? !targetDevice : !targetIpInput.trim())}
-              >
-                {loading
-                  ? <><span className="traceroute-spinner"></span>추적 중...</>
-                  : <><i className="bi bi-play-fill"></i>추적 시작</>}
+              <button className="tr-run-btn" onClick={handleRun} disabled={loading || (targetMode === 'device' ? !targetDevice : !targetIpInput.trim())}>
+                {loading ? <><span className="traceroute-spinner" /> 추적 중...</> : <><i className="bi bi-play-fill" /> 추적 시작</>}
               </button>
             </div>
-
-            {error && (
-              <div className="traceroute-error">
-                <i className="bi bi-exclamation-triangle"></i> {error}
-              </div>
-            )}
           </div>
+
+          {error && (
+            <div className="traceroute-error">
+              <i className="bi bi-exclamation-triangle"></i> {error}
+            </div>
+          )}
 
           {/* 결과 스크롤 래퍼 */}
           <div className="traceroute-result-scroll">
@@ -511,11 +468,11 @@ export default function Traceroute() {
             {!result && !loading && (
               <div className="traceroute-empty glass-panel">
                 <i className="bi bi-signpost-split traceroute-empty-icon"></i>
-                <p className="traceroute-empty-title">네트워크 경로 추적</p>
+                <p className="traceroute-empty-title">경로 추적 대기</p>
                 <div className="traceroute-empty-steps">
                   <div className="traceroute-empty-step">
                     <span className="traceroute-step-num">1</span>
-                    <span>왼쪽 트리에서 <strong>출발지</strong> 선택 (선택사항)</span>
+                    <span>출발지 / 목적지 설정 후 <strong>추적</strong> 클릭</span>
                   </div>
                   <div className="traceroute-empty-step">
                     <span className="traceroute-step-num">2</span>

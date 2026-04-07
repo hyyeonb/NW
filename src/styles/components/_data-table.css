@@ -251,9 +251,15 @@
 }
 
 /* 빈 상태 */
+.empty-row {
+    width: 100%;
+}
+
 .empty-row td {
     height: 100%;
+    width: 100% !important;
     vertical-align: middle;
+    text-align: center;
 }
 
 .table-empty {

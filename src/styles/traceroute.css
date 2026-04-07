@@ -12,33 +12,213 @@
   overflow: hidden;
 }
 
-/* 헤더 */
-.traceroute-header {
+/* 헤더: 공통 page-header 사용 */
+
+/* ─── 설정 카드 ─── */
+.tr-config-card {
+  background: var(--theme-glass-bg, rgba(255,255,255,0.03));
+  border: 1px solid var(--theme-border-subtle, rgba(255,255,255,0.06));
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* Row 1: 출발지 → 목적지 */
+.tr-route-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tr-route-arrow {
+  color: var(--theme-text-muted, #64748b);
+  font-size: 16px;
   flex-shrink: 0;
 }
 
-.traceroute-title-area {
+/* Chip (출발지/목적지) */
+.tr-chip {
   display: flex;
   align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+  cursor: pointer;
+  transition: all 0.15s;
+  flex: 1;
+  min-width: 0;
+}
+
+.tr-chip:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.tr-chip-active {
+  border-color: rgba(99,102,241,0.4);
+  background: rgba(99,102,241,0.06);
+}
+
+.tr-chip-source > .bi-geo-alt { color: #10b981; font-size: 14px; flex-shrink: 0; }
+.tr-chip-target > .bi-geo-alt-fill { color: #8b5cf6; font-size: 14px; flex-shrink: 0; }
+
+.tr-chip-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--theme-text-primary, #f8fafc);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tr-chip-ip {
+  font-size: 11px;
+  color: var(--theme-accent-light, #818cf8);
+  font-family: var(--font-family-mono);
+  white-space: nowrap;
+}
+
+.tr-chip-empty {
+  font-size: 12px;
+  color: var(--theme-text-muted, #64748b);
+}
+
+.tr-chip-x {
+  font-size: 14px;
+  color: var(--theme-text-muted, #64748b);
+  cursor: pointer;
+  margin-left: auto;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.tr-chip-x:hover { color: #ef4444; }
+
+/* 목적지 모드 토글 (chip 내부) */
+.tr-mode-toggle {
+  display: flex;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
+}
+
+.tr-mode-toggle button {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--theme-text-muted, #94a3b8);
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tr-mode-toggle button.active {
+  background: var(--theme-accent-primary, #6366f1);
+  color: white;
+}
+
+/* 목적지 IP 입력 */
+.tr-ip-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tr-ip-field {
+  flex: 1;
+  min-width: 100px;
+  max-width: 160px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: var(--font-family-mono);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 5px;
+  color: var(--theme-text-primary, #f8fafc);
+  outline: none;
+}
+
+.tr-ip-field:focus { border-color: rgba(99,102,241,0.5); }
+.tr-ip-ok { color: #10b981; font-size: 12px; }
+.tr-ip-err { color: #ef4444; font-size: 12px; }
+
+/* Row 2: 설정 + 버튼 */
+.tr-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+.tr-settings {
+  display: flex;
   gap: 16px;
 }
 
-.traceroute-icon {
-  font-size: 2rem;
-  color: #8b5cf6;
+.tr-setting {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.traceroute-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #f8fafc;
-  margin: 0;
+.tr-setting label {
+  font-size: 11px;
+  color: var(--theme-text-muted, #94a3b8);
+  white-space: nowrap;
 }
 
-.traceroute-subtitle {
-  font-size: 0.875rem;
-  color: #64748b;
-  margin: 4px 0 0;
+.tr-setting input {
+  width: 60px;
+  padding: 4px 6px;
+  font-size: 12px;
+  text-align: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 5px;
+  color: var(--theme-text-primary, #f8fafc);
+  outline: none;
+}
+
+.tr-setting input:focus { border-color: rgba(99,102,241,0.5); }
+
+.tr-setting small {
+  font-size: 11px;
+  color: var(--theme-text-muted, #94a3b8);
+}
+
+/* 실행 버튼 */
+.tr-run-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, var(--theme-accent-primary, #6366f1), var(--theme-accent-dark, #8b5cf6));
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+}
+
+.tr-run-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+}
+
+.tr-run-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ─── 메인 바디 (트리 + 오른쪽) ─── */
@@ -151,11 +331,11 @@
 }
 
 .traceroute-search-input {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 7px 28px 7px 30px;
+  width: 100% !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  padding: 7px 28px 7px 30px !important;
   color: #e2e8f0;
   font-size: 0.82rem;
   outline: none;
@@ -363,11 +543,11 @@
   color: #a78bfa;
 }
 
-/* ─── 오른쪽 영역 ─── */
+/* ─── 오른쪽 영역 (트리와 높이 일치) ─── */
 .traceroute-right {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
   min-width: 0;
   height: 100%;
   min-height: 0;
@@ -384,13 +564,14 @@
   gap: 6px 14px;
 }
 
-/* 결과 스크롤 래퍼 — 80% 비율 */
+/* 결과 스크롤 래퍼 — 남은 공간 전체 채움 */
 .traceroute-result-scroll {
-  flex: 8;
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(139, 92, 246, 0.2) transparent;
+  margin-top: 12px;
 }
 
 .traceroute-result-scroll::-webkit-scrollbar { width: 4px; }
@@ -1071,6 +1252,8 @@
   justify-content: center; gap: 16px;
   padding: 48px 20px; text-align: center;
   flex: 1;
+  height: 100%;
+  min-height: 0;
 }
 
 .traceroute-empty-icon {

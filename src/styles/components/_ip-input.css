@@ -1,0 +1,72 @@
+/* ==================
+   Segmented IP Input
+   ================== */
+
+.ip-input-segmented {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 1px 3px;
+  transition: border-color 0.15s;
+  width: fit-content;
+}
+
+.ip-input-segmented:focus-within {
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+.ip-segment-group {
+  display: flex;
+  align-items: center;
+}
+
+.ip-dot {
+  color: var(--theme-text-muted, #64748b);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 1px;
+  user-select: none;
+}
+
+.ip-segment {
+  width: 34px !important;
+  padding: 3px 2px !important;
+  text-align: center !important;
+  font-size: 12px !important;
+  font-family: var(--font-family-mono, 'JetBrains Mono', monospace) !important;
+  color: var(--theme-text-primary, #f8fafc) !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  -moz-appearance: textfield;
+  min-height: unset !important;
+}
+
+.ip-segment::-webkit-inner-spin-button,
+.ip-segment::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.ip-segment:focus {
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: 3px;
+}
+
+.ip-segment:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Light theme */
+[data-theme="light"] .ip-input-segmented {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .ip-segment:focus {
+  background: rgba(99, 102, 241, 0.06);
+}

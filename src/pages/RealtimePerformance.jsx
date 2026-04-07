@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import {
   useWatchGroups,
@@ -18,6 +19,7 @@ import { useWatchStore } from '../stores/watchStore';
 import { watchApi } from '../api/watch';
 import DeviceMetricCard from '../components/DeviceMetricCard';
 import WatchGroupModal from '../components/WatchGroupModal';
+import { useAlert } from '../components/CustomAlert';
 import WatchIconSelectorModal from '../components/WatchIconSelectorModal';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
@@ -439,6 +441,8 @@ function WatchGroupNode({
 }
 
 export default function RealtimePerformance() {
+  const location = useLocation();
+  const { alert: showAlert, success: showSuccess, error: showError, warning: showWarning, confirm: showConfirm } = useAlert();
   const {
     selectedWatchGroup,
     setSelectedWatchGroup,
@@ -500,7 +504,7 @@ export default function RealtimePerformance() {
   const [expandedNodes, setExpandedNodes] = useState(new Set());
 
   // 탭 상태
-  const [activeTab, setActiveTab] = useState('custom'); // 'custom' | 'regular'
+  const [activeTab, setActiveTab] = useState('regular'); // 'regular' | 'custom'
   const [regularExpandedNodes, setRegularExpandedNodes] = useState(new Set());
   const [selectedRegularGroup, setSelectedRegularGroup] = useState(null);
   const [syncingRegularGroup, setSyncingRegularGroup] = useState(false);
@@ -551,7 +555,7 @@ export default function RealtimePerformance() {
   const handleFirstGroupSubmit = async (e) => {
     e.preventDefault();
     if (!firstGroupName.trim()) {
-      alert('그룹명을 입력해주세요.');
+      showWarning('그룹명을 입력해주세요.');
       return;
     }
 
@@ -572,7 +576,7 @@ export default function RealtimePerformance() {
       }
     } catch (error) {
       console.error('그룹 생성 오류:', error);
-      alert('그룹 생성에 실패했습니다: ' + error.message);
+      showError('그룹 생성에 실패했습니다: ' + error.message);
     }
   };
 
@@ -601,7 +605,7 @@ export default function RealtimePerformance() {
       }, 30000);
     } catch (error) {
       console.error('관제 시작 실패:', error);
-      alert('관제 시작에 실패했습니다.');
+      showError('관제 시작에 실패했습니다.');
     }
   };
 
@@ -652,16 +656,18 @@ export default function RealtimePerformance() {
         await createGroupMutation.mutateAsync(data);
       }
       closeGroupModal(); // 스토어에서 parentGroupIdForCreate도 함께 초기화됨
+      syncedGroupCache.current.clear(); // 캐시 초기화 → 다음 선택 시 최신 데이터 조회
       refetchGroups();
     } catch (error) {
       console.error('그룹 저장 실패:', error);
-      alert('그룹 저장에 실패했습니다.');
+      showError('그룹 저장에 실패했습니다.');
     }
   };
 
   // 그룹 삭제
   const handleDeleteGroup = async (group) => {
-    if (!confirm(`"${group.groupName}" 그룹을 삭제하시겠습니까?`)) return;
+    const ok = await showConfirm(`"${group.groupName}" 그룹을 삭제하시겠습니까?`);
+    if (!ok) return;
 
     try {
       await deleteGroupMutation.mutateAsync(group.watchGroupId);
@@ -669,10 +675,11 @@ export default function RealtimePerformance() {
         setSelectedWatchGroup(null);
         setIsWatching(false);
       }
+      syncedGroupCache.current.clear();
       refetchGroups();
     } catch (error) {
       console.error('그룹 삭제 실패:', error);
-      alert('그룹 삭제에 실패했습니다.');
+      showError('그룹 삭제에 실패했습니다.');
     }
   };
 
@@ -861,7 +868,8 @@ export default function RealtimePerformance() {
         ? `"${draggedWatchGroup.groupName}" 그룹과 하위 ${childCount}개 그룹을 "${targetGroup.groupName}" 아래로 이동하시겠습니까?`
         : `"${draggedWatchGroup.groupName}" 그룹을 "${targetGroup.groupName}" 아래로 이동하시겠습니까?`;
 
-      if (confirm(message)) {
+      const ok = await showConfirm(message);
+      if (ok) {
         await moveGroupMutation.mutateAsync({
           watchGroupId: draggedWatchGroup.watchGroupId,
           parentGroupId: targetGroup.watchGroupId,
@@ -870,11 +878,11 @@ export default function RealtimePerformance() {
       }
     } catch (error) {
       console.error('그룹 이동 실패:', error);
-      alert('그룹 이동에 실패했습니다.');
+      showError('그룹 이동에 실패했습니다.');
     }
 
     setDraggedWatchGroup(null);
-  }, [draggedWatchGroup, watchGroups, isDescendantOf, moveGroupMutation, refetchGroups, setDraggedWatchGroup]);
+  }, [draggedWatchGroup, watchGroups, isDescendantOf, moveGroupMutation, refetchGroups, setDraggedWatchGroup, showConfirm, showError]);
 
   // 빈 공간에 드롭 (최상위로 이동)
   const handleContainerDrop = useCallback(async (e) => {
@@ -891,7 +899,8 @@ export default function RealtimePerformance() {
           ? `"${draggedWatchGroup.groupName}" 그룹과 하위 ${childCount}개 그룹을 최상위로 이동하시겠습니까?`
           : `"${draggedWatchGroup.groupName}" 그룹을 최상위로 이동하시겠습니까?`;
 
-        if (confirm(message)) {
+        const ok = await showConfirm(message);
+        if (ok) {
           await moveGroupMutation.mutateAsync({
             watchGroupId: draggedWatchGroup.watchGroupId,
             parentGroupId: null,
@@ -900,11 +909,11 @@ export default function RealtimePerformance() {
         }
       } catch (error) {
         console.error('그룹 이동 실패:', error);
-        alert('그룹 이동에 실패했습니다.');
+        showError('그룹 이동에 실패했습니다.');
       }
     }
     setDraggedWatchGroup(null);
-  }, [draggedWatchGroup, moveGroupMutation, refetchGroups, setDraggedWatchGroup]);
+  }, [draggedWatchGroup, moveGroupMutation, refetchGroups, setDraggedWatchGroup, showConfirm, showError]);
 
   const handleContainerDragOver = useCallback((e) => {
     if (e.target.closest('.group-item')) return;
@@ -1327,6 +1336,39 @@ export default function RealtimePerformance() {
     }
   };
 
+  // 페이지 재진입 시 리셋 (메뉴 재클릭 시 일반 그룹 첫 항목으로 복원)
+  const refreshKey = location.state?._refresh;
+  const prevRefreshKey = useRef(refreshKey);
+  const autoSelectedRef = useRef(false);
+
+  useEffect(() => {
+    // 최초 마운트가 아닌 refreshKey 변경 시에만 리셋
+    if (refreshKey && refreshKey !== prevRefreshKey.current) {
+      prevRefreshKey.current = refreshKey;
+      setActiveTab('regular');
+      setSelectedWatchGroup(null);
+      setSelectedRegularGroup(null);
+      setIsWatching(false);
+      syncedGroupCache.current.clear();
+      // 직접 첫 항목 선택 (state 업데이트 후 실행)
+      setTimeout(() => {
+        if (regularGroups && regularGroups.length > 0) {
+          handleSelectRegularGroup(regularGroups[0]);
+          autoSelectedRef.current = true;
+        }
+      }, 50);
+    }
+  }, [refreshKey]);
+
+  // 최초 마운트 시 일반 그룹 첫 번째 항목 자동 선택
+  useEffect(() => {
+    if (autoSelectedRef.current) return;
+    if (regularGroups && regularGroups.length > 0 && !selectedRegularGroup && !selectedWatchGroup) {
+      autoSelectedRef.current = true;
+      handleSelectRegularGroup(regularGroups[0]);
+    }
+  }, [regularGroups]);
+
   // 일반 그룹 노드 토글
   const handleToggleRegularNode = useCallback((groupId) => {
     setRegularExpandedNodes((prev) => {
@@ -1344,11 +1386,17 @@ export default function RealtimePerformance() {
     setSearchText('');
     if (tab === 'custom') {
       setSelectedRegularGroup(null);
+      if (watchGroups && watchGroups.length > 0) {
+        setSelectedWatchGroup(watchGroups[0]);
+      }
     } else {
       setSelectedWatchGroup(null);
       setIsWatching(false);
+      if (regularGroups && regularGroups.length > 0) {
+        handleSelectRegularGroup(regularGroups[0]);
+      }
     }
-  }, [activeTab, setSelectedWatchGroup, setIsWatching]);
+  }, [activeTab, setSelectedWatchGroup, setIsWatching, watchGroups, regularGroups, handleSelectRegularGroup]);
 
   // (RegularGroupNode는 파일 상단에 별도 컴포넌트로 분리됨)
 
@@ -1388,16 +1436,16 @@ export default function RealtimePerformance() {
           {!sidebarCollapsed && (
             <div className="ws-tab-bar">
               <button
-                className={`ws-tab-btn ${activeTab === 'custom' ? 'active' : ''}`}
-                onClick={() => handleTabChange('custom')}
-              >
-                커스텀 그룹
-              </button>
-              <button
                 className={`ws-tab-btn ${activeTab === 'regular' ? 'active' : ''}`}
                 onClick={() => handleTabChange('regular')}
               >
                 일반 그룹
+              </button>
+              <button
+                className={`ws-tab-btn ${activeTab === 'custom' ? 'active' : ''}`}
+                onClick={() => handleTabChange('custom')}
+              >
+                커스텀 그룹
               </button>
             </div>
           )}
@@ -1760,7 +1808,7 @@ export default function RealtimePerformance() {
                     <button
                       className="btn btn-primary"
                       onClick={handleStartWatch}
-                      disabled={startWatchMutation.isPending}
+                      disabled={startWatchMutation.isPending || !groupDetail?.devices?.length}
                     >
                       <i className="bi bi-play-fill"></i>
                       관제 시작

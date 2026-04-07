@@ -54,11 +54,11 @@ export const useDevice = (deviceId) => {
   });
 };
 
-export const useDevicePorts = (deviceId) => {
+export const useDevicePorts = (deviceId, type) => {
   return useQuery({
-    queryKey: ['devicePorts', deviceId],
+    queryKey: ['devicePorts', deviceId, type || 'ethernet'],
     queryFn: async () => {
-      const response = await devicesApi.getDevicePorts(deviceId);
+      const response = await devicesApi.getDevicePorts(deviceId, type);
       // 응답 데이터 구조: { code, message, data: [...] }
       const ports = response.data?.data || response.data || [];
       return Array.isArray(ports) ? ports : [];

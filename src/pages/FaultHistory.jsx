@@ -13,6 +13,7 @@ import SshTerminalModal from '../components/SshTerminalModal';
 import 'react-datepicker/dist/react-datepicker.css';
 import '../styles/fault-monitoring.css';
 import { historyApi } from '../api/history';
+import DevCodeDropdown from '../components/DevCodeDropdown';
 import '../styles/fault-stats.css';
 
 // 한국어 로케일 등록
@@ -78,10 +79,12 @@ export default function FaultHistory() {
   const deviceIdsParam = useMemo(() => {
     if (!selectedGroup) return undefined;
     if (selectedGroup.type === 'regular') {
-      return regularDevices?.length ? regularDevices.map(d => d.DEVICE_ID) : undefined;
+      if (!regularDevices) return [];
+      return regularDevices.map(d => d.DEVICE_ID);
     }
-    if (selectedGroup.watchGroupId && groupDetail?.devices?.length) {
-      return groupDetail.devices.map(d => d.deviceId);
+    if (selectedGroup.watchGroupId) {
+      if (!groupDetail) return [];
+      return (groupDetail.devices || []).map(d => d.deviceId);
     }
     return undefined;
   }, [selectedGroup, groupDetail, regularDevices]);
@@ -127,7 +130,7 @@ export default function FaultHistory() {
       try {
         const response = await devicesApi.getDevCodeTree();
         const tree = response.data?.data || [];
-        setDevCodes(flattenTree(tree));
+        setDevCodes(tree);
       } catch (error) {
         console.error('장비 코드 조회 실패:', error);
       }
@@ -137,6 +140,11 @@ export default function FaultHistory() {
 
   // 장애 이력 조회
   const fetchHistory = useCallback(async () => {
+    if (Array.isArray(deviceIdsParam) && deviceIdsParam.length === 0) {
+      setHistories([]);
+      setTotalElements(0);
+      return;
+    }
     setIsLoading(true);
     try {
       const params = {
@@ -151,15 +159,17 @@ export default function FaultHistory() {
       if (searchErrorMessage.trim()) params.errorMessage = searchErrorMessage.trim();
       if (searchIp.trim()) params.deviceIp = searchIp.trim();
       if (searchGroupName.trim()) params.groupName = searchGroupName.trim();
-      if (deviceIdsParam) params.deviceIds = deviceIdsParam;
+      if (deviceIdsParam && deviceIdsParam.length > 0) params.deviceIds = deviceIdsParam;
+      // 등급 필터: 전체 선택이 아닌 경우에만 서버에 전달
+      if (selectedLevels.length > 0 && selectedLevels.length < ERROR_LEVELS.length) {
+        params.errorLevels = selectedLevels;
+      }
 
       const response = await faultApi.getHistory(params);
       const data = response.data?.data || {};
 
       // API 응답: { content: [...], page, size, totalElements, totalPages }
-      const rawList = data.content || [];
-      const filteredList = rawList.filter(e => selectedLevels.includes(e.ERROR_LEVEL));
-      setHistories(filteredList);
+      setHistories(data.content || []);
       setTotalCount(data.totalElements || 0);
     } catch (error) {
       console.error('장애 이력 조회 실패:', error);
@@ -413,18 +423,11 @@ export default function FaultHistory() {
           </div>
           <div className="filter-group">
             <label>장비코드</label>
-            <select
-              className="filter-select"
+            <DevCodeDropdown
+              devCodes={devCodes}
               value={searchDevCode}
-              onChange={(e) => setSearchDevCode(e.target.value)}
-            >
-              <option value="">전체</option>
-              {devCodes.map((code) => (
-                <option key={code.DEV_CODE_ID} value={code.DEV_CODE_ID}>
-                  {code.CODE_NM}
-                </option>
-              ))}
-            </select>
+              onChange={setSearchDevCode}
+            />
           </div>
           <div className="filter-group">
             <label>장비명</label>
@@ -554,10 +557,12 @@ export default function FaultHistory() {
               if (searchErrorMessage.trim()) params.errorMessage = searchErrorMessage.trim();
               if (searchIp.trim()) params.deviceIp = searchIp.trim();
               if (searchGroupName.trim()) params.groupName = searchGroupName.trim();
+              if (selectedLevels.length > 0 && selectedLevels.length < ERROR_LEVELS.length) {
+                params.errorLevels = selectedLevels;
+              }
               const res = await faultApi.getHistory(params);
               const data = res.data?.data || {};
-              const rawList = data.content || [];
-              return rawList.filter(e => selectedLevels.includes(e.ERROR_LEVEL));
+              return data.content || [];
             },
           }}
         />

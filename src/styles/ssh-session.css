@@ -612,3 +612,25 @@
 [data-theme="light"] .ssh-detail-tab .tab-count {
     background: rgba(142, 142, 147, 0.1);
 }
+
+/* CRUD 활동 뱃지 */
+.activity-crud {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.crud-badge {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-family-mono, monospace);
+  line-height: 1.4;
+}
+
+.crud-r { background: rgba(59, 130, 246, 0.12); color: #60a5fa; }
+.crud-c { background: rgba(16, 185, 129, 0.12); color: #34d399; }
+.crud-u { background: rgba(245, 158, 11, 0.12); color: #fbbf24; }
+.crud-d { background: rgba(239, 68, 68, 0.12); color: #f87171; }

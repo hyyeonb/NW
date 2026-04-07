@@ -71,27 +71,45 @@ export function useAlertWebSocket(options = {}) {
         // 3. 방해금지 시간대 체크
         const inQuiet = state.isInQuietHours();
 
-        // 알림 목록에는 항상 추가 (이력 보존)
-        addAlert(alert);
+        // 비활성 탭이면 알림 목록만 추가 (Toast/사운드 억제)
+        const isHiddenTab = document.visibilityState === 'hidden';
 
-        // 방해금지 중이면 소리/토스트 억제
-        if (inQuiet) return;
+        // 알림 목록에는 항상 추가 (이력 보존), Toast는 활성 탭에서만
+        addAlert(alert, isHiddenTab);
 
-        // CLEAR가 아닌 CRITICAL 알림일 때만 소리 재생
-        if (!isMuted && alert.severity === 'CRITICAL' && !alert.isCleared) {
+        // 방해금지 또는 비활성 탭이면 소리/토스트 억제
+        if (inQuiet || isHiddenTab) return;
+
+        // CLEAR가 아닌 장애 알림일 때 소리 재생 (CRITICAL/MAJOR/MINOR/WARNING)
+        if (!isMuted && !alert.isCleared) {
           const prefs = state.notificationPrefs;
           const volume = prefs?.SOUND_ENABLED !== false ? (prefs?.SOUND_VOLUME || 30) : 0;
           const type = prefs?.SOUND_TYPE || 'SINE';
-          if (volume > 0) playAlertSound(type, volume);
+          if (volume > 0) playAlertSound(type, volume, alert.severity);
         }
 
-        // 브라우저 알림
-        const prefs = state.notificationPrefs;
-        if (prefs?.BROWSER_NOTIFY && !alert.isCleared && Notification.permission === 'granted') {
-          new Notification(`[NMS] ${alert.alertType}`, {
-            body: `${alert.deviceName || ''} - ${alert.message || ''}`,
-            icon: '/logo-single.svg',
-          });
+        // 브라우저 알림 (Notification API 사용 가능한 환경에서만)
+        if (!alert.isCleared && typeof Notification !== 'undefined') {
+          const prefs = state.notificationPrefs;
+          if (prefs?.BROWSER_NOTIFY) {
+            if (Notification.permission === 'granted') {
+              new Notification(`[NMS] ${alert.alertType}`, {
+                body: `${alert.deviceName || ''} - ${alert.message || ''}`,
+                icon: '/logo-single.svg',
+                tag: `nms-${alert.deviceId}-${alert.alertType}`, // 중복 방지
+              });
+            } else if (Notification.permission === 'default') {
+              // 아직 권한 미결정 → 요청 (HTTPS 또는 localhost에서만 동작)
+              Notification.requestPermission().then(perm => {
+                if (perm === 'granted') {
+                  new Notification(`[NMS] ${alert.alertType}`, {
+                    body: `${alert.deviceName || ''} - ${alert.message || ''}`,
+                    icon: '/logo-single.svg',
+                  });
+                }
+              }).catch(() => {});
+            }
+          }
         }
       } catch (error) {
         console.error('[WebSocket] Failed to parse message:', error);
@@ -253,9 +271,33 @@ export function useAlertWebSocket(options = {}) {
 }
 
 // 알림음 재생 (환경설정 반영)
-function playAlertSound(type = 'SINE', volume = 30) {
+// 공유 AudioContext (사용자 인터랙션 후 resume 보장)
+let sharedAudioCtx = null;
+function getAudioCtx() {
+  if (!sharedAudioCtx) {
+    sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  // suspended 상태면 resume (Chrome 자동재생 정책)
+  if (sharedAudioCtx.state === 'suspended') {
+    sharedAudioCtx.resume().catch(() => {});
+  }
+  return sharedAudioCtx;
+}
+
+// 사용자 최초 클릭 시 AudioContext resume (Chrome 정책 대응)
+if (typeof document !== 'undefined') {
+  const resumeAudio = () => {
+    if (sharedAudioCtx?.state === 'suspended') sharedAudioCtx.resume();
+    document.removeEventListener('click', resumeAudio);
+    document.removeEventListener('keydown', resumeAudio);
+  };
+  document.addEventListener('click', resumeAudio, { once: true });
+  document.addEventListener('keydown', resumeAudio, { once: true });
+}
+
+function playAlertSound(type = 'SINE', volume = 30, severity = 'CRITICAL') {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = getAudioCtx();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
@@ -263,14 +305,40 @@ function playAlertSound(type = 'SINE', volume = 30) {
     osc.connect(gain);
     gain.connect(ctx.destination);
 
-    const freqMap = { SINE: 440, BEEP: 880, CHIME: 523, ALARM: 660 };
-    osc.frequency.value = freqMap[type] || 440;
-    osc.type = type === 'ALARM' ? 'sawtooth' : type === 'BEEP' ? 'square' : 'sine';
+    // 심각도별 주파수 + 재생 시간 차등
+    const severityConfig = {
+      CRITICAL: { freq: 880, duration: 0.5, wave: 'sawtooth' },
+      MAJOR:    { freq: 660, duration: 0.3, wave: 'square' },
+      MINOR:    { freq: 523, duration: 0.2, wave: 'sine' },
+      WARNING:  { freq: 440, duration: 0.15, wave: 'sine' },
+    };
+    const typeOverride = { SINE: 'sine', BEEP: 'square', CHIME: 'sine', ALARM: 'sawtooth' };
+
+    const config = severityConfig[severity] || severityConfig.WARNING;
+    osc.frequency.value = config.freq;
+    osc.type = typeOverride[type] || config.wave;
 
     osc.start();
-    osc.stop(ctx.currentTime + 0.2);
+    osc.stop(ctx.currentTime + config.duration);
+
+    // CRITICAL: 2연타
+    if (severity === 'CRITICAL') {
+      setTimeout(() => {
+        try {
+          const osc2 = ctx.createOscillator();
+          const gain2 = ctx.createGain();
+          gain2.gain.value = volume / 100;
+          osc2.connect(gain2);
+          gain2.connect(ctx.destination);
+          osc2.frequency.value = config.freq * 1.2;
+          osc2.type = config.wave;
+          osc2.start();
+          osc2.stop(ctx.currentTime + 0.3);
+        } catch {}
+      }, 300);
+    }
   } catch (error) {
-    // 무시
+    // 무시 — AudioContext 미지원 환경
   }
 }
 

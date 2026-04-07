@@ -5,6 +5,7 @@ import { useAuthStore } from './stores';
 import MainLayout from './layouts/MainLayout';
 import { Login, Signup, SignupSuccess, FindAccount, SocialLoginLanding } from './pages';
 import AlertToast from './components/AlertToast';
+import { AlertProvider } from './components/CustomAlert';
 import UrgentNoticePopup from './components/UrgentNoticePopup';
 import GlobalTooltip from './components/GlobalTooltip';
 import PermissionGuard from './components/PermissionGuard';
@@ -35,6 +36,7 @@ const ThresholdManagement = lazy(() => import('./pages/ThresholdManagement'));
 const AdminStyleTest = lazy(() => import('./pages/AdminStyleTest'));
 const AccountSettings = lazy(() => import('./pages/AccountSettings'));
 const NotificationSettings = lazy(() => import('./pages/NotificationSettings'));
+const MiddlewareManagement = lazy(() => import('./pages/MiddlewareManagement'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -184,6 +186,7 @@ export default function App() {
         <ErrorBoundary>
         <AuthProvider>
           <AlertWebSocketProvider>
+            <AlertProvider>
             <AlertToast />
             <UrgentNoticePopup />
             <GlobalTooltip />
@@ -236,12 +239,14 @@ export default function App() {
               <Route path="settings/admin/style-test" element={<AdminStyleTest />} />
               <Route path="settings/account" element={<AccountSettings />} />
               <Route path="settings/notifications" element={<NotificationSettings />} />
+              <Route path="settings/middleware" element={<PermissionGuard pageCode="system_admin"><MiddlewareManagement /></PermissionGuard>} />
             </Route>
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
           </Suspense>
+          </AlertProvider>
           </AlertWebSocketProvider>
         </AuthProvider>
         </ErrorBoundary>

@@ -203,6 +203,27 @@ export default function LoginHistory() {
       render: (value) => value || '-',
     },
     {
+      key: 'ACTIVITY_SUMMARY',
+      label: '활동',
+      width: '160px',
+      align: 'center',
+      render: (_, row) => {
+        const c = row.ACTIVITY_CREATE || 0;
+        const r = row.ACTIVITY_VIEW || 0;
+        const u = row.ACTIVITY_UPDATE || 0;
+        const d = row.ACTIVITY_DELETE || 0;
+        if (c + r + u + d === 0) return <span style={{ color: '#64748b' }}>-</span>;
+        return (
+          <span className="activity-crud">
+            {r > 0 && <span className="crud-badge crud-r">R {r}</span>}
+            {c > 0 && <span className="crud-badge crud-c">C {c}</span>}
+            {u > 0 && <span className="crud-badge crud-u">U {u}</span>}
+            {d > 0 && <span className="crud-badge crud-d">D {d}</span>}
+          </span>
+        );
+      },
+    },
+    {
       key: 'USER_AGENT',
       label: 'User Agent',
       sortable: false,

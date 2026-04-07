@@ -625,6 +625,114 @@
 }
 
 /* ==================
+   등록 결과 테이블
+   ================== */
+.result-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.result-table th {
+    background: rgba(255, 255, 255, 0.04);
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--theme-text-muted);
+    border-bottom: 1px solid var(--theme-border-default);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.result-table td {
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #e2e8f0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: middle;
+}
+
+.result-table td.device-name {
+    display: table-cell !important;
+    font-weight: 500;
+    font-size: 13px;
+    white-space: nowrap;
+    vertical-align: middle !important;
+    text-align: left !important;
+    overflow: visible !important;
+}
+
+.result-table .device-ip {
+    color: var(--theme-accent-light);
+    font-family: var(--font-family-mono);
+    white-space: nowrap;
+}
+
+.result-table .desc-column {
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.result-table .failure-reason {
+    color: var(--color-error-light);
+    font-size: 12px;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 등록 모달 하단 액션 - 진행바 왼쪽 + 확인 버튼 오른쪽 */
+.registration-modal .modal-actions {
+    display: flex;
+    align-items: flex-end;
+    padding: 12px 16px;
+    gap: 16px;
+}
+
+.registration-modal .modal-actions .btn-primary {
+    padding: 6px 20px;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+/* 하단 진행 바 (확인 버튼 왼쪽, 버튼 상단에 바 정렬) */
+.modal-actions .progress-bottom {
+    flex: 1;
+    margin: 0;
+}
+
+.modal-actions .progress-bottom .progress-bar-container {
+    height: 6px;
+    margin-bottom: 6px;
+}
+
+.modal-actions .progress-bottom .progress-text {
+    font-size: 12px;
+    margin-top: 0;
+}
+
+.success-section .result-table th {
+    background: rgba(74, 222, 128, 0.06);
+    border-bottom-color: rgba(74, 222, 128, 0.15);
+}
+
+.failure-section .result-table th {
+    background: rgba(248, 113, 113, 0.06);
+    border-bottom-color: rgba(248, 113, 113, 0.15);
+}
+
+.success-row {
+    background: rgba(74, 222, 128, 0.05);
+}
+
+.failure-row {
+    background: rgba(248, 113, 113, 0.05);
+}
+
+/* ==================
    Responsive - Tablet
    ================== */
 @media (max-width: 1024px) {

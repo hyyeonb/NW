@@ -1,0 +1,131 @@
+/* ==================
+   DevCode 2-Depth Hover Dropdown
+   ================== */
+
+.devcode-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.devcode-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  cursor: pointer;
+  min-width: 80px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: var(--theme-text-primary, #f8fafc);
+  font-size: 13px;
+}
+
+.devcode-trigger span {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.devcode-arrow {
+  font-size: 10px;
+  color: var(--theme-text-muted, #94a3b8);
+  transition: transform 0.15s;
+}
+
+/* 1뎁스 메뉴 */
+.devcode-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 10000;
+  min-width: 160px;
+  background: rgba(22, 22, 40, 0.97);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 4px 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* 항목 공통 */
+.devcode-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  font-size: 13px;
+  color: var(--theme-text-secondary, #e2e8f0);
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+  transition: background 0.1s;
+}
+
+.devcode-item:hover {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--theme-text-primary, #f8fafc);
+}
+
+.devcode-item.active {
+  color: var(--theme-accent-light, #818cf8);
+  font-weight: 500;
+}
+
+.devcode-item.active::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 14px;
+  background: var(--theme-accent-primary, #6366f1);
+  border-radius: 2px;
+}
+
+/* 상위 항목 화살표 */
+.devcode-sub-arrow {
+  font-size: 10px;
+  color: var(--theme-text-muted, #64748b);
+  margin-left: 8px;
+}
+
+/* 상위 호버 */
+.devcode-parent.hovered {
+  background: rgba(99, 102, 241, 0.12);
+}
+
+/* 2뎁스 서브메뉴 (Portal로 body에 렌더, fixed 위치) */
+.devcode-submenu-portal {
+  position: fixed;
+  min-width: 150px;
+  background: rgba(22, 22, 40, 0.97);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 4px 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 10001;
+}
+
+/* 라이트 테마 */
+[data-theme="light"] .devcode-menu,
+[data-theme="light"] .devcode-submenu-portal {
+  background: rgba(255, 255, 255, 0.97);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .devcode-item {
+  color: var(--theme-text-secondary, #475569);
+}
+
+[data-theme="light"] .devcode-item:hover {
+  background: rgba(99, 102, 241, 0.08);
+}

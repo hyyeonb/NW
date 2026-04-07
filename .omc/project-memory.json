@@ -1,0 +1,225 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1774580055683,
+  "projectRoot": "C:\\STN\\new_nms\\front\\frontend",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "react",
+        "version": "19.2.0",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "19.2.0",
+        "category": "frontend"
+      },
+      {
+        "name": "vite",
+        "version": "7.2.4",
+        "category": "build"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "npm run build",
+    "testCommand": null,
+    "lintCommand": "npm run lint",
+    "devCommand": "npm run dev",
+    "scripts": {
+      "dev": "vite",
+      "build": "vite build",
+      "lint": "eslint .",
+      "preview": "vite preview"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": "type-based"
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "docs",
+      "public",
+      "src"
+    ],
+    "gitBranches": {
+      "defaultBranch": "origin",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 5,
+      "lastAccessed": 1774580055321,
+      "keyFiles": [
+        "index.html",
+        "logo-full-dark.svg",
+        "logo-single.svg",
+        "logo-text-dark.svg",
+        "vite.svg"
+      ]
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 8,
+      "lastAccessed": 1774580055329,
+      "keyFiles": [
+        "backend-response-examples.md",
+        "backend-spring-implementation.md",
+        "backend-spring-mybatis.md",
+        "backend-widget-data-implementation.md",
+        "config-reference.md"
+      ]
+    },
+    "public": {
+      "path": "public",
+      "purpose": "Public files",
+      "fileCount": 4,
+      "lastAccessed": 1774580055457,
+      "keyFiles": [
+        "logo-full-dark.svg",
+        "logo-single.svg",
+        "logo-text-dark.svg",
+        "vite.svg"
+      ]
+    },
+    "sql": {
+      "path": "sql",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1774580055465,
+      "keyFiles": [
+        "add_custom_widget.sql",
+        "insert_dashboard_widgets.sql"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 3,
+      "lastAccessed": 1774580055467,
+      "keyFiles": [
+        "App.jsx",
+        "index.css",
+        "main.jsx"
+      ]
+    },
+    "dist\\assets": {
+      "path": "dist\\assets",
+      "purpose": "Static assets",
+      "fileCount": 37,
+      "lastAccessed": 1774580055472,
+      "keyFiles": [
+        "AccountSettings-C_yoxE4J.js",
+        "AccountSettings-D-gUQlrN.css",
+        "admin-CVyFhC4J.js"
+      ]
+    },
+    "src\\api": {
+      "path": "src\\api",
+      "purpose": "API routes",
+      "fileCount": 17,
+      "lastAccessed": 1774580055482,
+      "keyFiles": [
+        "account.js",
+        "admin.js",
+        "auth.js"
+      ]
+    },
+    "src\\assets": {
+      "path": "src\\assets",
+      "purpose": "Static assets",
+      "fileCount": 1,
+      "lastAccessed": 1774580055484,
+      "keyFiles": [
+        "react.svg"
+      ]
+    },
+    "src\\components": {
+      "path": "src\\components",
+      "purpose": "UI components",
+      "fileCount": 25,
+      "lastAccessed": 1774580055505,
+      "keyFiles": [
+        "AlertToast.jsx",
+        "ConnectivityCheckModal.jsx",
+        "CustomAlert.jsx"
+      ]
+    },
+    "src\\data": {
+      "path": "src\\data",
+      "purpose": "Data files",
+      "fileCount": 1,
+      "lastAccessed": 1774580055517,
+      "keyFiles": [
+        "iconData.js"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src\\styles\\components\\_tables.css",
+      "accessCount": 26,
+      "lastAccessed": 1774583366797,
+      "type": "directory"
+    },
+    {
+      "path": "src\\components\\DataTable.jsx",
+      "accessCount": 9,
+      "lastAccessed": 1774582905981,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\DeviceDetailModal.jsx",
+      "accessCount": 6,
+      "lastAccessed": 1774582349604,
+      "type": "file"
+    },
+    {
+      "path": "src\\pages\\AssetManagement.jsx",
+      "accessCount": 5,
+      "lastAccessed": 1774582372001,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\DeviceMetricCard.jsx",
+      "accessCount": 1,
+      "lastAccessed": 1774582326162,
+      "type": "file"
+    },
+    {
+      "path": "src\\pages\\RealtimePerformance.jsx",
+      "accessCount": 1,
+      "lastAccessed": 1774582335936,
+      "type": "file"
+    },
+    {
+      "path": "src\\pages",
+      "accessCount": 1,
+      "lastAccessed": 1774582353846,
+      "type": "directory"
+    }
+  ],
+  "userDirectives": []
+}

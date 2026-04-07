@@ -3,8 +3,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import GroupTree from '../components/GroupTree';
 import apiClient from '../api/client';
 import { devicesApi, groupsApi } from '../api';
+import { useAlert } from '../components/CustomAlert';
 
 export default function NewAssetManagement() {
+  const { alert: showAlert, success: showSuccess, error: showError, warning: showWarning, confirm: showConfirm } = useAlert();
   const queryClient = useQueryClient();
   const [devices, setDevices] = useState([]);
   const [allGroups, setAllGroups] = useState([]); // 전체 그룹 목록 (flat)
@@ -164,7 +166,7 @@ export default function NewAssetManagement() {
   // 장비 추가 (서버 측 중복 검증 포함)
   const handleAddDevice = async () => {
     if (!formData.DEVICE_NAME || !formData.DEVICE_IP) {
-      alert('장비명과 IP 주소는 필수입니다.');
+      showWarning('장비명과 IP 주소는 필수입니다.');
       return;
     }
 
@@ -176,7 +178,7 @@ export default function NewAssetManagement() {
 
     // 현재 목록에서 중복 검사
     if (devices.some((d) => d.DEVICE_IP === formData.DEVICE_IP)) {
-      alert(`IP 주소 ${formData.DEVICE_IP}는 이미 목록에 있습니다.`);
+      showWarning(`IP 주소 ${formData.DEVICE_IP}는 이미 목록에 있습니다.`);
       return;
     }
 
@@ -185,7 +187,7 @@ export default function NewAssetManagement() {
       const response = await devicesApi.validateDevices([{ DEVICE_IP: formData.DEVICE_IP }]);
       const validDevices = response.data?.data || [];
       if (validDevices.length === 0) {
-        alert(`IP 주소 ${formData.DEVICE_IP}는 이미 DB에 등록된 장비입니다.`);
+        showWarning(`IP 주소 ${formData.DEVICE_IP}는 이미 DB에 등록된 장비입니다.`);
         return;
       }
     } catch (error) {
@@ -284,7 +286,7 @@ export default function NewAssetManagement() {
   // 그룹 선택 모달 열기 (일괄)
   const openBulkGroupModal = () => {
     if (selectedDeviceIds.size === 0) {
-      alert('장비를 선택해주세요.');
+      showWarning('장비를 선택해주세요.');
       return;
     }
     setGroupModalTarget('bulk');
@@ -303,7 +305,7 @@ export default function NewAssetManagement() {
   // 그룹 선택 확인
   const handleGroupModalConfirm = async () => {
     if (!tempSelectedGroup) {
-      alert('그룹을 선택해주세요.');
+      showWarning('그룹을 선택해주세요.');
       return;
     }
 
@@ -327,7 +329,7 @@ export default function NewAssetManagement() {
         }
       }
 
-      alert(`${selectedDeviceIds.size}개 장비의 그룹이 변경되었습니다.`);
+      showSuccess(`${selectedDeviceIds.size}개 장비의 그룹이 변경되었습니다.`);
       setSelectedDeviceIds(new Set());
     } else {
       // 개별 지정
@@ -392,7 +394,7 @@ export default function NewAssetManagement() {
   const parseCsvAndAddDevices = async (csvData) => {
     const lines = csvData.split('\n').filter((line) => line.trim());
     if (lines.length < 2) {
-      alert('유효한 CSV 파일이 아닙니다.');
+      showWarning('유효한 CSV 파일이 아닙니다.');
       return;
     }
 
@@ -462,9 +464,9 @@ export default function NewAssetManagement() {
         messages.push(`유효하지 않은 IP: ${invalidIps.length}개`);
       }
       if (messages.length > 0) {
-        alert(`추가할 수 있는 장비가 없습니다.\n${messages.join('\n')}`);
+        showWarning(`추가할 수 있는 장비가 없습니다.\n${messages.join('\n')}`);
       } else {
-        alert('추가할 수 있는 장비가 없습니다.');
+        showWarning('추가할 수 있는 장비가 없습니다.');
       }
       return;
     }
@@ -475,7 +477,7 @@ export default function NewAssetManagement() {
       const validDevices = response.data?.data || [];
 
       if (validDevices.length === 0) {
-        alert('모든 장비가 이미 등록되어 있어 추가할 수 없습니다.');
+        showWarning('모든 장비가 이미 등록되어 있어 추가할 수 없습니다.');
         return;
       }
 
@@ -513,31 +515,32 @@ export default function NewAssetManagement() {
       }
 
       if (excludedMessages.length > 0) {
-        alert(`${validDevices.length}개의 장비가 추가되었습니다.\n\n제외된 항목:\n${excludedMessages.join('\n')}`);
+        showSuccess(`${validDevices.length}개의 장비가 추가되었습니다.\n\n제외된 항목:\n${excludedMessages.join('\n')}`);
       } else {
-        alert(`${validDevices.length}개의 장비가 추가되었습니다.`);
+        showSuccess(`${validDevices.length}개의 장비가 추가되었습니다.`);
       }
     } catch (error) {
       console.error('CSV 업로드 검증 오류:', error);
-      alert('장비 검증 중 오류가 발생했습니다.');
+      showError('장비 검증 중 오류가 발생했습니다.');
     }
   };
 
   // 일괄 등록 (실시간 진행 표시)
   const handleRegisterAll = async () => {
     if (devices.length === 0) {
-      alert('등록할 장비가 없습니다.');
+      showWarning('등록할 장비가 없습니다.');
       return;
     }
 
     // 그룹 미지정 장비 체크
     const devicesWithoutGroup = devices.filter((d) => !d.GROUP_ID);
     if (devicesWithoutGroup.length > 0) {
-      alert(`그룹이 지정되지 않은 장비가 ${devicesWithoutGroup.length}개 있습니다.\n모든 장비에 그룹을 지정해주세요.`);
+      showWarning(`그룹이 지정되지 않은 장비가 ${devicesWithoutGroup.length}개 있습니다.\n모든 장비에 그룹을 지정해주세요.`);
       return;
     }
 
-    if (!confirm(`${devices.length}개의 장비 등록을 시작하시겠습니까?`)) {
+    const ok = await showConfirm(`${devices.length}개의 장비 등록을 시작하시겠습니까?`);
+    if (!ok) {
       return;
     }
 
@@ -1192,21 +1195,23 @@ export default function NewAssetManagement() {
               {registrationProgress.isComplete ? '장비 등록 완료' : '장비 등록 중...'}
             </h3>
 
-            {/* 진행 바 */}
-            <div className="progress-section">
-              <div className="progress-bar-container">
-                <div
-                  className="progress-bar-fill"
-                  style={{ width: `${(registrationProgress.current / registrationProgress.total) * 100}%` }}
-                />
+            {/* 진행 바 (진행 중일 때만 상단 표시) */}
+            {!registrationProgress.isComplete && (
+              <div className="progress-section">
+                <div className="progress-bar-container">
+                  <div
+                    className="progress-bar-fill"
+                    style={{ width: `${(registrationProgress.current / registrationProgress.total) * 100}%` }}
+                  />
+                </div>
+                <div className="progress-text">
+                  {registrationProgress.current} / {registrationProgress.total}
+                  {registrationProgress.currentDevice && (
+                    <span className="current-device"> - {registrationProgress.currentDevice} 처리 중...</span>
+                  )}
+                </div>
               </div>
-              <div className="progress-text">
-                {registrationProgress.current} / {registrationProgress.total}
-                {registrationProgress.currentDevice && !registrationProgress.isComplete && (
-                  <span className="current-device"> - {registrationProgress.currentDevice} 처리 중...</span>
-                )}
-              </div>
-            </div>
+            )}
 
             {/* 성공 목록 */}
             {(registrationProgress.successList.length > 0 || registrationProgress.isComplete) && (
@@ -1309,9 +1314,20 @@ export default function NewAssetManagement() {
               </div>
             )}
 
-            {/* 완료 시 닫기 버튼 */}
+            {/* 완료 시 진행 바 + 닫기 버튼 */}
             {registrationProgress.isComplete && (
               <div className="modal-actions">
+                <div className="progress-section progress-bottom">
+                  <div className="progress-bar-container">
+                    <div
+                      className="progress-bar-fill"
+                      style={{ width: `${(registrationProgress.current / registrationProgress.total) * 100}%` }}
+                    />
+                  </div>
+                  <div className="progress-text">
+                    {registrationProgress.current} / {registrationProgress.total}
+                  </div>
+                </div>
                 <button className="btn btn-primary" onClick={closeProgressModal}>
                   확인
                 </button>

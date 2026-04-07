@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import {
   useWatchGroups,
@@ -13,6 +14,7 @@ import { useWatchStore } from '../stores/watchStore';
 import { watchApi } from '../api/watch';
 import WatchGroupModal from './WatchGroupModal';
 import WatchIconSelectorModal from './WatchIconSelectorModal';
+import { useAlert } from './CustomAlert';
 import '../styles/realtime-performance.css';
 import '../styles/group-tree.css';
 
@@ -265,6 +267,8 @@ const RegularGroupNode = memo(function RegularGroupNode({ group, depth = 0, sele
 // ==================== WatchSidebar 공통 컴포넌트 ====================
 
 export default function WatchSidebar({ onGroupSelect, title = '관제 그룹', titleIcon = 'bi bi-collection' }) {
+  const location = useLocation();
+  const { alert: showAlert, success: showSuccess, error: showError, warning: showWarning, confirm: showConfirm } = useAlert();
   const {
     selectedWatchGroup, setSelectedWatchGroup,
     isGroupModalOpen, editingGroup, parentGroupIdForCreate, modalMode,
@@ -280,7 +284,7 @@ export default function WatchSidebar({ onGroupSelect, title = '관제 그룹', t
   const [contextMenu, setContextMenu] = useState(null);
   const [expandedNodes, setExpandedNodes] = useState(new Set());
   const [searchText, setSearchText] = useState('');
-  const [activeTab, setActiveTab] = useState('custom'); // 'custom' | 'regular'
+  const [activeTab, setActiveTab] = useState('regular'); // 'regular' | 'custom'
   const [regularExpandedNodes, setRegularExpandedNodes] = useState(new Set());
   const [selectedRegularGroup, setSelectedRegularGroup] = useState(null);
 
@@ -401,6 +405,27 @@ export default function WatchSidebar({ onGroupSelect, title = '관제 그룹', t
     onGroupSelect?.({ groupId: group.GROUP_ID, groupName: group.GROUP_NAME, type: 'regular' });
   }, [setSelectedWatchGroup, onGroupSelect]);
 
+  // 페이지 재진입 시 리셋 (_refresh state 감지)
+  const refreshKey = location.state?._refresh;
+  const autoSelectedRef = useRef(false);
+  useEffect(() => {
+    if (!refreshKey) return;
+    autoSelectedRef.current = false;
+    setActiveTab('regular');
+    setSelectedWatchGroup(null);
+    setSelectedRegularGroup(null);
+    onGroupSelect?.(null);
+  }, [refreshKey]);
+
+  // 일반 그룹 첫 번째 항목 자동 선택
+  useEffect(() => {
+    if (autoSelectedRef.current) return;
+    if (regularGroups && regularGroups.length > 0 && !selectedRegularGroup && !selectedWatchGroup) {
+      autoSelectedRef.current = true;
+      handleSelectRegularGroup(regularGroups[0]);
+    }
+  }, [regularGroups, selectedRegularGroup, selectedWatchGroup, handleSelectRegularGroup]);
+
   // 일반 그룹 노드 토글
   const handleToggleRegularNode = useCallback((groupId) => {
     setRegularExpandedNodes((prev) => {
@@ -411,25 +436,32 @@ export default function WatchSidebar({ onGroupSelect, title = '관제 그룹', t
     });
   }, []);
 
-  // 탭 전환
+  // 탭 전환 → 해당 탭의 첫 번째 항목 자동 선택
   const handleTabChange = useCallback((tab) => {
     if (tab === activeTab) return;
     setActiveTab(tab);
     setSearchText('');
-    // 탭 전환 시 선택 상태 초기화
     if (tab === 'custom') {
       setSelectedRegularGroup(null);
-      onGroupSelect?.(null);
+      if (watchGroups && watchGroups.length > 0) {
+        handleSelectGroup(watchGroups[0]);
+      } else {
+        onGroupSelect?.(null);
+      }
     } else {
       setSelectedWatchGroup(null);
-      onGroupSelect?.(null);
+      if (regularGroups && regularGroups.length > 0) {
+        handleSelectRegularGroup(regularGroups[0]);
+      } else {
+        onGroupSelect?.(null);
+      }
     }
-  }, [activeTab, setSelectedWatchGroup, onGroupSelect]);
+  }, [activeTab, setSelectedWatchGroup, onGroupSelect, watchGroups, regularGroups, handleSelectGroup, handleSelectRegularGroup]);
 
   // 첫 그룹 등록
   const handleFirstGroupSubmit = async (e) => {
     e.preventDefault();
-    if (!firstGroupName.trim()) { alert('그룹명을 입력해주세요.'); return; }
+    if (!firstGroupName.trim()) { showWarning('그룹명을 입력해주세요.'); return; }
     try {
       await createGroupMutation.mutateAsync({
         groupName: firstGroupName.trim(), intervalSec: 5, devices: [], parentGroupId: null,
@@ -440,7 +472,7 @@ export default function WatchSidebar({ onGroupSelect, title = '관제 그룹', t
       if (groups && groups.length > 0) handleSelectGroup(groups[0]);
     } catch (error) {
       console.error('그룹 생성 오류:', error);
-      alert('그룹 생성에 실패했습니다: ' + error.message);
+      showError('그룹 생성에 실패했습니다: ' + error.message);
     }
   };
 
@@ -456,20 +488,21 @@ export default function WatchSidebar({ onGroupSelect, title = '관제 그룹', t
       refetchGroups();
     } catch (error) {
       console.error('그룹 저장 실패:', error);
-      alert('그룹 저장에 실패했습니다.');
+      showError('그룹 저장에 실패했습니다.');
     }
   };
 
   // 그룹 삭제
   const handleDeleteGroup = async (group) => {
-    if (!confirm(`"${group.groupName}" 그룹을 삭제하시겠습니까?`)) return;
+    const ok = await showConfirm(`"${group.groupName}" 그룹을 삭제하시겠습니까?`);
+    if (!ok) return;
     try {
       await deleteGroupMutation.mutateAsync(group.watchGroupId);
       if (selectedWatchGroup?.watchGroupId === group.watchGroupId) setSelectedWatchGroup(null);
       refetchGroups();
     } catch (error) {
       console.error('그룹 삭제 실패:', error);
-      alert('그룹 삭제에 실패했습니다.');
+      showError('그룹 삭제에 실패했습니다.');
     }
   };
 
@@ -569,16 +602,17 @@ export default function WatchSidebar({ onGroupSelect, title = '관제 그룹', t
       const message = childCount > 0
         ? `"${draggedWatchGroup.groupName}" 그룹과 하위 ${childCount}개 그룹을 "${targetGroup.groupName}" 아래로 이동하시겠습니까?`
         : `"${draggedWatchGroup.groupName}" 그룹을 "${targetGroup.groupName}" 아래로 이동하시겠습니까?`;
-      if (confirm(message)) {
+      const ok = await showConfirm(message);
+      if (ok) {
         await moveGroupMutation.mutateAsync({ watchGroupId: draggedWatchGroup.watchGroupId, parentGroupId: targetGroup.watchGroupId });
         refetchGroups();
       }
     } catch (error) {
       console.error('그룹 이동 실패:', error);
-      alert('그룹 이동에 실패했습니다.');
+      showError('그룹 이동에 실패했습니다.');
     }
     setDraggedWatchGroup(null);
-  }, [draggedWatchGroup, watchGroups, isDescendantOf, moveGroupMutation, refetchGroups, setDraggedWatchGroup]);
+  }, [draggedWatchGroup, watchGroups, isDescendantOf, moveGroupMutation, refetchGroups, setDraggedWatchGroup, showConfirm, showError]);
 
   const handleContainerDrop = useCallback(async (e) => {
     if (e.target.closest('.group-item')) return;
@@ -591,17 +625,18 @@ export default function WatchSidebar({ onGroupSelect, title = '관제 그룹', t
         const message = childCount > 0
           ? `"${draggedWatchGroup.groupName}" 그룹과 하위 ${childCount}개 그룹을 최상위로 이동하시겠습니까?`
           : `"${draggedWatchGroup.groupName}" 그룹을 최상위로 이동하시겠습니까?`;
-        if (confirm(message)) {
+        const ok = await showConfirm(message);
+        if (ok) {
           await moveGroupMutation.mutateAsync({ watchGroupId: draggedWatchGroup.watchGroupId, parentGroupId: null });
           refetchGroups();
         }
       } catch (error) {
         console.error('그룹 이동 실패:', error);
-        alert('그룹 이동에 실패했습니다.');
+        showError('그룹 이동에 실패했습니다.');
       }
     }
     setDraggedWatchGroup(null);
-  }, [draggedWatchGroup, moveGroupMutation, refetchGroups, setDraggedWatchGroup]);
+  }, [draggedWatchGroup, moveGroupMutation, refetchGroups, setDraggedWatchGroup, showConfirm, showError]);
 
   const handleContainerDragOver = useCallback((e) => {
     if (e.target.closest('.group-item')) return;
@@ -657,16 +692,16 @@ export default function WatchSidebar({ onGroupSelect, title = '관제 그룹', t
         {!sidebarCollapsed && (
           <div className="ws-tab-bar">
             <button
-              className={`ws-tab-btn ${activeTab === 'custom' ? 'active' : ''}`}
-              onClick={() => handleTabChange('custom')}
-            >
-              커스텀 그룹
-            </button>
-            <button
               className={`ws-tab-btn ${activeTab === 'regular' ? 'active' : ''}`}
               onClick={() => handleTabChange('regular')}
             >
               일반 그룹
+            </button>
+            <button
+              className={`ws-tab-btn ${activeTab === 'custom' ? 'active' : ''}`}
+              onClick={() => handleTabChange('custom')}
+            >
+              커스텀 그룹
             </button>
           </div>
         )}

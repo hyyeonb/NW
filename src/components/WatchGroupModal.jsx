@@ -4,6 +4,7 @@ import ReactECharts from 'echarts-for-react';
 import { devicesApi } from '../api';
 import { watchApi } from '../api/watch';
 import { useGroupTree } from '../hooks/useGroups';
+import { useAlert } from './CustomAlert';
 
 // 트래픽 포맷팅 함수
 const formatBps = (bps) => {
@@ -129,6 +130,7 @@ function GroupFilterNode({ group, selectedGroupId, onSelect, depth, deviceCountM
 }
 
 export default function WatchGroupModal({ isOpen, onClose, onSave, editingGroup = null, parentGroupId = null, mode = null }) {
+  const { warning: showWarning } = useAlert();
   // 폼 상태
   const [groupName, setGroupName] = useState('');
   const [selectedDevices, setSelectedDevices] = useState([]); // [{ deviceId, ifIndexes: [] }]
@@ -290,7 +292,7 @@ export default function WatchGroupModal({ isOpen, onClose, onSave, editingGroup 
 
         // 새로 추가하려는 경우 최대 5개 제한 체크
         if (d.ifIndexes.length >= MAX_PORTS_PER_DEVICE) {
-          alert(`포트는 장비당 최대 ${MAX_PORTS_PER_DEVICE}개까지만 선택할 수 있습니다.`);
+          showWarning(`포트는 장비당 최대 ${MAX_PORTS_PER_DEVICE}개까지만 선택할 수 있습니다.`);
           return d;
         }
 
@@ -323,7 +325,7 @@ export default function WatchGroupModal({ isOpen, onClose, onSave, editingGroup 
   // 저장 핸들러
   const handleSave = () => {
     if (!groupName.trim()) {
-      alert('그룹명을 입력해주세요.');
+      showWarning('그룹명을 입력해주세요.');
       return;
     }
 

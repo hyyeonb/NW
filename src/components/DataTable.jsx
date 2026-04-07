@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   useReactTable,
   getCoreRowModel,
@@ -24,7 +25,7 @@ import Pagination from './Pagination';
 import ExportModal from './ExportModal';
 
 // 드래그 가능한 헤더 셀 컴포넌트
-function DraggableHeader({ column, children, sortable, onSort, sort, enableReorder, resizeHandle, computedWidth, autoWidth }) {
+function DraggableHeader({ column, children, sortable, onSort, sort, enableReorder, resizeHandle, computedWidth, autoWidth, filterIcon, filterDropdown }) {
   const {
     attributes,
     listeners,
@@ -48,6 +49,7 @@ function DraggableHeader({ column, children, sortable, onSort, sort, enableReord
     width: computedWidth || autoWidth || undefined,
     textAlign: column.columnDef.align || 'left',
     zIndex: isDragging ? 100 : undefined,
+    position: 'relative',
   };
 
   // 정렬 아이콘 렌더링
@@ -78,9 +80,13 @@ function DraggableHeader({ column, children, sortable, onSort, sort, enableReord
       {...attributes}
       {...listeners}
     >
-      <span className="th-label">{children}</span>
-      {renderSortIcon()}
+      <div className="th-inner">
+        <span className="th-label">{children}</span>
+        {renderSortIcon()}
+        {filterIcon}
+      </div>
       {resizeHandle}
+      {filterDropdown}
     </th>
   );
 }
@@ -332,6 +338,104 @@ export default function DataTable({
     })
   );
 
+  // === 컬럼 필터 ===
+  const [columnFilters, setColumnFilters] = useState({}); // { colKey: Set<value> }
+  const [openFilterColumn, setOpenFilterColumn] = useState(null); // currently open dropdown colId
+  const [filterDropdownPos, setFilterDropdownPos] = useState({ top: 0, left: 0 }); // fixed position
+
+  // 각 filterable 컬럼의 고유값 추출 (전체 data 기준)
+  const uniqueValues = useMemo(() => {
+    const result = {};
+    columns.filter(c => c.filterable).forEach(col => {
+      const values = new Set(data.map(row => row[col.key]));
+      result[col.key] = [...values].sort((a, b) => {
+        if (a == null) return 1;
+        if (b == null) return -1;
+        return String(a).localeCompare(String(b));
+      });
+    });
+    return result;
+  }, [data, columns]);
+
+  // 필터 적용된 데이터
+  const filteredData = useMemo(() => {
+    const activeFilters = Object.entries(columnFilters).filter(([, set]) => set && set.size > 0);
+    if (activeFilters.length === 0) return data;
+    return data.filter(row =>
+      activeFilters.every(([key, allowedValues]) => allowedValues.has(row[key]))
+    );
+  }, [data, columnFilters]);
+
+  // 필터 드롭다운 토글 (클릭 위치 기반 fixed 포지셔닝)
+  const toggleFilterDropdown = useCallback((colId, e) => {
+    setOpenFilterColumn(prev => {
+      if (prev === colId) return null;
+      if (e?.target) {
+        const rect = e.target.getBoundingClientRect();
+        setFilterDropdownPos({ top: rect.bottom + 4, left: rect.left });
+      }
+      return colId;
+    });
+  }, []);
+
+  // 필터 값 토글
+  const toggleFilterValue = useCallback((colKey, value) => {
+    setColumnFilters(prev => {
+      const current = prev[colKey] ? new Set(prev[colKey]) : new Set(uniqueValues[colKey] || []);
+      if (current.has(value)) {
+        current.delete(value);
+      } else {
+        current.add(value);
+      }
+      // 전체 선택 상태면 필터 제거
+      const allVals = uniqueValues[colKey] || [];
+      if (current.size === allVals.length) {
+        const next = { ...prev };
+        delete next[colKey];
+        return next;
+      }
+      return { ...prev, [colKey]: current };
+    });
+    // 필터 변경 시 페이지 1로 리셋
+    if (pagination?.onPageChange) {
+      pagination.onPageChange(1);
+    }
+  }, [uniqueValues, pagination]);
+
+  // 전체 선택/해제 토글
+  const toggleFilterAll = useCallback((colKey) => {
+    setColumnFilters(prev => {
+      const allVals = uniqueValues[colKey] || [];
+      const current = prev[colKey];
+      // 이미 전체 선택(필터 없음)이면 전체 해제 (빈 Set)
+      if (!current || current.size === allVals.length) {
+        return { ...prev, [colKey]: new Set() };
+      }
+      // 아니면 전체 선택 (필터 제거)
+      const next = { ...prev };
+      delete next[colKey];
+      return next;
+    });
+    if (pagination?.onPageChange) {
+      pagination.onPageChange(1);
+    }
+  }, [uniqueValues, pagination]);
+
+  // 외부 클릭 시 드롭다운 닫기
+  useEffect(() => {
+    if (!openFilterColumn) return;
+    const handleOutsideClick = () => setOpenFilterColumn(null);
+    const handleScrollOrResize = () => setOpenFilterColumn(null);
+    document.addEventListener('click', handleOutsideClick);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+    return () => {
+      document.removeEventListener('click', handleOutsideClick);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [openFilterColumn]);
+
   // 컬럼 Map (O(1) 룩업)
   const columnsMap = useMemo(() => new Map(columns.map(c => [c.key, c])), [columns]);
 
@@ -422,7 +526,7 @@ export default function DataTable({
 
   // TanStack Table 인스턴스
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => String(row[rowKey]),
@@ -430,16 +534,16 @@ export default function DataTable({
 
   // 전체 선택 상태 계산
   const allSelected = useMemo(() => {
-    if (!selectable || selectMode !== 'multi' || data.length === 0) return false;
-    return data.every((row) => selectedRows.includes(row[rowKey]));
-  }, [selectable, selectMode, data, selectedRows, rowKey]);
+    if (!selectable || selectMode !== 'multi' || filteredData.length === 0) return false;
+    return filteredData.every((row) => selectedRows.includes(row[rowKey]));
+  }, [selectable, selectMode, filteredData, selectedRows, rowKey]);
 
   // 일부 선택 상태 계산
   const someSelected = useMemo(() => {
-    if (!selectable || selectMode !== 'multi' || data.length === 0) return false;
-    const selectedCount = data.filter((row) => selectedRows.includes(row[rowKey])).length;
-    return selectedCount > 0 && selectedCount < data.length;
-  }, [selectable, selectMode, data, selectedRows, rowKey]);
+    if (!selectable || selectMode !== 'multi' || filteredData.length === 0) return false;
+    const selectedCount = filteredData.filter((row) => selectedRows.includes(row[rowKey])).length;
+    return selectedCount > 0 && selectedCount < filteredData.length;
+  }, [selectable, selectMode, filteredData, selectedRows, rowKey]);
 
   // 전체 선택 핸들러
   const handleSelectAll = () => {
@@ -447,7 +551,7 @@ export default function DataTable({
     if (allSelected) {
       onSelectChange([]);
     } else {
-      onSelectChange(data.map((row) => row[rowKey]));
+      onSelectChange(filteredData.map((row) => row[rowKey]));
     }
   };
 
@@ -536,10 +640,10 @@ export default function DataTable({
         setExportLoading(false);
       }
     } else {
-      // 클라이언트 데이터 그대로 사용
-      setExportData(data);
+      // 클라이언트 데이터 (필터 적용된 데이터 사용)
+      setExportData(filteredData);
     }
-  }, [exportConfig, data]);
+  }, [exportConfig, filteredData]);
 
   // 컬럼 설정 버튼 (페이지네이션 우측에 렌더)
   const columnSettingsBtn = hasHideableColumns ? (
@@ -600,6 +704,22 @@ export default function DataTable({
 
                       // 데이터 컬럼 (드래그 가능)
                       const colDef = columns.find(c => c.key === header.id);
+                      const colId = header.id;
+                      const isFilterable = colDef?.filterable === true;
+                      const activeFilterSet = columnFilters[colId];
+                      const hasActiveFilter = isFilterable && activeFilterSet && activeFilterSet.size > 0;
+                      const allVals = uniqueValues[colId] || [];
+                      const isAllSelected = !activeFilterSet || activeFilterSet.size === 0 || activeFilterSet.size === allVals.length;
+
+                      const filterIcon = isFilterable ? (
+                        <i
+                          className={`bi ${hasActiveFilter ? 'bi-funnel-fill filter-active' : 'bi-funnel'} filter-icon`}
+                          onClick={(e) => { e.stopPropagation(); toggleFilterDropdown(colId, e); }}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
+                        />
+                      ) : null;
+
                       return (
                         <DraggableHeader
                           key={header.id}
@@ -610,6 +730,8 @@ export default function DataTable({
                           enableReorder={enableColumnReorder}
                           computedWidth={columnWidths?.[header.id] ? `${columnWidths[header.id]}px` : undefined}
                           autoWidth={autoWidths?.[header.id]}
+                          filterIcon={filterIcon}
+                          filterDropdown={null}
                           resizeHandle={nextDataHeader ? (
                             <div
                               className="col-resize-handle"
@@ -642,7 +764,7 @@ export default function DataTable({
               )}
 
               {/* 빈 상태 */}
-              {!loading && data.length === 0 && (
+              {!loading && filteredData.length === 0 && (
                 <tr className="empty-row">
                   <td colSpan={tableColumns.length}>
                     <div className="table-empty">
@@ -717,7 +839,11 @@ export default function DataTable({
       {!pagination && exportConfig && (
         <div className="pagination-controls export-only">
           <div className="pagination-left">
-            <span className="pagination-info">전체 {data.length}건</span>
+            <span className="pagination-info">
+              {filteredData.length !== data.length
+                ? `${filteredData.length}건 (전체 ${data.length}건)`
+                : `전체 ${data.length}건`}
+            </span>
           </div>
           <div className="pagination-right">
             {columnSettingsBtn}
@@ -791,6 +917,52 @@ export default function DataTable({
           </div>
         </div>
       )}
+
+      {/* 필터 드롭다운 Portal */}
+      {openFilterColumn && (() => {
+        const colDef = columns.find(c => c.key === openFilterColumn);
+        if (!colDef?.filterable) return null;
+        const activeFilterSet = columnFilters[openFilterColumn];
+        const allVals = uniqueValues[openFilterColumn] || [];
+        const isAllSelected = !activeFilterSet || activeFilterSet.size === 0 || activeFilterSet.size === allVals.length;
+        const dropLeft = Math.min(filterDropdownPos.left, window.innerWidth - 180);
+
+        return createPortal(
+          <div
+            className="column-filter-dropdown"
+            style={{ top: filterDropdownPos.top, left: dropLeft }}
+            onClick={e => e.stopPropagation()}
+            onPointerDown={e => e.stopPropagation()}
+            onMouseDown={e => e.stopPropagation()}
+          >
+            <label className="filter-item filter-all">
+              <span>전체</span>
+              <input
+                type="checkbox"
+                checked={isAllSelected}
+                onChange={() => toggleFilterAll(openFilterColumn)}
+              />
+            </label>
+            <div className="filter-list">
+              {allVals.map(val => {
+                const isChecked = !activeFilterSet || activeFilterSet.size === 0 || activeFilterSet.has(val);
+                const displayVal = colDef.filterLabel ? colDef.filterLabel(val) : (val != null ? String(val) : '(비어있음)');
+                return (
+                  <label key={String(val)} className="filter-item">
+                    <span>{displayVal}</span>
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleFilterValue(openFilterColumn, val)}
+                    />
+                  </label>
+                );
+              })}
+            </div>
+          </div>,
+          document.body
+        );
+      })()}
 
     </div>
   );

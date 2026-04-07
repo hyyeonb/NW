@@ -33,4 +33,12 @@ export const adminApi = {
   getDeviceThreshold: (deviceId) => apiClient.get(`/admin/thresholds/devices/${deviceId}`),
   upsertDeviceThresholds: (deviceId, thresholds) => apiClient.put(`/admin/thresholds/devices/${deviceId}`, thresholds),
   deleteDeviceThresholds: (deviceId) => apiClient.delete(`/admin/thresholds/devices/${deviceId}`),
+
+  // 미들웨어(수집 서버) 관리
+  getMiddlewares: () => apiClient.get('/middleware'),
+  getMiddleware: (id) => apiClient.get(`/middleware/${id}`),
+  createMiddleware: (data) => apiClient.post('/middleware', data),
+  updateMiddleware: (id, data) => apiClient.put(`/middleware/${id}`, data),
+  deleteMiddleware: (id) => apiClient.delete(`/middleware/${id}`),
+  healthCheckMiddleware: (id) => apiClient.post(`/middleware/${id}/health`),
 };

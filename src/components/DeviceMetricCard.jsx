@@ -156,7 +156,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         axisLine: { show: false },
         axisLabel: {
           show: true,
-          color: '#64748b',
+          color: '#e2e8f0',
           fontSize: 7,
           interval: Math.floor(times.length / 3),
           formatter: (value) => value,
@@ -170,7 +170,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         interval: 50,
         axisLine: { show: false },
         splitLine: { show: false },
-        axisLabel: { color: '#64748b', fontSize: 8, formatter: '{value}' },
+        axisLabel: { color: '#e2e8f0', fontSize: 8, formatter: '{value}' },
       },
       series: series.length > 0 ? series : [{ name: 'No Data', type: 'line', data: [] }],
     };
@@ -272,7 +272,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         axisLine: { show: false },
         axisLabel: {
           show: true,
-          color: '#64748b',
+          color: '#e2e8f0',
           fontSize: 7,
           interval: Math.floor(times.length / 3),
           formatter: (value) => value,
@@ -286,7 +286,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         splitNumber: 2,
         axisLine: { show: false },
         splitLine: { show: false },
-        axisLabel: { color: '#64748b', fontSize: 8, formatter: (v) => formatTrafficValue(Math.abs(v), trafficUnit) },
+        axisLabel: { color: '#e2e8f0', fontSize: 8, formatter: (v) => formatTrafficValue(Math.abs(v), trafficUnit) },
       },
       series: series.length > 0 ? series : [{ name: 'No Data', type: 'line', data: [] }],
     };
@@ -384,7 +384,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         axisLine: { show: false },
         axisLabel: {
           show: true,
-          color: '#64748b',
+          color: '#e2e8f0',
           fontSize: 7,
           interval: Math.floor(times.length / 3),
           formatter: (value) => value,
@@ -398,7 +398,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         splitNumber: 2,
         axisLine: { show: false },
         splitLine: { show: false },
-        axisLabel: { color: '#64748b', fontSize: 8 },
+        axisLabel: { color: '#e2e8f0', fontSize: 8 },
       },
       series: series.length > 0 ? series : [{ name: 'No Data', type: 'line', data: [] }],
     };

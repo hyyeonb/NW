@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, memo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore, useThemeStore, usePermissionStore } from '../stores';
 
 // 메뉴 구조 — pageCode 추가
@@ -73,16 +73,27 @@ const MENU_ITEMS = [
       { label: '알림 설정', path: '/settings/notifications', icon: 'bi-bell' },
       { label: '사용자 관리', path: '/settings/admin', icon: 'bi-shield-lock', pageCode: 'system_admin' },
       { label: '임계치 관리', path: '/settings/threshold', icon: 'bi-speedometer2', pageCode: 'system_admin' },
+      { label: '수집 서버 관리', path: '/settings/middleware', icon: 'bi-hdd-network', pageCode: 'system_admin' },
     ],
   },
 ];
 
 export default memo(function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { resolvedTheme, toggleTheme, initTheme } = useThemeStore();
   const { canView, isAdmin } = usePermissionStore();
-  const [expandedMenus, setExpandedMenus] = useState({});
+  const [expandedMenus, setExpandedMenus] = useState(() => {
+    // 현재 경로가 속한 메뉴를 초기에 열어둠
+    const initial = {};
+    MENU_ITEMS.forEach((item, idx) => {
+      if (item.children?.some(c => window.location.pathname === c.path)) {
+        initial[idx] = true;
+      }
+    });
+    return initial;
+  });
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileRef = useRef(null);
 
@@ -106,10 +117,16 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
   };
 
   const toggleMenu = (index) => {
-    setExpandedMenus((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
+    setExpandedMenus((prev) => {
+      // 아코디언: 클릭한 메뉴가 이미 열려있으면 닫고, 아니면 해당 메뉴만 열기
+      if (prev[index]) {
+        return { ...prev, [index]: false };
+      }
+      // 다른 메뉴 모두 닫고 클릭한 메뉴만 열기
+      const next = {};
+      next[index] = true;
+      return next;
+    });
   };
 
   const handleMenuClick = (index, hasChildren) => {
@@ -117,7 +134,7 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
       onToggle();
       if (hasChildren) {
         setTimeout(() => {
-          setExpandedMenus((prev) => ({ ...prev, [index]: true }));
+          setExpandedMenus({ [index]: true });
         }, 100);
       }
     } else if (hasChildren) {
@@ -206,13 +223,21 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
                               </div>
                             </div>
                           ) : (
-                            <Link
-                              to={child.path}
+                            <a
+                              href={child.path}
                               className={`submenu-link ${isActive(child.path) ? 'active' : ''}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (location.pathname === child.path) {
+                                  navigate(child.path, { state: { _refresh: Date.now() }, replace: true });
+                                } else {
+                                  navigate(child.path);
+                                }
+                              }}
                             >
                               {child.icon && <i className={`bi ${child.icon}`}></i>}
                               <span>{child.label}</span>
-                            </Link>
+                            </a>
                           )}
                         </li>
                       ))}

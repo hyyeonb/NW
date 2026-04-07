@@ -1112,16 +1112,27 @@
     font-size: 13px;
     color: #e2e8f0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: middle !important;
+}
+
+.result-table .device-name,
+.result-table .device-ip,
+.result-table .status-text,
+.result-table .desc-column,
+.result-table .failure-reason {
+    vertical-align: middle !important;
 }
 
 .result-table .device-name {
     font-weight: 500;
+    font-size: 13px;
     white-space: nowrap;
 }
 
 .result-table .device-ip {
     color: #818cf8;
     font-family: var(--font-family-mono);
+    font-size: 13px;
     white-space: nowrap;
 }
 
@@ -1556,5 +1567,11 @@
 
 [data-theme="light"] .group-tree-toggle:hover {
     box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
+}
+
+/* 결과 테이블 모든 셀 수직 중앙 정렬 강제 */
+.result-section .result-table tbody tr td {
+    vertical-align: middle !important;
+    display: table-cell !important;
 }
 

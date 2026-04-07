@@ -1,0 +1,53 @@
+{
+  "updatedAt": "2026-03-27T03:33:06.368Z",
+  "missions": [
+    {
+      "id": "session:b27491f9-7c25-435e-b997-9d70cf6e58d2:none",
+      "source": "session",
+      "name": "none",
+      "objective": "Session mission",
+      "createdAt": "2026-03-27T03:31:54.239Z",
+      "updatedAt": "2026-03-27T03:33:06.368Z",
+      "status": "done",
+      "workerCount": 1,
+      "taskCounts": {
+        "total": 1,
+        "pending": 0,
+        "blocked": 0,
+        "inProgress": 0,
+        "completed": 1,
+        "failed": 0
+      },
+      "agents": [
+        {
+          "name": "Explore:adb4ef4",
+          "role": "Explore",
+          "ownership": "adb4ef4932563513d",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-03-27T03:33:06.368Z"
+        }
+      ],
+      "timeline": [
+        {
+          "id": "session-start:adb4ef4932563513d:2026-03-27T03:31:54.239Z",
+          "at": "2026-03-27T03:31:54.239Z",
+          "kind": "update",
+          "agent": "Explore:adb4ef4",
+          "detail": "started Explore:adb4ef4",
+          "sourceKey": "session-start:adb4ef4932563513d"
+        },
+        {
+          "id": "session-stop:adb4ef4932563513d:2026-03-27T03:33:06.368Z",
+          "at": "2026-03-27T03:33:06.368Z",
+          "kind": "completion",
+          "agent": "Explore:adb4ef4",
+          "detail": "completed",
+          "sourceKey": "session-stop:adb4ef4932563513d"
+        }
+      ]
+    }
+  ]
+}

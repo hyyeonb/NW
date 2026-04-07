@@ -189,7 +189,15 @@ function formatTime(dateStr) {
   if (!dateStr) return '';
 
   try {
-    const date = new Date(dateStr);
+    let date;
+    if (Array.isArray(dateStr)) {
+      // Java LocalDateTime 배열 형식: [2026, 3, 25, 14, 30, 0]
+      const [y, M, d, h = 0, m = 0, s = 0] = dateStr;
+      date = new Date(y, M - 1, d, h, m, s);
+    } else {
+      date = new Date(dateStr);
+    }
+    if (isNaN(date.getTime())) return '';
     return date.toLocaleTimeString('ko-KR', {
       hour: '2-digit',
       minute: '2-digit',

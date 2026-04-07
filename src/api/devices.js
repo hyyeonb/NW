@@ -47,9 +47,9 @@ export const devicesApi = {
   registerDevices: (groupId, devices) =>
     apiClient.post(`/mgmt/devices/register/${groupId}`, devices),
 
-  // 장비 포트 목록 조회
-  getDevicePorts: (deviceId) =>
-    apiClient.get(`/mgmt/devices/${deviceId}/ports`),
+  // 장비 포트 목록 조회 (기본: Ethernet, type='all'이면 전체)
+  getDevicePorts: (deviceId, type) =>
+    apiClient.get(`/mgmt/devices/${deviceId}/ports`, type ? { params: { type } } : undefined),
 
   // 포트 정보 수정
   updatePort: (deviceId, ifIndex, data) =>

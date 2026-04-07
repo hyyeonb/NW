@@ -25,27 +25,28 @@ const DIST_RANGES = [
   { label: '80~100%', min: 80, max: 100, color: '#ef4444' },
 ];
 
-// 이용률(%) 추출 — 신규 PERCENT 컬럼 우선, USED 컬럼 폴백
+// DB 컬럼 직접 사용 — High 값 우선, 없으면 일반 값 폴백 (COALESCE 패턴)
+// BPS: IN_HIGH_BPS → IN_BPS
+// PERCENT: IN_HIGH_USED_PERCENT → IN_USED_PERCENT
+function getInBps(r) {
+  const v = r.IN_HIGH_BPS ?? r.IN_BPS;
+  return v != null ? Number(v) : 0;
+}
+function getOutBps(r) {
+  const v = r.OUT_HIGH_BPS ?? r.OUT_BPS;
+  return v != null ? Number(v) : 0;
+}
 function getInPercent(r) {
-  if (r.IN_HIGH_USED_PERCENT != null) return Number(r.IN_HIGH_USED_PERCENT);
-  if (r.IN_USED_PERCENT != null) return Number(r.IN_USED_PERCENT);
-  if (r.IN_HIGH_USED != null) return Number(r.IN_HIGH_USED);
-  if (r.IN_USED != null) return Number(r.IN_USED);
-  return 0;
+  const v = r.IN_HIGH_USED_PERCENT ?? r.IN_USED_PERCENT;
+  return v != null ? Number(v) : 0;
 }
 function getOutPercent(r) {
-  if (r.OUT_HIGH_USED_PERCENT != null) return Number(r.OUT_HIGH_USED_PERCENT);
-  if (r.OUT_USED_PERCENT != null) return Number(r.OUT_USED_PERCENT);
-  if (r.OUT_HIGH_USED != null) return Number(r.OUT_HIGH_USED);
-  if (r.OUT_USED != null) return Number(r.OUT_USED);
-  return 0;
+  const v = r.OUT_HIGH_USED_PERCENT ?? r.OUT_USED_PERCENT;
+  return v != null ? Number(v) : 0;
 }
-// % 데이터 존재 여부 (첫 row 기준으로 판단)
 function hasPercentData(rows) {
   if (!rows || rows.length === 0) return false;
-  const r = rows[0];
-  return r.IN_HIGH_USED_PERCENT != null || r.IN_USED_PERCENT != null
-    || r.IN_HIGH_USED != null || r.IN_USED != null;
+  return rows.some(r => r.IN_HIGH_USED_PERCENT != null || r.IN_USED_PERCENT != null);
 }
 
 function formatMemory(value) {
@@ -199,9 +200,9 @@ export default function PerformanceTest() {
     if (selectedGroup?.type === 'regular') {
       return regularDevicesRaw.length > 0 ? regularDevicesRaw : [];
     }
-    if (selectedGroup && groupDetail?.devices) {
-      // useWatchGroupDetail의 camelCase → UPPER_SNAKE_CASE 정규화
-      return groupDetail.devices
+    if (selectedGroup?.watchGroupId) {
+      if (!groupDetail) return []; // 로딩 중 → 빈 결과
+      return (groupDetail.devices || [])
         .filter(d => d.deviceId != null)
         .map(d => ({
           DEVICE_ID: d.deviceId,
@@ -394,8 +395,8 @@ export default function PerformanceTest() {
         }
         const entry = portMap.get(key);
         const t = (r.COLLECTED_AT || '').substring(0, 16);
-        const inBps = Number(r.IN_HIGH_BPS || r.IN_BPS || 0);
-        const outBps = Number(r.OUT_HIGH_BPS || r.OUT_BPS || 0);
+        const inBps = getInBps(r);
+        const outBps = getOutBps(r);
         const inUsed = getInPercent(r);
         const outUsed = getOutPercent(r);
         entry.series.push({ time: t, inBps, outBps, inUsed, outUsed });
@@ -435,8 +436,8 @@ export default function PerformanceTest() {
         const entry = timeMap.get(t);
         entry.inUseds.push(getInPercent(r));
         entry.outUseds.push(getOutPercent(r));
-        entry.inBpsList.push(Number(r.IN_HIGH_BPS || r.IN_BPS || 0));
-        entry.outBpsList.push(Number(r.OUT_HIGH_BPS || r.OUT_BPS || 0));
+        entry.inBpsList.push(getInBps(r));
+        entry.outBpsList.push(getOutBps(r));
       });
     });
     const sorted = [...timeMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
@@ -458,15 +459,31 @@ export default function PerformanceTest() {
     if (!isSnapshotMode) return [];
     const trafficMap = new Map();
     deviceTrafficMetrics.forEach(d => trafficMap.set(d.DEVICE_ID, d));
+    // 인터페이스별 트래픽을 장비별로 그룹핑
+    const portsByDevice = new Map();
+    portTimeSeriesData.forEach(p => {
+      const deviceKey = p.key.split('_')[0];
+      if (!portsByDevice.has(deviceKey)) portsByDevice.set(deviceKey, []);
+      portsByDevice.get(deviceKey).push(p);
+    });
     return deviceMetrics.map(d => {
       const t = trafficMap.get(d.DEVICE_ID);
+      const ports = portsByDevice.get(String(d.DEVICE_ID)) || [];
       return {
         ...d,
         inUsed: t?.maxInUsed ?? 0,
         outUsed: t?.maxOutUsed ?? 0,
+        ports: ports.map(p => ({
+          ifName: p.ifName,
+          ifIndex: p.ifIndex,
+          inUsed: p.peakInUsed || 0,
+          outUsed: p.peakOutUsed || 0,
+          inBps: p.peakInBps || 0,
+          outBps: p.peakOutBps || 0,
+        })),
       };
     });
-  }, [isSnapshotMode, deviceMetrics, deviceTrafficMetrics]);
+  }, [isSnapshotMode, deviceMetrics, deviceTrafficMetrics, portTimeSeriesData]);
 
   // ========== 차트 옵션 ==========
 
@@ -491,7 +508,7 @@ export default function PerformanceTest() {
       grid: { left: 100, right: 30, top: 8, bottom: 8 },
       xAxis: {
         type: 'value', max: 100,
-        axisLabel: { color: '#64748b', fontSize: 11, formatter: '{value}%' },
+        axisLabel: { color: '#e2e8f0', fontSize: 11, formatter: '{value}%' },
         splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
       },
       yAxis: {
@@ -535,7 +552,7 @@ export default function PerformanceTest() {
       grid: { left: 100, right: 30, top: 8, bottom: 8 },
       xAxis: {
         type: 'value', max: 100,
-        axisLabel: { color: '#64748b', fontSize: 11, formatter: '{value}%' },
+        axisLabel: { color: '#e2e8f0', fontSize: 11, formatter: '{value}%' },
         splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
       },
       yAxis: {
@@ -589,12 +606,12 @@ export default function PerformanceTest() {
       xAxis: {
         type: 'category',
         data: trendData.map(d => d.time),
-        axisLabel: { color: '#64748b', fontSize: 10 },
+        axisLabel: { color: '#e2e8f0', fontSize: 10 },
         axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
       },
       yAxis: {
         type: 'value', max: 100,
-        axisLabel: { color: '#64748b', fontSize: 10, formatter: '{value}%' },
+        axisLabel: { color: '#e2e8f0', fontSize: 10, formatter: '{value}%' },
         splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
       },
       series: [
@@ -646,12 +663,12 @@ export default function PerformanceTest() {
       xAxis: {
         type: 'category',
         data: trendData.map(d => d.time),
-        axisLabel: { color: '#64748b', fontSize: 10 },
+        axisLabel: { color: '#e2e8f0', fontSize: 10 },
         axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
       },
       yAxis: {
         type: 'value', max: 100,
-        axisLabel: { color: '#64748b', fontSize: 10, formatter: '{value}%' },
+        axisLabel: { color: '#e2e8f0', fontSize: 10, formatter: '{value}%' },
         splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
       },
       series: [
@@ -751,7 +768,7 @@ export default function PerformanceTest() {
       grid: { left: 100, right: 30, top: 8, bottom: 8 },
       xAxis: {
         type: 'value', max: 100,
-        axisLabel: { color: '#64748b', fontSize: 11, formatter: '{value}%' },
+        axisLabel: { color: '#e2e8f0', fontSize: 11, formatter: '{value}%' },
         splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
       },
       yAxis: {
@@ -792,7 +809,7 @@ export default function PerformanceTest() {
       grid: { left: 100, right: 30, top: 8, bottom: 8 },
       xAxis: {
         type: 'value', max: 100,
-        axisLabel: { color: '#64748b', fontSize: 11, formatter: '{value}%' },
+        axisLabel: { color: '#e2e8f0', fontSize: 11, formatter: '{value}%' },
         splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
       },
       yAxis: {
@@ -868,13 +885,12 @@ export default function PerformanceTest() {
       grid: { left: isBps ? 70 : 45, right: 16, top: 8, bottom: 24 },
       xAxis: {
         type: 'category', data: allTimes.map(t => t.substring(11)),
-        axisLabel: { color: '#64748b', fontSize: 10 },
+        axisLabel: { color: '#e2e8f0', fontSize: 10 },
         axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
       },
       yAxis: {
         type: 'value',
-        max: isBps ? undefined : 100,
-        axisLabel: { color: '#64748b', fontSize: 10, formatter: isBps ? (v) => formatBpsValue(v) : '{value}%' },
+        axisLabel: { color: '#e2e8f0', fontSize: 10, formatter: isBps ? (v) => formatBpsValue(v) : (v) => `${v.toFixed(2)}%` },
         splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
       },
       series,
@@ -928,13 +944,12 @@ export default function PerformanceTest() {
       grid: { left: isBps ? 70 : 45, right: 16, top: 8, bottom: 24 },
       xAxis: {
         type: 'category', data: allTimes.map(t => t.substring(11)),
-        axisLabel: { color: '#64748b', fontSize: 10 },
+        axisLabel: { color: '#e2e8f0', fontSize: 10 },
         axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
       },
       yAxis: {
         type: 'value',
-        max: isBps ? undefined : 100,
-        axisLabel: { color: '#64748b', fontSize: 10, formatter: isBps ? (v) => formatBpsValue(v) : '{value}%' },
+        axisLabel: { color: '#e2e8f0', fontSize: 10, formatter: isBps ? (v) => formatBpsValue(v) : (v) => `${v.toFixed(2)}%` },
         splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
       },
       series,
@@ -968,13 +983,12 @@ export default function PerformanceTest() {
       xAxis: {
         type: 'category',
         data: trafficTrendData.map(d => d.time),
-        axisLabel: { color: '#64748b', fontSize: 10 },
+        axisLabel: { color: '#e2e8f0', fontSize: 10 },
         axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
       },
       yAxis: {
         type: 'value',
-        max: isBps ? undefined : 100,
-        axisLabel: { color: '#64748b', fontSize: 10, formatter: isBps ? (v) => formatBpsValue(v) : '{value}%' },
+        axisLabel: { color: '#e2e8f0', fontSize: 10, formatter: isBps ? (v) => formatBpsValue(v) : (v) => `${v.toFixed(2)}%` },
         splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
       },
       series: [
@@ -1390,76 +1404,93 @@ export default function PerformanceTest() {
               </div>
             </div>
 
-            {/* Row 5: 포트별 Traffic IN/OUT TOP 10 */}
-            <div className="stats-panel">
-              <div className="stats-panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span><i className="bi bi-ethernet"></i> 포트별 IN TOP 10</span>
-                <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '2px' }}>
-                  <button
-                    onClick={() => setPortTopUnit('percent')}
-                    style={{
-                      padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                      fontSize: '11px', fontWeight: 600, transition: 'all 0.2s',
-                      background: portTopUnit === 'percent' ? 'rgba(99,102,241,0.8)' : 'transparent',
-                      color: portTopUnit === 'percent' ? '#fff' : '#94a3b8',
-                    }}
-                  >%</button>
-                  <button
-                    onClick={() => setPortTopUnit('bps')}
-                    style={{
-                      padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                      fontSize: '11px', fontWeight: 600, transition: 'all 0.2s',
-                      background: portTopUnit === 'bps' ? 'rgba(99,102,241,0.8)' : 'transparent',
-                      color: portTopUnit === 'bps' ? '#fff' : '#94a3b8',
-                    }}
-                  >BPS</button>
+            {/* Row 5: 포트별 Traffic IN/OUT TOP 10 — 5분 모드에서는 카드 */}
+            {isSnapshotMode ? (
+              <div className="stats-panel panel-full-width">
+                <div className="stats-panel-header">
+                  <i className="bi bi-ethernet"></i> 포트별 트래픽 스냅샷
+                </div>
+                <div className="stats-panel-body" style={{ padding: '16px' }}>
+                  {isLoadingTraffic ? <LoadingSpinner /> :
+                    portTimeSeriesData.length === 0 ? <EmptyState message="포트 트래픽 데이터가 없습니다" /> :
+                    <div className="snapshot-grid">
+                      {[...portTimeSeriesData].sort((a, b) => (b.peakInUsed + b.peakOutUsed) - (a.peakInUsed + a.peakOutUsed)).slice(0, 10).map(port => (
+                        <div key={port.key} className="snapshot-card">
+                          <div className="snapshot-card-header">
+                            <span className="snapshot-card-name">{port.deviceName}</span>
+                            <span className="snapshot-card-ip">{port.ifName}</span>
+                          </div>
+                          <div className="snapshot-metric-row">
+                            <span className="snapshot-metric-label" style={{ color: '#06b6d4' }}>IN</span>
+                            <div className="snapshot-progress">
+                              <div className="snapshot-progress-fill" style={{ width: `${Math.min((port.peakInBps / Math.max(...portTimeSeriesData.map(p => p.peakInBps), 1)) * 100, 100)}%`, background: '#06b6d4' }} />
+                            </div>
+                            <span className="snapshot-metric-value" style={{ color: '#06b6d4', minWidth: '80px', textAlign: 'right' }}>
+                              {formatBpsValue(port.peakInBps)}
+                            </span>
+                          </div>
+                          <div className="snapshot-metric-row">
+                            <span className="snapshot-metric-label" style={{ color: '#8b5cf6' }}>OUT</span>
+                            <div className="snapshot-progress">
+                              <div className="snapshot-progress-fill" style={{ width: `${Math.min((port.peakOutBps / Math.max(...portTimeSeriesData.map(p => p.peakOutBps), 1)) * 100, 100)}%`, background: '#8b5cf6' }} />
+                            </div>
+                            <span className="snapshot-metric-value" style={{ color: '#8b5cf6', minWidth: '80px', textAlign: 'right' }}>
+                              {formatBpsValue(port.peakOutBps)}
+                            </span>
+                          </div>
+                          {port.peakInUsed > 0 && (
+                            <div className="snapshot-traffic-row">
+                              <span>IN <b style={{ color: '#06b6d4' }}>{port.peakInUsed.toFixed(2)}%</b></span>
+                              <span>OUT <b style={{ color: '#8b5cf6' }}>{port.peakOutUsed.toFixed(2)}%</b></span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  }
                 </div>
               </div>
-              <div className="stats-panel-body" style={{ minHeight: 320 }}>
-                {isLoadingTraffic ? <LoadingSpinner /> :
-                  topPortIn.length === 0 ? <EmptyState message="포트 트래픽 데이터가 없습니다" /> :
-                  <>
-                    <SafeECharts key={`portIn-${portTopUnit}`} option={portInTopOption} style={{ height: 240 }} notMerge />
-                    <PortLegendTable ports={topPortIn} direction="in" unit={portTopUnit} colors={PORT_COLORS} />
-                  </>
-                }
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="stats-panel">
+                  <div className="stats-panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span><i className="bi bi-ethernet"></i> 포트별 IN TOP 10</span>
+                    <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '2px' }}>
+                      <button onClick={() => setPortTopUnit('percent')} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 600, transition: 'all 0.2s', background: portTopUnit === 'percent' ? 'rgba(99,102,241,0.8)' : 'transparent', color: portTopUnit === 'percent' ? '#fff' : '#94a3b8' }}>%</button>
+                      <button onClick={() => setPortTopUnit('bps')} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 600, transition: 'all 0.2s', background: portTopUnit === 'bps' ? 'rgba(99,102,241,0.8)' : 'transparent', color: portTopUnit === 'bps' ? '#fff' : '#94a3b8' }}>BPS</button>
+                    </div>
+                  </div>
+                  <div className="stats-panel-body" style={{ minHeight: 320 }}>
+                    {isLoadingTraffic ? <LoadingSpinner /> :
+                      topPortIn.length === 0 ? <EmptyState message="포트 트래픽 데이터가 없습니다" /> :
+                      <>
+                        <SafeECharts key={`portIn-${portTopUnit}`} option={portInTopOption} style={{ height: 240 }} notMerge />
+                        <PortLegendTable ports={topPortIn} direction="in" unit={portTopUnit} colors={PORT_COLORS} />
+                      </>
+                    }
+                  </div>
+                </div>
 
-            <div className="stats-panel">
-              <div className="stats-panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span><i className="bi bi-ethernet"></i> 포트별 OUT TOP 10</span>
-                <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '2px' }}>
-                  <button
-                    onClick={() => setPortTopUnit('percent')}
-                    style={{
-                      padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                      fontSize: '11px', fontWeight: 600, transition: 'all 0.2s',
-                      background: portTopUnit === 'percent' ? 'rgba(99,102,241,0.8)' : 'transparent',
-                      color: portTopUnit === 'percent' ? '#fff' : '#94a3b8',
-                    }}
-                  >%</button>
-                  <button
-                    onClick={() => setPortTopUnit('bps')}
-                    style={{
-                      padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                      fontSize: '11px', fontWeight: 600, transition: 'all 0.2s',
-                      background: portTopUnit === 'bps' ? 'rgba(99,102,241,0.8)' : 'transparent',
-                      color: portTopUnit === 'bps' ? '#fff' : '#94a3b8',
-                    }}
-                  >BPS</button>
+                <div className="stats-panel">
+                  <div className="stats-panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span><i className="bi bi-ethernet"></i> 포트별 OUT TOP 10</span>
+                    <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '2px' }}>
+                      <button onClick={() => setPortTopUnit('percent')} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 600, transition: 'all 0.2s', background: portTopUnit === 'percent' ? 'rgba(99,102,241,0.8)' : 'transparent', color: portTopUnit === 'percent' ? '#fff' : '#94a3b8' }}>%</button>
+                      <button onClick={() => setPortTopUnit('bps')} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 600, transition: 'all 0.2s', background: portTopUnit === 'bps' ? 'rgba(99,102,241,0.8)' : 'transparent', color: portTopUnit === 'bps' ? '#fff' : '#94a3b8' }}>BPS</button>
+                    </div>
+                  </div>
+                  <div className="stats-panel-body" style={{ minHeight: 320 }}>
+                    {isLoadingTraffic ? <LoadingSpinner /> :
+                      topPortOut.length === 0 ? <EmptyState message="포트 트래픽 데이터가 없습니다" /> :
+                      <>
+                        <SafeECharts key={`portOut-${portTopUnit}`} option={portOutTopOption} style={{ height: 240 }} notMerge />
+                        <PortLegendTable ports={topPortOut} direction="out" unit={portTopUnit} colors={PORT_COLORS} />
+                      </>
+                    }
+                  </div>
                 </div>
-              </div>
-              <div className="stats-panel-body" style={{ minHeight: 320 }}>
-                {isLoadingTraffic ? <LoadingSpinner /> :
-                  topPortOut.length === 0 ? <EmptyState message="포트 트래픽 데이터가 없습니다" /> :
-                  <>
-                    <SafeECharts key={`portOut-${portTopUnit}`} option={portOutTopOption} style={{ height: 240 }} notMerge />
-                    <PortLegendTable ports={topPortOut} direction="out" unit={portTopUnit} colors={PORT_COLORS} />
-                  </>
-                }
-              </div>
-            </div>
+              </>
+            )}
 
             {/* Row 6: Traffic 추이 (full-width) — 5분 모드에서는 숨김 */}
             {!isSnapshotMode && (

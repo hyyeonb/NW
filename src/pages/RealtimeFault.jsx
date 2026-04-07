@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { faultApi, devicesApi } from '../api';
@@ -11,6 +11,7 @@ import ConnectivityCheckModal from '../components/ConnectivityCheckModal';
 import '../styles/fault-monitoring.css';
 import { historyApi } from '../api/history';
 import '../styles/fault-stats.css';
+import DevCodeDropdown from '../components/DevCodeDropdown';
 
 // 장애 등급 설정
 const ERROR_LEVELS = [
@@ -40,6 +41,7 @@ export default function RealtimeFault() {
   const [showAckModal, setShowAckModal] = useState(false);
   const [ackMessage, setAckMessage] = useState('');
   const [checkDevice, setCheckDevice] = useState(null); // 장비 점검 대상 장비
+  const fetchIdRef = useRef(0); // race condition 방지용
 
   // 관제 그룹 기반 필터링
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -52,10 +54,12 @@ export default function RealtimeFault() {
   const deviceIdsParam = useMemo(() => {
     if (!selectedGroup) return undefined;
     if (selectedGroup.type === 'regular') {
-      return regularDevices?.length ? regularDevices.map(d => d.DEVICE_ID) : undefined;
+      if (!regularDevices) return []; // 로딩 중 → 빈 결과
+      return regularDevices.map(d => d.DEVICE_ID);
     }
-    if (selectedGroup.watchGroupId && groupDetail?.devices?.length) {
-      return groupDetail.devices.map(d => d.deviceId);
+    if (selectedGroup.watchGroupId) {
+      if (!groupDetail) return []; // 로딩 중 → 빈 결과
+      return (groupDetail.devices || []).map(d => d.deviceId);
     }
     return undefined;
   }, [selectedGroup, groupDetail, regularDevices]);
@@ -132,6 +136,12 @@ export default function RealtimeFault() {
 
   // 장애 목록 조회
   const fetchErrors = useCallback(async () => {
+    // 그룹 선택됐지만 장비가 없거나 로딩 중 → 빈 결과
+    if (Array.isArray(deviceIdsParam) && deviceIdsParam.length === 0) {
+      setErrors([]);
+      return;
+    }
+    const currentFetchId = ++fetchIdRef.current;
     setIsLoading(true);
     try {
       const params = {};
@@ -140,18 +150,23 @@ export default function RealtimeFault() {
       if (searchErrorMessage.trim()) params.errorMessage = searchErrorMessage.trim();
       if (searchIp.trim()) params.deviceIp = searchIp.trim();
       if (searchGroupName.trim()) params.groupName = searchGroupName.trim();
-      if (deviceIdsParam) params.deviceIds = deviceIdsParam;
+      if (deviceIdsParam && deviceIdsParam.length > 0) params.deviceIds = deviceIdsParam;
 
       const response = await faultApi.getErrors(params);
-      const data = response.data?.data || {};
+      // race condition 방지: 이후에 더 새로운 요청이 시작됐으면 이 응답 무시
+      if (currentFetchId !== fetchIdRef.current) return;
 
-      // 클라이언트에서 선택된 등급만 필터링
+      const data = response.data?.data || {};
       const filteredList = (data.list || []).filter(e => selectedLevels.includes(e.ERROR_LEVEL));
       setErrors(filteredList);
     } catch (error) {
-      console.error('장애 목록 조회 실패:', error);
+      if (currentFetchId === fetchIdRef.current) {
+        console.error('장애 목록 조회 실패:', error);
+      }
     } finally {
-      setIsLoading(false);
+      if (currentFetchId === fetchIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [selectedLevels, searchDevCode, searchDeviceName, searchErrorMessage, searchIp, searchGroupName, deviceIdsParam]);
 
@@ -247,6 +262,15 @@ export default function RealtimeFault() {
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
     }));
   };
+
+  // 가장 최근 장애의 등급 색상 (LIVE 테두리용 — severity-badge 색상과 동일)
+  const latestFaultColor = useMemo(() => {
+    const colorMap = { C: '#ef4444', M: '#f97316', N: '#eab308', W: '#6366f1' };
+    if (errors.length === 0) return '#10b981';
+    // OCCUR_AT 기준 가장 최신
+    const latest = errors.reduce((a, b) => (a.OCCUR_AT > b.OCCUR_AT ? a : b), errors[0]);
+    return colorMap[latest.ERROR_LEVEL] || '#10b981';
+  }, [errors]);
 
   // 등급 우선순위 (정렬용)
   const levelPriority = { 'C': 1, 'M': 2, 'N': 3, 'W': 4 };
@@ -437,10 +461,11 @@ export default function RealtimeFault() {
           <span className="page-subtitle">현재 발생 중인 장애를 모니터링합니다</span>
         </div>
         <div className="page-header-right">
-          <button className="btn btn-ghost" onClick={fetchErrors}>
-            <i className="bi bi-arrow-clockwise"></i>
-            새로고침
-          </button>
+          <div className="fault-live-chip" style={{ '--border-color': latestFaultColor }} onClick={fetchErrors}>
+            <span className="fault-live-border" />
+            <span className="fault-live-dot" />
+            <span className="fault-live-label">LIVE</span>
+          </div>
         </div>
       </div>
 
@@ -452,6 +477,7 @@ export default function RealtimeFault() {
           titleIcon="bi bi-exclamation-triangle"
         />
       <div className="fault-content">
+        <div className="fault-table-glow" style={{ '--table-border-color': latestFaultColor }}>
         <div className="table-panel">
         {/* 필터 영역 */}
         <div className="filter-bar">
@@ -472,18 +498,11 @@ export default function RealtimeFault() {
           </div>
           <div className="filter-group">
             <label>장비코드</label>
-            <select
-              className="filter-select"
+            <DevCodeDropdown
+              devCodes={devCodes}
               value={searchDevCode}
-              onChange={(e) => setSearchDevCode(e.target.value)}
-            >
-              <option value="">전체</option>
-              {devCodes.map((code) => (
-                <option key={code.DEV_CODE_ID} value={code.DEV_CODE_ID}>
-                  {code.CODE_NM}
-                </option>
-              ))}
-            </select>
+              onChange={setSearchDevCode}
+            />
           </div>
           <div className="filter-group">
             <label>장비명</label>
@@ -570,6 +589,7 @@ export default function RealtimeFault() {
             fetchAllData: async () => sortedErrors,
           }}
         />
+        </div>
         </div>
       </div>
       </div>

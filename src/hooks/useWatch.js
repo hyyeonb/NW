@@ -100,6 +100,7 @@ export const useUpdateWatchGroup = () => {
     onSuccess: (_, { watchGroupId }) => {
       queryClient.invalidateQueries({ queryKey: ['watchGroups'] });
       queryClient.invalidateQueries({ queryKey: ['watchGroup', watchGroupId] });
+      queryClient.invalidateQueries({ queryKey: ['watchGroupDetail', watchGroupId] });
     },
   });
 };

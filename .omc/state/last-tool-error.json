@@ -1,0 +1,7 @@
+{
+  "tool_name": "Read",
+  "tool_input_preview": "{\"file_path\":\"C:\\\\STN\\\\new_nms\\\\front\\\\frontend\\\\src\\\\components\\\\DataTable.jsx\"}",
+  "error": "File content (10240 tokens) exceeds maximum allowed tokens (10000). Use offset and limit parameters to read specific portions of the file, or search for specific content instead of reading the whole file.",
+  "timestamp": "2026-03-27T03:33:15.251Z",
+  "retry_count": 1
+}

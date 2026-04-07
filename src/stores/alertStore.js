@@ -83,8 +83,8 @@ export const useAlertStore = create((set, get) => ({
     return current >= start || current <= end;
   },
 
-  // 새 알림 추가
-  addAlert: (alert) =>
+  // 새 알림 추가 (skipToast: 비활성 탭에서 Toast 억제)
+  addAlert: (alert, skipToast = false) =>
     set((state) => {
       // 장애 해소 알림인 경우 (isCleared = true)
       if (alert.isCleared) {
@@ -102,7 +102,7 @@ export const useAlertStore = create((set, get) => ({
         const clearAlerts = [alert, ...updatedAlerts];
         return {
           alerts: clearAlerts.length > MAX_ALERTS ? clearAlerts.slice(0, MAX_ALERTS) : clearAlerts,
-          toasts: state.toasts, // Toast 유지 (CLEAR 알림은 Toast 표시 안함)
+          toasts: state.toasts,
         };
       }
 
@@ -110,7 +110,7 @@ export const useAlertStore = create((set, get) => ({
       const newAlerts = [alert, ...state.alerts];
       return {
         alerts: newAlerts.length > MAX_ALERTS ? newAlerts.slice(0, MAX_ALERTS) : newAlerts,
-        toasts: addToast(state.toasts, alert),
+        toasts: skipToast ? state.toasts : addToast(state.toasts, alert),
       };
     }),
 
