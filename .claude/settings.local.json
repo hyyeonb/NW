@@ -16,7 +16,12 @@
       "Bash(git remote:*)",
       "Bash(git checkout:*)",
       "Bash(git rebase:*)",
-      "Bash(npx vite build:*)"
+      "Bash(git pull:*)",
+      "Bash(cmd //c \"taskkill /F /PID 127252\")",
+      "Bash(cmd //c \"taskkill /F /PID 397280\")",
+      "Bash(npm ls:*)",
+      "Bash(tasklist:*)",
+      "Bash(cmd /c \"tasklist /FI \"\"IMAGENAME eq node.exe\"\" 2>NUL\")"
     ]
   }
 }

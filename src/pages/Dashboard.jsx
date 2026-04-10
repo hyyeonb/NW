@@ -3138,7 +3138,7 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
         xAxis: {
           type: 'category',
           boundaryGap: false,
-          data: chartData[0]?.timestamps?.map(ts => ts.split(' ')[1]?.substring(0, 5) || '') || [],
+          data: chartData[0]?.timestamps?.map(ts => (ts ? (ts.split(' ')[1]?.substring(0, 5) || '') : '')) || [],
           axisLabel: { color: '#94a3b8', fontSize: 9 },
           axisLine: { lineStyle: { color: '#334155' } }
         },
@@ -3253,7 +3253,13 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
 
   return (
     <div className="widget-content-inner" ref={containerRef}>
-      <div className="custom-widget-content echarts-container">
+      <div className="custom-widget-content echarts-container" onMouseLeave={() => {
+        const chart = chartRef.current?.getEchartsInstance?.();
+        if (chart && !chart.isDisposed?.()) {
+          chart.dispatchAction({ type: 'hideTip' });
+          chart.dispatchAction({ type: 'updateAxisPointer', currTrigger: 'leave' });
+        }
+      }}>
         {chartData.length > 0 ? (
           <ReactECharts
             ref={chartRef}
@@ -3267,6 +3273,13 @@ function CustomWidgetContent({ widget, isEditMode, onDeviceClick }) {
                 if (isEditMode || !onDeviceClick) return;
                 const deviceId = params.data?.deviceId;
                 if (deviceId) onDeviceClick(deviceId);
+              },
+              globalout: () => {
+                const chart = chartRef.current?.getEchartsInstance?.();
+                if (chart && !chart.isDisposed?.()) {
+                  chart.dispatchAction({ type: 'hideTip' });
+                  chart.dispatchAction({ type: 'updateAxisPointer', currTrigger: 'leave' });
+                }
               }
             }}
             onChartReady={(chart) => {
