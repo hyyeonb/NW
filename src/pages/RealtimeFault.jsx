@@ -375,6 +375,16 @@ export default function RealtimeFault() {
       className: 'cell-truncate',
     },
     {
+      key: 'DEV_CODE_NM',
+      label: '장비코드',
+      sortable: true,
+      className: 'cell-truncate',
+      hideable: true,
+      render: (value) => value
+        ? <span className="cell-badge info">{value}</span>
+        : <span style={{ color: 'var(--theme-text-muted)', fontSize: 12 }}>-</span>,
+    },
+    {
       key: 'DEVICE_IP',
       label: 'IP 주소',
       sortable: true,
