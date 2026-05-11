@@ -1,0 +1,24 @@
+// NMS 메트릭 코드 → 짧은 표시 라벨 변환 (Dashboard 위젯 헤더/축 표기 전용)
+
+const SHORT_NAMES = {
+  ICMP_MAX: 'MAX',
+  ICMP_MIN: 'MIN',
+  ICMP_AVG: 'AVG',
+  ICMP_LOSS: 'LOSS',
+  TRAFFIC_IN_BPS: 'IN_BPS',
+  TRAFFIC_OUT_BPS: 'OUT_BPS',
+  TRAFFIC_IN_BYTE: 'IN_BYTE',
+  TRAFFIC_OUT_BYTE: 'OUT_BYTE',
+  TRAFFIC_INPUT_BYTE: 'IN_BYTE',
+  TRAFFIC_OUTPUT_BYTE: 'OUT_BYTE',
+  TRAFFIC_IN_PKT: 'IN_PKT',
+  TRAFFIC_OUT_PKT: 'OUT_PKT',
+  TRAFFIC_IN_ERR: 'IN_ERR',
+  TRAFFIC_OUT_ERR: 'OUT_ERR',
+  TRAFFIC_IN_DROP: 'IN_DROP',
+  TRAFFIC_OUT_DROP: 'OUT_DROP',
+  CPU_USAGE: 'CPU',
+  MEMORY_USAGE: 'MEM',
+};
+
+export const getShortMetricName = (metric) => SHORT_NAMES[metric] || metric;

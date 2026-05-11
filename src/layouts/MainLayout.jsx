@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
+import ThemeToggle from '../components/ThemeToggle';
 import { usePageTracking } from '../hooks/usePageTracking';
-import { historyApi } from '../api/history';
+import DailySummaryModal from '../components/DailySummaryModal';
+import { getPageCategory } from '../shared/config/routeCategory';
 
 export default function MainLayout() {
   const location = useLocation();
@@ -29,8 +31,10 @@ export default function MainLayout() {
   return (
     <div className="app-layout">
       <Sidebar collapsed={sidebarCollapsed} onToggle={handleToggle} />
-      <main className={`app-main ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-        <Outlet />
+      <main className={`app-main ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${getPageCategory(location.pathname)}`}>
+        <ThemeToggle className="fixed-top-right" />
+        <Outlet key={location.state?._refresh ?? location.key} />
+        <DailySummaryModal />
       </main>
     </div>
   );

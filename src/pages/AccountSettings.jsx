@@ -4,20 +4,12 @@ import { useAccountInfo, useUpdateProfile, useChangePassword } from '../hooks/us
 import { accountApi } from '../api/account';
 import { useAuthStore } from '../stores/authStore';
 import '../styles/AccountSettings.css';
+import { parseBrowser } from '../shared/lib/userAgent';
 
 function formatDate(dateStr) {
   if (!dateStr) return '-';
   const d = new Date(dateStr);
   return d.toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-}
-
-function parseBrowser(ua) {
-  if (!ua) return '-';
-  if (ua.includes('Edg/')) return 'Edge';
-  if (ua.includes('Chrome/')) return 'Chrome';
-  if (ua.includes('Firefox/')) return 'Firefox';
-  if (ua.includes('Safari/')) return 'Safari';
-  return 'Browser';
 }
 
 export default function AccountSettings() {

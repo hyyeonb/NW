@@ -27,6 +27,7 @@ const COLORS = {
   minor: '#eab308',
   warning: '#3b82f6',
   success: '#10b981',
+  unknown: '#94a3b8',
 };
 
 function formatBpsForPdf(bps) {
@@ -255,12 +256,13 @@ export function buildFaultReport(pdf, { chartOptions, reportData }) {
 
   // 요약 카드
   y = addSummaryCards(pdf, [
-    { label: '전체 활성', value: totalActive, color: COLORS.accent, valueColor: COLORS.accent },
+    { label: '전체 장애 건수', value: totalActive, color: COLORS.accent, valueColor: COLORS.accent },
     { label: 'Critical', value: levelCounts.C, color: COLORS.critical, valueColor: COLORS.critical },
     { label: 'Major', value: levelCounts.M, color: COLORS.major, valueColor: COLORS.major },
     { label: 'Minor', value: levelCounts.N, color: COLORS.minor, valueColor: COLORS.minor },
     { label: 'Warning', value: levelCounts.W, color: COLORS.warning, valueColor: COLORS.warning },
-    { label: '평균 MTTR', value: formatDuration(avgMttr), color: COLORS.muted },
+    { label: '미분류', value: levelCounts.UNKNOWN, color: COLORS.unknown, valueColor: COLORS.unknown },
+    { label: '평균 복구시간', value: formatDuration(avgMttr), color: COLORS.muted },
   ], y);
 
   const chartH = 72;
@@ -278,7 +280,7 @@ export function buildFaultReport(pdf, { chartOptions, reportData }) {
 
   // ── 유형별 추이 + MTTR ──
   y = checkPageBreak(pdf, 90, y);
-  y = addSectionTitle(pdf, '유형별 발생 추이 / 평균 처리시간(MTTR)', y);
+  y = addSectionTitle(pdf, '유형별 발생 추이 / 평균 복구시간', y);
 
   const typeTrendImg = renderChartToImage(chartOptions.typeTrend, 560, 280);
   const mttrImg = renderChartToImage(chartOptions.mttrChart, 480, 280);
@@ -300,7 +302,7 @@ export function buildFaultReport(pdf, { chartOptions, reportData }) {
 
   // ── Aging + Top Devices ──
   y = checkPageBreak(pdf, 60, y);
-  y = addSectionTitle(pdf, '미해소 장애 Aging 분포', y);
+  y = addSectionTitle(pdf, '미해결 장애 경과시간 분포', y);
 
   if (agingData && agingData.length > 0) {
     const agingTotal = agingData.reduce((s, a) => s + a.count, 0) || 1;
@@ -329,7 +331,7 @@ export function buildFaultReport(pdf, { chartOptions, reportData }) {
 
   // 상습 장애 장비 Top 10
   y = checkPageBreak(pdf, 50, y);
-  y = addSectionTitle(pdf, '상습 장애 장비 Top 10', y);
+  y = addSectionTitle(pdf, '상습 장애 장비 상위 10', y);
 
   if (topDevices && topDevices.length > 0) {
     autoTable(pdf, {

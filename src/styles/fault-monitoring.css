@@ -25,58 +25,19 @@
     }
 }
 
-/* ==================
-   Page Header
-   ================== */
-.fault-monitoring-page .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--spacing-3);
-    flex-shrink: 0;
-}
-
-.fault-monitoring-page .page-header-left {
-    display: flex;
-    align-items: baseline;
-    gap: var(--spacing-4);
-}
-
-.fault-monitoring-page .page-title {
-    font-size: var(--font-size-h2);
-    font-weight: var(--font-weight-bold);
-    color: var(--theme-text-primary);
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-3);
-    margin: 0;
-}
-
-.fault-monitoring-page .page-title i {
-    color: var(--theme-warning);
-}
-
-.fault-monitoring-page .page-subtitle {
-    font-size: var(--font-size-body);
-    color: var(--theme-text-muted);
-}
-
-.fault-monitoring-page .page-header-right {
-    display: flex;
-    gap: var(--spacing-2);
-}
+/* page-header — 통합 규격 사용 (_page-container.css) */
 
 /* ==================
    DatePicker Z-Index 수정
    ================== */
 .react-datepicker-popper {
-    z-index: 99999 !important;
+    z-index: var(--z-tooltip) !important;
 }
 
 /* filter-bar가 fault-content보다 위에 있도록 */
 .fault-monitoring-page .filter-bar {
     position: relative;
-    z-index: 100;
+    z-index: var(--z-dropdown);
 }
 
 .fault-monitoring-page .fault-content {
@@ -211,7 +172,7 @@
 }
 
 .react-datepicker-popper {
-    z-index: 9999 !important;
+    z-index: var(--z-modal-backdrop) !important;
 }
 
 .fault-monitoring-page .filter-input {
@@ -317,6 +278,9 @@
     border-radius: var(--radius-xl, 16px);
     overflow: hidden;
     animation: contentFadeIn 0.6s ease 0.2s both;
+    background: var(--theme-bg-panel);
+    border: 1px solid var(--theme-border-subtle);
+    box-shadow: var(--theme-shadow-sm);
 }
 
 .fault-content > .table-panel {
@@ -664,7 +628,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: var(--z-sidebar);
     animation: fadeIn 0.2s ease;
 }
 
@@ -890,7 +854,7 @@
    ================== */
 
 /* React Datepicker - first set (without !important) */
-[data-theme="light"] .react-datepicker {
+[data-theme^="light"] .react-datepicker {
     background: rgba(255, 255, 255, 0.98) !important;
     border: 1px solid rgba(0, 0, 0, 0.1) !important;
     box-shadow:
@@ -898,52 +862,52 @@
         0 1px 3px rgba(0, 0, 0, 0.06) !important;
 }
 
-[data-theme="light"] .react-datepicker__header {
+[data-theme^="light"] .react-datepicker__header {
     background: rgba(0, 0, 0, 0.02) !important;
     border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
 }
 
-[data-theme="light"] .react-datepicker__current-month,
-[data-theme="light"] .react-datepicker__day-name {
+[data-theme^="light"] .react-datepicker__current-month,
+[data-theme^="light"] .react-datepicker__day-name {
     color: #1d1d1f !important;
 }
 
-[data-theme="light"] .react-datepicker__day {
+[data-theme^="light"] .react-datepicker__day {
     color: #1d1d1f !important;
 }
 
-[data-theme="light"] .react-datepicker__day:hover {
+[data-theme^="light"] .react-datepicker__day:hover {
     background: rgba(79, 70, 229, 0.1) !important;
     color: #1d1d1f !important;
 }
 
-[data-theme="light"] .react-datepicker__day--selected,
-[data-theme="light"] .react-datepicker__day--keyboard-selected {
+[data-theme^="light"] .react-datepicker__day--selected,
+[data-theme^="light"] .react-datepicker__day--keyboard-selected {
     background: #4f46e5 !important;
     color: #ffffff !important;
 }
 
-[data-theme="light"] .react-datepicker__day--in-range {
+[data-theme^="light"] .react-datepicker__day--in-range {
     background: rgba(79, 70, 229, 0.15) !important;
 }
 
-[data-theme="light"] .react-datepicker__day--disabled {
+[data-theme^="light"] .react-datepicker__day--disabled {
     color: #aeaeb2 !important;
 }
 
-[data-theme="light"] .react-datepicker__navigation-icon::before {
+[data-theme^="light"] .react-datepicker__navigation-icon::before {
     border-color: #8e8e93 !important;
 }
 
-[data-theme="light"] .react-datepicker__navigation:hover *::before {
+[data-theme^="light"] .react-datepicker__navigation:hover *::before {
     border-color: #1d1d1f !important;
 }
 
-[data-theme="light"] .react-datepicker__day--today {
+[data-theme^="light"] .react-datepicker__day--today {
     border: 1px solid #4f46e5 !important;
 }
 
-[data-theme="light"] .react-datepicker__close-icon::after {
+[data-theme^="light"] .react-datepicker__close-icon::after {
     background: rgba(0, 0, 0, 0.06) !important;
     color: #1d1d1f !important;
 }
@@ -1010,6 +974,21 @@
   z-index: 1;
 }
 
+/* 비활성 LIVE 칩 */
+.fault-live-chip.live-inactive .fault-live-border {
+  animation: none;
+  border-color: #334155;
+  background: none;
+}
+.fault-live-chip.live-inactive .fault-live-dot {
+  background: #64748b;
+  box-shadow: none;
+  animation: none;
+}
+.fault-live-chip.live-inactive .fault-live-label {
+  color: #64748b;
+}
+
 /* ==================== 테이블 보더 그라디언트 회전 ==================== */
 .fault-table-glow {
   padding: 4px;
@@ -1046,6 +1025,12 @@
   border-radius: 0;
   background: transparent;
 }
+
+/* @property 애니메이션 스타일 재계산 시 새 행 텍스트 색상 보호 */
+.fault-table-glow .data-table td {
+  color: var(--theme-text-secondary);
+}
+
 @property --table-border-angle {
   syntax: '<angle>';
   initial-value: 0deg;

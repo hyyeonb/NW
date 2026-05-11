@@ -2,18 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useThresholds, useUpdateThresholds } from '../hooks/useAdmin';
 import '../styles/ThresholdManagement.css';
 
-const SEVERITIES = ['CRITICAL', 'MAJOR', 'MINOR', 'WARNING'];
-const SEV_META = {
-  CRITICAL: { label: 'Critical', color: '#ef4444' },
-  MAJOR:    { label: 'Major',    color: '#f97316' },
-  MINOR:    { label: 'Minor',    color: '#f59e0b' },
-  WARNING:  { label: 'Warning',  color: '#3b82f6' },
-};
-const TYPES = [
-  { key: 'CPU',     label: 'CPU',     icon: 'bi-cpu' },
-  { key: 'MEM',     label: 'Memory',  icon: 'bi-memory' },
-  { key: 'TRAFFIC', label: 'Traffic', icon: 'bi-bar-chart-line' },
-];
+import { SEVERITIES, SEV_META, TYPES } from '../features/threshold-management/model/constants';
 
 export default function ThresholdManagement() {
   const { data: thresholds, isLoading } = useThresholds();
@@ -33,28 +22,20 @@ export default function ThresholdManagement() {
   const setVal = useCallback((idx, sev, val) => {
     setForm(prev => {
       const next = [...prev];
-      next[idx] = { ...next[idx], [sev]: parseInt(val) || 0 };
+      const max = next[idx].MAX_VALUE || 100;
+      let v = parseInt(val);
+      if (isNaN(v)) v = 0;
+      if (v < 0) v = 0;
+      if (v > max) v = max;
+      next[idx] = { ...next[idx], [sev]: v };
       return next;
     });
   }, []);
 
   const handleSave = async () => {
     setMsg(null);
-    // 프론트 검증: MAX_VALUE 초과, 음수, 순서
+    // 순서 검증 (값 범위는 input에서 이미 제한됨)
     for (const t of form) {
-      const max = t.MAX_VALUE || 100;
-      const vals = [t.CRITICAL, t.MAJOR, t.MINOR, t.WARNING];
-      const unit = t.TYPE === 'TEMPERATURE' ? '°C' : t.TYPE === 'HUMIDITY' ? '%RH' : '%';
-      for (const v of vals) {
-        if (v < 0) {
-          setMsg({ type: 'error', text: `${t.TYPE}: 임계치 값은 0 미만일 수 없습니다.` });
-          return;
-        }
-        if (v > max) {
-          setMsg({ type: 'error', text: `${t.TYPE}: 임계치 값은 최대 ${max}${unit}을(를) 초과할 수 없습니다.` });
-          return;
-        }
-      }
       if (t.CRITICAL < t.MAJOR || t.MAJOR < t.MINOR || t.MINOR < t.WARNING) {
         setMsg({ type: 'error', text: `${t.TYPE}: Critical > Major > Minor > Warning 순서여야 합니다.` });
         return;

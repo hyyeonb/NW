@@ -19,12 +19,7 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-.board-container > .page-header {
-  flex-shrink: 0;
-  margin-bottom: 0;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--theme-border-subtle);
-}
+/* page-header — 통합 규격 사용 (_page-container.css) */
 
 /* ===== 패널 래퍼 (그라데이션 보더) ===== */
 .board-panels-wrapper {

@@ -1,6 +1,6 @@
-import { useMemo, useRef } from 'react';
-import ReactECharts from 'echarts-for-react';
-import { useThemeStore } from '../stores';
+import { useEffect, useMemo, useRef } from 'react';
+import SafeECharts from './SafeECharts';
+import { useThemeStore } from '../stores/themeStore';
 
 const CHART_COLORS = [
   '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6',
@@ -60,6 +60,25 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
   }, [chartPortsSet]);
 
   const chartAreaRef = useRef(null);
+
+  // 컨테이너 크기 변경 시 ECharts 재계산 (ResizeObserver)
+  useEffect(() => {
+    const el = chartAreaRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    let raf;
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        window.dispatchEvent(new Event('resize'));
+      });
+    });
+    ro.observe(el);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
+  }, []);
 
   // portsData → O(1) 룩업 Map (포트명, 속도)
   const portLookup = useMemo(() => {
@@ -260,7 +279,11 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
           if (!params || params.length === 0) return '';
           const chartH = chartAreaRef.current?.offsetHeight || 300;
           const maxH = Math.max(chartH - 60, 120);
-          const header = `<div style="font-weight:bold;margin-bottom:6px;border-bottom:1px solid #334155;padding-bottom:4px">${params[0].axisValue}</div>`;
+          const dividerColor = isDark ? '#334155' : '#e2e8f0';
+          const hintColor = isDark ? '#64748b' : '#94a3b8';
+          const scrollbarColor = isDark ? '#64748b #1e293b' : '#cbd5e1 #f1f5f9';
+          const shadow = isDark ? '0 4px 20px rgba(0,0,0,0.5)' : '0 4px 16px rgba(15,23,42,0.12)';
+          const header = `<div style="font-weight:bold;margin-bottom:6px;border-bottom:1px solid ${dividerColor};padding-bottom:4px">${params[0].axisValue}</div>`;
           let items = '';
           params.forEach(p => {
             const marker = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px"></span>`;
@@ -269,9 +292,9 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
             items += `<div style="margin-top:4px;white-space:nowrap;font-size:12px">${marker}${p.seriesName} ${dir}: <strong>${displayVal}</strong></div>`;
           });
           const scrollHint = params.length > 10
-            ? `<div style="text-align:center;padding:6px 0 2px;color:#64748b;font-size:10px;border-top:1px solid #334155;margin-top:6px">↕ 스크롤</div>`
+            ? `<div style="text-align:center;padding:6px 0 2px;color:${hintColor};font-size:10px;border-top:1px solid ${dividerColor};margin-top:6px">↕ 스크롤</div>`
             : '';
-          return `<div style="max-height:${maxH}px;max-width:300px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#64748b #1e293b;box-shadow:0 4px 20px rgba(0,0,0,0.5)">${header}${items}${scrollHint}</div>`;
+          return `<div style="max-height:${maxH}px;max-width:300px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:${scrollbarColor};box-shadow:${shadow};border-radius:6px">${header}${items}${scrollHint}</div>`;
         },
       },
       legend: {
@@ -321,7 +344,8 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
         textStyle: { color: isDark ? '#f1f5f9' : '#1e293b', fontSize: 11 }, confine: true,
         formatter: (params) => {
           if (!params || params.length === 0) return '';
-          let result = `<div style="font-weight:bold;margin-bottom:4px;border-bottom:1px solid #334155;padding-bottom:4px">${params[0].axisValue}</div>`;
+          const dividerColor = isDark ? '#334155' : '#e2e8f0';
+          let result = `<div style="font-weight:bold;margin-bottom:4px;border-bottom:1px solid ${dividerColor};padding-bottom:4px">${params[0].axisValue}</div>`;
           params.forEach(p => {
             const marker = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px"></span>`;
             result += `<div style="margin-top:4px;font-size:12px">${marker}${p.seriesName}: <strong>${formatCount(Math.abs(p.value || 0))}</strong></div>`;
@@ -354,7 +378,7 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
   return (
     <div className="port-traffic-chart">
       <div className="ptc-chart-area" ref={chartAreaRef}>
-        <ReactECharts
+        <SafeECharts
           key={`main-${counterType}-${trafficUnit}-${Array.from(chartPortsSet).join('-')}`}
           notMerge={false}
           option={mainOption}
@@ -368,7 +392,7 @@ export default function PortTrafficChart({ rawData, chartPortsSet, portsData, se
             {showError && <span className="ptc-ql-badge error">Error</span>}
             {showDiscard && <span className="ptc-ql-badge discard">Discard</span>}
           </div>
-          <ReactECharts
+          <SafeECharts
             key={`quality-${showError}-${showDiscard}-${Array.from(chartPortsSet).join('-')}`}
             notMerge={false}
             option={qualityOption}

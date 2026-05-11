@@ -27,6 +27,10 @@
     min-width: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    background: var(--theme-bg-panel);
+    border-radius: var(--radius-3xl);
+    border: 1px solid var(--theme-border-subtle);
+    box-shadow: var(--theme-shadow-sm);
 }
 
 /* ==================
@@ -68,7 +72,7 @@
     inset: 0;
     background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(8px);
-    z-index: 500;
+    z-index: var(--z-sticky);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -285,7 +289,7 @@
    ================== */
 .stats-summary-row {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: var(--spacing-3);
     margin-bottom: var(--spacing-4);
     flex-shrink: 0;
@@ -341,7 +345,7 @@
    ================== */
 .stats-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: var(--spacing-4);
     flex: 1;
     min-height: 0;
@@ -355,6 +359,8 @@
     display: flex;
     flex-direction: column;
     min-height: 280px;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .stats-panel-header {
@@ -362,9 +368,9 @@
     align-items: center;
     gap: var(--spacing-2);
     padding: var(--spacing-3) var(--spacing-4);
-    font-size: var(--font-size-body-sm);
-    font-weight: var(--font-weight-semibold);
-    color: var(--theme-text-secondary);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--theme-text-primary);
     border-bottom: 1px solid var(--theme-border-subtle);
     flex-shrink: 0;
 }
@@ -475,6 +481,10 @@
 .top-devices-table .device-name {
     font-weight: var(--font-weight-semibold);
     color: var(--theme-text-primary);
+    display: table-cell;
+    text-align: left;
+    font-size: 13px;
+    max-width: none;
 }
 
 .top-devices-table .device-ip {
@@ -602,8 +612,88 @@
     }
 }
 
+/* === Light Mode === */
+html[data-theme^="light"] .stats-card {
+    background: #ffffff !important;
+    border: 1px solid rgba(15, 23, 42, 0.07) !important;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08), 0 1px 4px rgba(15, 23, 42, 0.04) !important;
+    backdrop-filter: none !important;
+}
+html[data-theme^="light"] .stats-card:hover {
+    background: #ffffff !important;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1), 0 2px 6px rgba(15, 23, 42, 0.05) !important;
+    transform: translateY(-1px);
+}
+html[data-theme^="light"] .stats-panel {
+    background: #ffffff !important;
+    border: 1px solid rgba(15, 23, 42, 0.07) !important;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08), 0 1px 4px rgba(15, 23, 42, 0.04) !important;
+    backdrop-filter: none !important;
+}
+html[data-theme^="light"] .stats-panel-header {
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06) !important;
+}
+
+html[data-theme^="light"] .fault-stats-content,
+html[data-theme^="light"] .fault-content {
+    background: #ffffff !important;
+    border: 1px solid rgba(15, 23, 42, 0.07) !important;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08), 0 1px 4px rgba(15, 23, 42, 0.04) !important;
+    border-radius: calc(var(--radius-2xl) - 4px) !important;
+    padding: 4px !important;
+}
+
+/* fault-stats-container 패딩 — 다른 페이지 컨테이너와 통일 */
+html[data-theme^="light"] .fault-stats-container {
+    padding: 0 var(--spacing-5);
+    margin-top: var(--spacing-3);
+}
+
 @media (max-width: 640px) {
     .stats-summary-row {
         grid-template-columns: repeat(2, 1fr);
     }
+}
+
+/* ==================
+   Light Mode Overrides
+   ================== */
+
+/* -- PDF Preview Modal -- */
+[data-theme^="light"] .pdf-preview-modal {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme^="light"] .pdf-preview-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-theme^="light"] .pdf-preview-title {
+    color: #1d1d1f;
+}
+
+[data-theme^="light"] .pdf-close-btn {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(0, 0, 0, 0.03);
+    color: #6b7280;
+}
+
+[data-theme^="light"] .pdf-close-btn:hover {
+    color: #1d1d1f;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme^="light"] .pdf-preview-body {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme^="light"] .pdf-preview-loading {
+    color: #6b7280;
+}
+
+/* -- Aging Bar Track -- */
+[data-theme^="light"] .aging-bar-track {
+    background: rgba(0, 0, 0, 0.06);
 }

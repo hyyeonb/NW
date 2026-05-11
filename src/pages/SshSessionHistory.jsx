@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { sshSessionApi } from '../api';
-import { DataTable } from '../components';
+import { sshSessionApi } from '../api/sshSession';
+import DataTable from '../components/DataTable';
 import { historyApi } from '../api/history';
 import '../styles/ssh-session.css';
 
@@ -98,7 +98,6 @@ export default function SshSessionHistory() {
     setSftpLoading(true);
     try {
       const response = await sshSessionApi.getSftpLogs(sessionId, { page: p, size: s });
-      console.log('[SFTP Logs] 응답:', response.data);
       const data = response.data?.data || response.data || {};
       const list = Array.isArray(data.content) ? data.content : (Array.isArray(data) ? data : []);
       setSftpLogs(list);
@@ -489,7 +488,7 @@ export default function SshSessionHistory() {
                   onPageSizeChange: handleCmdPageSizeChange,
                   pageSizeOptions: [10, 20, 50, 100],
                 }}
-                maxHeight="calc(100vh - 460px)"
+                maxHeight="100%"
               />
             </div>
           </div>
@@ -516,7 +515,7 @@ export default function SshSessionHistory() {
                   onPageSizeChange: handleSftpPageSizeChange,
                   pageSizeOptions: [10, 20, 50, 100],
                 }}
-                maxHeight="calc(100vh - 460px)"
+                maxHeight="100%"
               />
             </div>
           </div>
@@ -585,7 +584,7 @@ export default function SshSessionHistory() {
               onPageSizeChange: (size) => { setPageSize(size); setPage(1); },
               pageSizeOptions: [10, 20, 50, 100],
             }}
-            maxHeight="calc(100vh - 300px)"
+            maxHeight="100%"
           />
         </div>
       </div>

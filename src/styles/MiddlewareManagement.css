@@ -386,7 +386,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 400;
+  z-index: var(--z-sticky);
   animation: mw-fade-in 0.18s ease;
 }
 
@@ -596,4 +596,243 @@
   .mw-modal {
     width: calc(100vw - 24px);
   }
+}
+
+/* ════════════════════════════════════════════
+   Light Mode Overrides
+   ════════════════════════════════════════════ */
+
+/* -- Card -- */
+[data-theme^="light"] .mw-card {
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+}
+
+[data-theme^="light"] .mw-card:hover {
+  border-color: rgba(15, 23, 42, 0.14);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme^="light"] .mw-card-header {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+[data-theme^="light"] .mw-card-title h3 {
+  color: #1d1d1f;
+}
+
+[data-theme^="light"] .mw-priority-badge {
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  color: #3a3a3c;
+}
+
+/* -- Status badges (라이트 톤) -- */
+[data-theme^="light"] .mw-status-active {
+  background: rgba(5, 150, 105, 0.1);
+  color: #059669;
+  border-color: rgba(5, 150, 105, 0.3);
+}
+
+[data-theme^="light"] .mw-status-active::before {
+  background: #059669;
+  box-shadow: 0 0 6px rgba(5, 150, 105, 0.5);
+}
+
+[data-theme^="light"] .mw-status-down {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+[data-theme^="light"] .mw-status-down::before {
+  background: #dc2626;
+}
+
+[data-theme^="light"] .mw-status-maintenance {
+  background: rgba(217, 119, 6, 0.1);
+  color: #d97706;
+  border-color: rgba(217, 119, 6, 0.3);
+}
+
+[data-theme^="light"] .mw-status-maintenance::before {
+  background: #d97706;
+}
+
+/* -- Info rows -- */
+[data-theme^="light"] .mw-info-label {
+  color: #8e8e93;
+}
+
+[data-theme^="light"] .mw-info-value {
+  color: #1d1d1f;
+}
+
+/* -- API Key -- */
+[data-theme^="light"] .mw-api-key {
+  background: #f5f5f7;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  color: #1d1d1f;
+}
+
+[data-theme^="light"] .mw-btn-eye {
+  color: #8e8e93;
+}
+
+[data-theme^="light"] .mw-btn-eye:hover {
+  color: #1d1d1f;
+  background: rgba(15, 23, 42, 0.04);
+}
+
+/* -- Stats row -- */
+[data-theme^="light"] .mw-stats-row {
+  background: rgba(15, 23, 42, 0.02);
+  border-top: 1px solid rgba(15, 23, 42, 0.05);
+}
+
+[data-theme^="light"] .mw-stat {
+  color: #3a3a3c;
+}
+
+[data-theme^="light"] .mw-stat i {
+  color: #8e8e93;
+}
+
+[data-theme^="light"] .mw-stat-value {
+  color: #1d1d1f;
+}
+
+/* -- Card actions & buttons -- */
+[data-theme^="light"] .mw-card-actions {
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+[data-theme^="light"] .mw-btn-ghost {
+  background: #ffffff;
+  color: #3a3a3c;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+}
+
+[data-theme^="light"] .mw-btn-ghost:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.03);
+  border-color: rgba(15, 23, 42, 0.24);
+}
+
+[data-theme^="light"] .mw-btn-health {
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  border-color: rgba(37, 99, 235, 0.25);
+}
+
+[data-theme^="light"] .mw-btn-health:hover:not(:disabled) {
+  background: rgba(37, 99, 235, 0.15);
+  border-color: rgba(37, 99, 235, 0.4);
+}
+
+[data-theme^="light"] .mw-btn-danger {
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.25);
+}
+
+[data-theme^="light"] .mw-btn-danger:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.15);
+  border-color: rgba(220, 38, 38, 0.4);
+}
+
+/* -- Empty / Loading -- */
+[data-theme^="light"] .mw-empty-state {
+  background: rgba(15, 23, 42, 0.02);
+  border: 1px dashed rgba(15, 23, 42, 0.14);
+  color: #8e8e93;
+}
+
+[data-theme^="light"] .mw-loading {
+  color: #8e8e93;
+}
+
+[data-theme^="light"] .mw-loading-spinner {
+  border-color: rgba(99, 102, 241, 0.18);
+  border-top-color: #4f46e5;
+}
+
+/* -- Modal -- */
+[data-theme^="light"] .mw-modal-overlay {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+[data-theme^="light"] .mw-modal {
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.15);
+}
+
+[data-theme^="light"] .mw-modal-header {
+  border-bottom-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme^="light"] .mw-modal-header h2 {
+  color: #1d1d1f;
+}
+
+[data-theme^="light"] .mw-modal-header h2 i {
+  color: #4f46e5;
+}
+
+[data-theme^="light"] .mw-modal-close {
+  color: #8e8e93;
+}
+
+[data-theme^="light"] .mw-modal-close:hover {
+  color: #1d1d1f;
+  background: rgba(15, 23, 42, 0.06);
+}
+
+[data-theme^="light"] .mw-modal-footer {
+  border-top-color: rgba(15, 23, 42, 0.08);
+}
+
+/* -- Form -- */
+[data-theme^="light"] .mw-form-label {
+  color: #3a3a3c;
+}
+
+[data-theme^="light"] .mw-form-input,
+[data-theme^="light"] .mw-form-textarea {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  color: #1d1d1f;
+}
+
+[data-theme^="light"] .mw-form-input:focus,
+[data-theme^="light"] .mw-form-textarea:focus {
+  border-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+[data-theme^="light"] .mw-form-input::placeholder,
+[data-theme^="light"] .mw-form-textarea::placeholder {
+  color: #c7c7cc;
+}
+
+[data-theme^="light"] .mw-btn-generate {
+  background: rgba(79, 70, 229, 0.08);
+  color: #4338ca;
+  border-color: rgba(79, 70, 229, 0.28);
+}
+
+[data-theme^="light"] .mw-btn-generate:hover {
+  background: rgba(79, 70, 229, 0.14);
+  border-color: rgba(79, 70, 229, 0.45);
+}
+
+/* -- Inline spinner (버튼 내부) -- */
+[data-theme^="light"] .mw-spinner {
+  border-color: rgba(15, 23, 42, 0.2);
+  border-top-color: currentColor;
 }

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { faultApi } from '../api';
+import { faultApi } from '../api/fault';
 
 // 현재 활성 장애 목록 조회
 export const useActiveErrors = () => {

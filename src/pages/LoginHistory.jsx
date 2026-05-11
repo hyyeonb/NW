@@ -1,66 +1,11 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { historyApi } from '../api/history';
-import { DataTable } from '../components';
+import DataTable from '../components/DataTable';
 import '../styles/ssh-session.css';
 
-const LOGIN_TYPE_BADGE = {
-  LOCAL: { label: 'Local', className: 'badge-info' },
-  KAKAO: { label: 'Kakao', className: 'badge-warning' },
-  GOOGLE: { label: 'Google', className: 'badge-danger' },
-  NAVER: { label: 'Naver', className: 'badge-success' },
-};
-
-const ACTION_TYPE_BADGE = {
-  PAGE_VIEW: { label: '조회', className: 'badge-info' },
-  CREATE: { label: '등록', className: 'badge-success' },
-  UPDATE: { label: '수정', className: 'badge-warning' },
-  DELETE: { label: '삭제', className: 'badge-danger' },
-};
-
-const TARGET_TYPE_LABEL = {
-  DEVICE: '장비', GROUP: '그룹', PORT: '포트', DEVICE_SCOPE: '수집 설정',
-  DEVICE_SNMP: 'SNMP 설정', DEVICE_SSH: 'SSH 접속 정보', MODEL: '모델',
-  DEV_CODE: '장비 분류', TEMP_DEVICE: '신규 자산', NOTICE: '공지사항',
-  BOARD_FILE: '자료실', THRESHOLD: '시스템 임계치', DEVICE_THRESHOLD: '장비별 임계치',
-  WATCH_GROUP: '관제 그룹', WATCH_CONTROL: '관제 수집', ERROR: '장애 인지',
-  USER_PERMISSION: '사용자 권한', USER_STATUS: '사용자 상태',
-  USER_SETTING: '사용자 설정', USER_REVIEW: '가입 심사',
-  ACCOUNT: '계정 정보', PASSWORD: '비밀번호', DASHBOARD: '대시보드',
-  TOPOLOGY: '토폴로지', USER_TOPOLOGY: '사용자 토폴로지', MODEL_OID: '모델 OID',
-};
-
-const PAGE_CODE_LABEL = {
-  dashboard: '대시보드', topology: '토폴로지', user_topology: '사용자 토폴로지',
-  watch_realtime: '실시간 관제', perf_stats: '성능 통계',
-  fault_realtime: '실시간 장애', fault_history: '장애 이력', fault_stats: '장애 통계',
-  group_mgmt: '그룹 관리', asset_mgmt: '자산 관리', asset_config: '자산 Config',
-  new_asset_mgmt: '신규 자산', model_mgmt: '모델 관리',
-  login_history: '로그인 이력', ssh_sessions: 'SSH 이력',
-  board_files: '자료실', board_notices: '공지사항',
-  system_admin: '시스템 관리', account_settings: '계정 설정',
-};
-
-function formatDateTime(value) {
-  if (!value) return '-';
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return value;
-  return d.toLocaleString('ko-KR', {
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-  });
-}
-
-function formatDuration(loginAt, logoutAt) {
-  if (!loginAt) return '-';
-  const start = new Date(loginAt);
-  const end = logoutAt ? new Date(logoutAt) : new Date();
-  const diff = Math.floor((end - start) / 1000);
-  if (diff < 60) return `${diff}초`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}분 ${diff % 60}초`;
-  const hours = Math.floor(diff / 3600);
-  const mins = Math.floor((diff % 3600) / 60);
-  return `${hours}시간 ${mins}분`;
-}
+import { LOGIN_TYPE_BADGE, ACTION_TYPE_BADGE, TARGET_TYPE_LABEL, PAGE_CODE_LABEL } from '../features/login-history/model/constants';
+import { formatSessionDuration as formatDuration } from '../features/login-history/lib/formatSessionDuration';
+import { formatDateTimeKo as formatDateTime } from '../shared/lib/format';
 
 export default function LoginHistory() {
   // === 뷰 모드 ===
@@ -156,6 +101,7 @@ export default function LoginHistory() {
     setSelectedSession(row);
     setViewMode('detail');
     setActPage(1);
+    // fetchActivities 호출 시 백엔드 @ViewLog가 자동 기록
     fetchActivities(row.HISTORY_ID, 1, actPageSize);
   };
 
@@ -212,13 +158,15 @@ export default function LoginHistory() {
         const r = row.ACTIVITY_VIEW || 0;
         const u = row.ACTIVITY_UPDATE || 0;
         const d = row.ACTIVITY_DELETE || 0;
-        if (c + r + u + d === 0) return <span style={{ color: '#64748b' }}>-</span>;
+        const ctrl = row.ACTIVITY_CONTROL || 0;
+        if (c + r + u + d + ctrl === 0) return <span style={{ color: '#64748b' }}>-</span>;
         return (
           <span className="activity-crud">
             {r > 0 && <span className="crud-badge crud-r">R {r}</span>}
             {c > 0 && <span className="crud-badge crud-c">C {c}</span>}
             {u > 0 && <span className="crud-badge crud-u">U {u}</span>}
             {d > 0 && <span className="crud-badge crud-d">D {d}</span>}
+            {ctrl > 0 && <span className="crud-badge crud-ctrl">CTL {ctrl}</span>}
           </span>
         );
       },
@@ -297,17 +245,27 @@ export default function LoginHistory() {
     {
       key: 'TARGET_NAME',
       label: '대상명',
-      width: '150px',
+      width: '180px',
       render: (value, row) => value || row.TARGET_ID || '-',
     },
     {
       key: 'DETAIL',
       label: '변경 상세',
-      render: (value) => value ? (
-        <span title={value} style={{ fontSize: '12px', lineHeight: '1.4', display: 'block', maxWidth: '500px', wordBreak: 'break-word' }}>
-          {value}
-        </span>
-      ) : <span style={{ color: '#64748b' }}>-</span>,
+      render: (value, row) => {
+        if (value) {
+          return (
+            <span title={value} style={{ fontSize: '12px', lineHeight: '1.4', display: 'block', maxWidth: '500px', wordBreak: 'break-word' }}>
+              {value}
+            </span>
+          );
+        }
+        // PAGE_VIEW는 순수 페이지 진입, 대상 없음 → PAGE_CODE로 페이지명 표시
+        if (row.ACTION_TYPE === 'PAGE_VIEW') {
+          const pageLabel = row.PAGE_CODE ? (PAGE_CODE_LABEL[row.PAGE_CODE] || row.PAGE_CODE) : '';
+          return <span style={{ color: '#94a3b8', fontSize: 12 }}>{pageLabel} 페이지 진입</span>;
+        }
+        return <span style={{ color: '#64748b' }}>-</span>;
+      },
     },
     {
       key: 'PAGE_CODE',
@@ -321,16 +279,17 @@ export default function LoginHistory() {
   if (viewMode === 'detail' && selectedSession) {
     return (
       <div className="ssh-history-page">
-        <div className="ssh-page-header">
-          <div className="ssh-header-left">
+        <div className="page-header">
+          <div className="page-header-left">
             <button className="ssh-btn-back" onClick={handleBackToList}>
               <i className="bi bi-arrow-left"></i>
               목록으로
             </button>
-            <h2 className="ssh-page-title">
+            <h1 className="page-title">
               <i className="bi bi-box-arrow-in-right"></i>
               로그인 세션 상세
-            </h2>
+            </h1>
+            <span className="page-subtitle">세션별 활동 로그</span>
           </div>
         </div>
 
@@ -396,7 +355,7 @@ export default function LoginHistory() {
               onPageSizeChange: (s) => { setActPageSize(s); setActPage(1); fetchActivities(selectedSession.HISTORY_ID, 1, s); },
               pageSizeOptions: [20, 50, 100],
             }}
-            maxHeight="calc(100vh - 420px)"
+            maxHeight="100%"
           />
         </div>
       </div>
@@ -406,12 +365,13 @@ export default function LoginHistory() {
   // ===================== 리스트 뷰 =====================
   return (
     <div className="ssh-history-page">
-      <div className="ssh-page-header">
-        <div className="ssh-header-left">
-          <h2 className="ssh-page-title">
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">
             <i className="bi bi-box-arrow-in-right"></i>
             로그인 이력
-          </h2>
+          </h1>
+          <span className="page-subtitle">사용자 로그인 세션과 활동 이력을 조회합니다</span>
           <span className="ssh-total-count">총 {totalCount.toLocaleString()}건</span>
         </div>
       </div>
@@ -498,7 +458,7 @@ export default function LoginHistory() {
           onPageSizeChange: (size) => { setPageSize(size); setPage(1); },
           pageSizeOptions: [10, 20, 50, 100],
         }}
-        maxHeight="calc(100vh - 300px)"
+        maxHeight="100%"
       />
     </div>
   );

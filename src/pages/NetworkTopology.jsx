@@ -3,20 +3,17 @@ import { useSearchParams } from "react-router-dom";
 import ForceGraph2D from "react-force-graph-2d";
 import TopologySidebar from "../components/TopologySidebar";
 import DeviceDetailModal from "../components/DeviceDetailModal";
-import { useDevicePorts, useTopologyView, useSaveTopology, useGroupTree, useDevicesByGroup, useDeviceErrorLevels } from "../hooks";
-import { topologyApi } from "../api";
-import { useGroupStore } from "../stores";
+import { useDevicePorts, useDevicesByGroup } from "../hooks/useDevices";
+import { useTopologyView, useSaveTopology } from "../hooks/useTopology";
+import { useGroupTree } from "../hooks/useGroups";
+import { useDeviceErrorLevels } from "../hooks/useFaults";
+import { topologyApi } from "../api/topology";
+import { useGroupStore } from "../stores/groupStore";
+import { useThemeStore } from "../stores/themeStore";
 import "../styles/topology-sidebar.css";
-
-const ICONS = {
-  "CX8100-24": "/icon/CX8100-24.png",
-  "CX8100-48": "/icon/CX8100-48.png",
-  "HPE 7503X": "/icon/HPE 7503X.png",
-  "HPE 7506X": "/icon/HPE 7506X.png"
-};
-
-const DEVICE_TYPES = ["CX8100-24", "CX8100-48", "HPE 7503X", "HPE 7506X"];
-const NODE_SIZE = 40;
+import "../styles/topology-light.css";
+import { ICONS, DEVICE_TYPES, NODE_SIZE } from "../features/network-topology/model/constants";
+import { propagateGroupErrors } from "../shared/lib/groupErrorPropagation";
 
 export default function NetworkTopology() {
   const graphRef = useRef(null);
@@ -25,6 +22,7 @@ export default function NetworkTopology() {
 
   // 그룹 스토어에서 선택된 그룹 가져오기
   const { selectedGroup, setSelectedGroup } = useGroupStore();
+  const { resolvedTheme } = useThemeStore();
 
   // 현재 토폴로지에 표시할 ID (그룹 또는 장비)
   const [currentTopologyGroupId, setCurrentTopologyGroupId] = useState(null);
@@ -45,30 +43,7 @@ export default function NetworkTopology() {
 
   useEffect(() => {
     deviceErrorMapRef.current = deviceErrorMap;
-    if (!groupTree || groupTree.length === 0) {
-      groupErrorMapRef.current = groupErrorMap;
-      return;
-    }
-    const levelPriority = { 'C': 4, 'M': 3, 'N': 2, 'W': 1 };
-    const enhanced = new Map(groupErrorMap);
-    const buildAncestors = (nodes, ancestors) => {
-      for (const node of nodes) {
-        const myLevel = groupErrorMap.get(node.GROUP_NAME);
-        if (myLevel) {
-          for (const anc of ancestors) {
-            const existing = enhanced.get(anc);
-            if ((levelPriority[myLevel] || 0) > (levelPriority[existing] || 0)) {
-              enhanced.set(anc, myLevel);
-            }
-          }
-        }
-        if (node.children?.length > 0) {
-          buildAncestors(node.children, [...ancestors, node.GROUP_NAME]);
-        }
-      }
-    };
-    buildAncestors(groupTree, []);
-    groupErrorMapRef.current = enhanced;
+    groupErrorMapRef.current = propagateGroupErrors(groupTree, groupErrorMap);
   }, [deviceErrorMap, groupErrorMap, groupTree]);
 
   // 장애 펄스 애니메이션 - 장애 노드가 있을 때만 주기적 re-render
@@ -352,12 +327,10 @@ export default function NetworkTopology() {
   // URL 파라미터에서 groupId 처리 (우선순위 높음)
   useEffect(() => {
     const urlGroupId = searchParams.get('groupId');
-    console.log('NetworkTopology: URL groupId:', urlGroupId, 'groupTree:', groupTree?.length);
 
     if (urlGroupId && groupTree && groupTree.length > 0) {
       // 재귀적으로 그룹 찾기
       const targetGroup = findGroupInTree(groupTree, urlGroupId);
-      console.log('NetworkTopology: 찾은 그룹:', targetGroup);
 
       if (targetGroup) {
         setCurrentTopologyGroupId(targetGroup.GROUP_ID);
@@ -389,8 +362,6 @@ export default function NetworkTopology() {
   // 토폴로지 데이터 로드 시 state 업데이트
   useEffect(() => {
     if (topologyData) {
-      console.log('=== 토폴로지 데이터 로드 ===', topologyData);
-
       // 모든 노드 위치 고정 (시뮬레이션으로 움직이지 않도록)
       const fixedNodes = (topologyData.nodes || []).map(n => ({
         ...n,
@@ -413,15 +384,10 @@ export default function NetworkTopology() {
         return isValid;
       });
 
-      console.log('=== 변환된 노드 ===', fixedNodes);
-      console.log('=== 유효한 링크 ===', validLinks);
-
       initialFitDone.current = false; // 새 데이터 로드 시 줌 재조정
 
       // 배경 이미지 설정 (BACK_ICON_DATA 또는 backIconData)
       const bgData = topologyData.backIconData || topologyData.BACK_ICON_DATA;
-      console.log('=== 배경 이미지 원본 데이터 (처음 200자) ===', bgData ? bgData.substring(0, 200) : null);
-      console.log('=== 배경 이미지 데이터 타입 ===', typeof bgData);
 
       // 배경 이미지 처리 및 전환 완료 함수
       const finishTransition = (hasBackgroundImage = false, bgImg = null, bgImgSrc = null) => {
@@ -485,11 +451,8 @@ export default function NetworkTopology() {
           imgSrc = `data:image/png;base64,${bgData}`;
         }
 
-        console.log('=== 배경 이미지 src (처음 100자) ===', imgSrc.substring(0, 100));
-
         const img = new Image();
         img.onload = () => {
-          console.log('=== 배경 이미지 로드 완료 ===', img.naturalWidth, img.naturalHeight);
           // 배경 이미지 로드 완료 후 전환 완료
           finishTransition(true, img, imgSrc);
         };
@@ -511,19 +474,8 @@ export default function NetworkTopology() {
   useEffect(() => {
     // 토폴로지 또는 장비 목록 로딩 중이면 대기
     if (topologyLoading || devicesLoading) {
-      console.log('=== 데이터 로딩 중... ===', { topologyLoading, devicesLoading });
       return;
     }
-
-    console.log('=== 빈 토폴로지 체크 ===', {
-      topologyData,
-      currentGroupDevices,
-      currentTopologyGroupId,
-      currentTopologyType,
-      checkedRef: emptyTopologyCheckedRef.current,
-      devicesLoading,
-      topologyLoading
-    });
 
     if (
       topologyData &&
@@ -535,11 +487,8 @@ export default function NetworkTopology() {
       const nodes = topologyData.nodes || [];
       const devices = currentGroupDevices?.content || [];
 
-      console.log('=== 노드/장비 수 ===', { nodesCount: nodes.length, devicesCount: devices.length });
-
       // 노드가 없고, 그룹에 속한 장비가 있는 경우에만 팝업 표시
       if (nodes.length === 0 && devices.length > 0) {
-        console.log('=== 빈 토폴로지 팝업 표시 ===');
         setShowEmptyTopologyPrompt(true);
       }
       emptyTopologyCheckedRef.current = currentTopologyGroupId;
@@ -611,7 +560,6 @@ export default function NetworkTopology() {
         data: payload
       });
 
-      console.log('=== 빈 토폴로지 자동 저장 완료 ===');
     } catch (e) {
       console.error('빈 토폴로지 자동 저장 실패:', e);
     }
@@ -860,7 +808,6 @@ export default function NetworkTopology() {
 
   // 편집 모드 토글
   const toggleEditMode = () => {
-    console.log('=== 편집 모드 토글 ===', { 현재모드: isEditMode, 현재데이터: data });
     setIsEditMode((prev) => {
       const next = !prev;
       if (!next) {
@@ -1047,11 +994,6 @@ export default function NetworkTopology() {
         }
       });
 
-      console.log('=== 노드 선택 완료 ===', {
-        selectedIds: [...selected],
-        count: selected.size
-      });
-      setSelectedNodes(selected);
       selectedNodesRef.current = selected; // ref도 즉시 업데이트
       setIsSelecting(false);
       setSelectionBox(null);
@@ -1642,7 +1584,6 @@ export default function NetworkTopology() {
         links: cleanLinks
       };
 
-      console.log('=== 저장 payload ===', payload);
 
       await saveTopologyMutation.mutateAsync({
         id: currentTopologyGroupId,
@@ -3034,6 +2975,17 @@ export default function NetworkTopology() {
 
       {/* 메인 콘텐츠 */}
       <div className="topology-main-content">
+        {/* 페이지 헤더 */}
+        <div className="page-header">
+          <div className="page-header-left">
+            <h1 className="page-title">
+              <i className="bi bi-diagram-3"></i>
+              네트워크 토폴로지
+            </h1>
+            <span className="page-subtitle">장비 간 연결 구조를 시각화하고 편집합니다</span>
+          </div>
+        </div>
+
         {/* 상단 툴바 */}
         <div className="topology-toolbar">
           {/* 사이드바 토글 버튼 */}
@@ -3201,7 +3153,7 @@ export default function NetworkTopology() {
             graphData={data}
             width={dimensions.width}
             height={dimensions.height}
-            backgroundColor="#0f172a"
+            backgroundColor={resolvedTheme === 'light' ? '#e8ecf1' : '#0f172a'}
             nodeLabel="name"
             nodeCanvasObject={drawNode}
             nodeCanvasObjectMode={() => "replace"}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useWatchStore } from '../stores/watchStore';
 import { useUpdateWatchGroupIcon } from '../hooks/useWatch';
+import { useAlert } from './CustomAlert';
 import {
   fontAwesomeIconsByCategory,
   materialIconsByCategory,
@@ -8,6 +9,7 @@ import {
 } from '../data/iconData';
 
 export default function WatchIconSelectorModal({ onClose, onSuccess }) {
+  const { error: showError } = useAlert();
   const { iconModalWatchGroup, hideIconModal } = useWatchStore();
   const updateIconMutation = useUpdateWatchGroupIcon();
   const modalRef = useRef(null);
@@ -85,7 +87,7 @@ export default function WatchIconSelectorModal({ onClose, onSuccess }) {
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('아이콘 설정 오류:', error);
-      alert('아이콘 설정에 실패했습니다.');
+      showError('아이콘 설정에 실패했습니다.');
     }
   };
 

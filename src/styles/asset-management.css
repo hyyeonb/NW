@@ -420,7 +420,7 @@ select:focus {
    ================== */
 .modal {
     position: fixed;
-    z-index: 2000;
+    z-index: var(--z-modal-backdrop);
     left: 0;
     top: 0;
     width: 100%;
@@ -605,7 +605,7 @@ select:focus {
     position: fixed;
     bottom: 30px;
     right: 30px;
-    z-index: 1050;
+    z-index: var(--z-sidebar);
     display: flex;
     gap: 15px;
 }
@@ -765,7 +765,7 @@ select:focus {
     visibility: hidden;
     opacity: 0;
     position: absolute;
-    z-index: 1000;
+    z-index: var(--z-sidebar);
     background: linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.95) 100%);
     backdrop-filter: blur(20px);
     color: #e2e8f0;
@@ -1343,7 +1343,7 @@ select:focus {
     visibility: hidden;
     opacity: 0;
     position: absolute;
-    z-index: 9999;
+    z-index: var(--z-modal-backdrop);
     background: linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.95) 100%);
     backdrop-filter: blur(20px);
     color: #e2e8f0;
@@ -2298,7 +2298,17 @@ select:focus {
 .two-column-layout {
     display: flex;
     gap: 16px;
-    min-height: 550px;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* 장비 정보 탭은 2컬럼 독립 스크롤이라 바깥 스크롤 제거 */
+#device-info-tab.detail-tab-content.active {
+    overflow: hidden;
+    padding-bottom: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .left-column {
@@ -2306,7 +2316,227 @@ select:focus {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    padding-right: 4px;
+    padding-bottom: 12px;
+    scrollbar-width: thin;
+}
+
+/* 장비 정보 내부 info-row 기본 간격 유지 (여유 있게) */
+.left-column .info-box .info-row {
+    padding: 9px 0;
+}
+
+/* ==================
+   Light Mode — SSH 이력 / Config 탭 인라인 스타일 오버라이드
+   ================== */
+[data-theme^="light"] #ssh-history-tab,
+[data-theme^="light"] #config-tab {
+    color: #0f172a;
+}
+
+/* SSH 이력 */
+[data-theme^="light"] #ssh-history-tab .ssh-history-item {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+[data-theme^="light"] #ssh-history-tab .ssh-history-item:hover {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+}
+
+[data-theme^="light"] #ssh-history-tab .ssh-history-icon {
+    color: #475569 !important;
+}
+
+[data-theme^="light"] #ssh-history-tab .ssh-history-header,
+[data-theme^="light"] #ssh-history-tab .ssh-history-times,
+[data-theme^="light"] #ssh-history-tab .ssh-history-user,
+[data-theme^="light"] #ssh-history-tab .ssh-remote-addr {
+    color: #475569 !important;
+}
+
+[data-theme^="light"] #ssh-history-tab .ssh-user-badge {
+    background: rgba(37, 99, 235, 0.1) !important;
+    color: #1d4ed8 !important;
+    border-color: rgba(37, 99, 235, 0.25) !important;
+}
+
+[data-theme^="light"] #ssh-history-tab .ssh-status-badge.active {
+    background: rgba(16, 185, 129, 0.12) !important;
+    color: #047857 !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+[data-theme^="light"] #ssh-history-tab .ssh-status-badge.closed {
+    background: rgba(148, 163, 184, 0.12) !important;
+    color: #475569 !important;
+    border-color: rgba(148, 163, 184, 0.3) !important;
+}
+
+/* SSH 이력 expand 영역 (명령어 리스트) */
+[data-theme^="light"] #ssh-history-tab .ssh-commands-expand {
+    background: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+}
+
+[data-theme^="light"] #ssh-history-tab .ssh-commands-expand > div {
+    color: #0f172a !important;
+}
+
+[data-theme^="light"] #ssh-history-tab .tab-empty,
+[data-theme^="light"] #ssh-history-tab .tab-loading {
+    color: #64748b !important;
+}
+
+/* Config 탭 — 외부 래퍼 / 패널 / 라인 */
+[data-theme^="light"] #config-tab > div[style*="rgba(15"] {
+    background: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+[data-theme^="light"] #config-tab span[style*="#94a3b8"],
+[data-theme^="light"] #config-tab div[style*="#94a3b8"] {
+    color: #475569 !important;
+}
+
+[data-theme^="light"] #config-tab span[style*="#cbd5e1"],
+[data-theme^="light"] #config-tab div[style*="#cbd5e1"] {
+    color: #0f172a !important;
+}
+
+[data-theme^="light"] #config-tab span[style*="#e2e8f0"],
+[data-theme^="light"] #config-tab div[style*="#e2e8f0"] {
+    color: #0f172a !important;
+}
+
+[data-theme^="light"] #config-tab span[style*="#64748b"] {
+    color: #475569 !important;
+}
+
+/* 라인 넘버 (#475569 → 중간 회색 유지) */
+[data-theme^="light"] #config-tab div[style*="#cbd5e1"] > span[style*="#475569"] {
+    color: #94a3b8 !important;
+}
+
+/* 모든 config-tab 하위 텍스트 강제 진하게 (fallback) */
+[data-theme^="light"] #config-tab,
+[data-theme^="light"] #config-tab div,
+[data-theme^="light"] #config-tab span {
+    color: #0f172a;
+}
+
+/* config 패널 배경 */
+[data-theme^="light"] #config-tab > div > div[style*="rgba(15, 23, 42, 0.4)"],
+[data-theme^="light"] #config-tab > div > div[style*="rgba(15, 23, 42, 0.5)"] {
+    background: #ffffff !important;
+    border-color: #e2e8f0 !important;
+}
+
+[data-theme^="light"] #config-tab div[style*="rgba(15, 23, 42, 0.7)"] {
+    background: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+}
+
+/* 날짜 input */
+[data-theme^="light"] #config-tab input[type="date"] {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+/* 동기화 스크롤 버튼 */
+[data-theme^="light"] #config-tab button {
+    color: #475569 !important;
+}
+
+/* diff highlight 색은 유지 (추가/삭제) */
+[data-theme^="light"] #config-tab span[style*="#34d399"] {
+    color: #059669 !important;
+}
+
+[data-theme^="light"] #config-tab span[style*="#f87171"] {
+    color: #dc2626 !important;
+}
+
+[data-theme^="light"] #config-tab span[style*="#38bdf8"] {
+    color: #0284c7 !important;
+}
+
+/* ========================================
+   변경이력 탭 — Light Mode 오버라이드
+   ======================================== */
+[data-theme^="light"] #change-history-tab .history-target-type {
+    color: #475569 !important;
+    background: rgba(15, 23, 42, 0.06) !important;
+}
+
+[data-theme^="light"] #change-history-tab .history-user {
+    color: #1e293b !important;
+}
+
+[data-theme^="light"] #change-history-tab .history-time {
+    color: #64748b !important;
+}
+
+[data-theme^="light"] #change-history-tab .history-item-detail {
+    color: #334155 !important;
+    background: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+}
+
+[data-theme^="light"] #change-history-tab .history-action-badge.create {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #059669 !important;
+}
+
+[data-theme^="light"] #change-history-tab .history-action-badge.update {
+    background: rgba(59, 130, 246, 0.15) !important;
+    color: #2563eb !important;
+}
+
+[data-theme^="light"] #change-history-tab .history-action-badge.delete {
+    background: rgba(239, 68, 68, 0.15) !important;
+    color: #dc2626 !important;
+}
+
+/* 리소스 박스는 content-height (파이 110px 고정) */
+.left-column > .resource-pie-box {
+    flex: 0 0 auto;
+}
+
+.left-column::-webkit-scrollbar {
+    width: 8px;
+}
+
+.left-column::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.left-column::-webkit-scrollbar-thumb {
+    background: var(--theme-scrollbar-thumb);
+    border-radius: 3px;
+}
+
+.left-column::-webkit-scrollbar-thumb:hover {
+    background: var(--theme-scrollbar-thumb-hover);
+}
+
+/* compact 박스들은 padding 축소 */
+.left-column .compact-box .info-box-header {
+    padding: 8px 14px;
+    font-size: 12px;
+}
+
+.left-column .compact-box .info-box-body {
+    padding: 8px 14px 10px;
+    gap: 6px;
 }
 
 .right-column {
@@ -2315,6 +2545,23 @@ select:focus {
     flex-direction: column;
     gap: 10px;
     min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* 우측 컬럼의 포트 현황 info-box가 남은 세로 공간 채우도록 */
+.right-column > .info-box {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.right-column > .info-box > .info-box-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 /* 정보 박스 - 글래스모피즘 */
@@ -2370,6 +2617,338 @@ select:focus {
     padding: 12px 14px;
 }
 
+/* ==================
+   Compact Left Column Boxes — 리소스/포트상태/트래픽 요약
+   ================== */
+.compact-box .info-box-body {
+    padding: 10px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 리소스 사용률 - 프로그레스 바 */
+.resource-bar-row {
+    display: grid;
+    grid-template-columns: 44px 1fr 52px;
+    gap: 10px;
+    align-items: center;
+    font-size: 12px;
+}
+
+/* 리소스 사용률 - 한 줄에 CPU + MEM 인라인 */
+.resource-inline-row {
+    display: grid;
+    grid-template-columns: 38px 1fr 44px 38px 1fr 44px;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+}
+
+.resource-inline-row .resource-track {
+    min-width: 0;
+}
+
+/* 리소스 사용률 - 콤팩트 파이 (좌/우 배치) */
+.resource-pie-box .info-box-body,
+.resource-pie-body {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-around;
+    align-items: center;
+    padding: 6px 10px 10px !important;
+    gap: 8px !important;
+}
+
+.resource-pie-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+.resource-pie-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--theme-text-muted);
+    letter-spacing: 0.5px;
+}
+
+[data-theme^="light"] .resource-pie-name {
+    color: #64748b;
+}
+
+.resource-label {
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+}
+
+.resource-label.cpu { color: #3b82f6; }
+.resource-label.mem { color: #10b981; }
+.resource-label.temp { color: #f59e0b; }
+.resource-label.hum { color: #06b6d4; }
+
+.resource-track {
+    height: 8px;
+    background: rgba(148, 163, 184, 0.15);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.resource-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+
+.resource-fill.cpu { background: linear-gradient(90deg, #60a5fa, #3b82f6); }
+.resource-fill.mem { background: linear-gradient(90deg, #34d399, #10b981); }
+.resource-fill.temp { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
+.resource-fill.hum { background: linear-gradient(90deg, #22d3ee, #06b6d4); }
+
+.resource-value {
+    text-align: right;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--theme-text-primary);
+}
+
+/* 포트 상태 요약 */
+.port-summary-row {
+    display: grid;
+    grid-template-columns: 16px 1fr auto 50px;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+    padding: 2px 0;
+}
+
+.port-summary-row.total {
+    grid-template-columns: 1fr auto;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--theme-border-subtle);
+    margin-bottom: 2px;
+}
+
+.port-summary-row.total span {
+    color: var(--theme-text-muted);
+    font-weight: 600;
+}
+
+.port-summary-row.total strong {
+    font-size: 16px;
+    color: var(--theme-text-primary);
+}
+
+.port-summary-row > span:not(.ps-dot):not(.ps-pct) {
+    color: var(--theme-text-secondary);
+}
+
+.port-summary-row strong {
+    font-weight: 700;
+    color: var(--theme-text-primary);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.port-summary-row .ps-pct {
+    text-align: right;
+    font-size: 11px;
+    color: var(--theme-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.ps-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.ps-dot.up { background: #10b981; box-shadow: 0 0 4px rgba(16, 185, 129, 0.5); }
+.ps-dot.down { background: #ef4444; box-shadow: 0 0 4px rgba(239, 68, 68, 0.5); }
+.ps-dot.admin-down { background: #94a3b8; }
+
+/* ==================
+   트래픽 요약 — 카드 2개 (IN/OUT) + 스파크라인
+   ================== */
+.traffic-summary-box .info-box-body {
+    gap: 10px !important;
+}
+
+.traffic-card {
+    position: relative;
+    padding: 6px 10px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--theme-border-default);
+    background: linear-gradient(180deg, rgba(59,130,246,0.04) 0%, transparent 100%);
+    overflow: hidden;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.traffic-card.out {
+    background: linear-gradient(180deg, rgba(16,185,129,0.04) 0%, transparent 100%);
+}
+
+.traffic-card:hover {
+    transform: translateY(-1px);
+}
+
+.traffic-card.in {
+    border-color: rgba(59, 130, 246, 0.25);
+}
+
+.traffic-card.out {
+    border-color: rgba(16, 185, 129, 0.25);
+}
+
+.traffic-card.in:hover { border-color: rgba(59, 130, 246, 0.5); }
+.traffic-card.out:hover { border-color: rgba(16, 185, 129, 0.5); }
+
+/* 스파크라인 배경 */
+.traffic-spark {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 38px;
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+/* 카드 헤더 — 방향 + 트렌드 */
+.traffic-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+.traffic-dir {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+}
+
+.traffic-card.in .traffic-dir { color: #3b82f6; }
+.traffic-card.out .traffic-dir { color: #10b981; }
+
+.traffic-dir i {
+    font-size: 13px;
+}
+
+.traffic-trend {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 10px;
+}
+
+.traffic-trend.up { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.traffic-trend.down { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.traffic-trend.flat { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+
+/* 현재값 대형 표시 */
+.traffic-now {
+    position: relative;
+    z-index: 1;
+    margin-top: 2px;
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    line-height: 1.1;
+}
+
+.traffic-now .num {
+    font-size: 20px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--theme-text-primary);
+    letter-spacing: -0.5px;
+}
+
+.traffic-now .unit {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--theme-text-muted);
+}
+
+/* 평균/최대 보조 정보 */
+.traffic-minmax {
+    position: relative;
+    z-index: 1;
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--theme-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.traffic-minmax strong {
+    color: var(--theme-text-secondary);
+    font-weight: 700;
+}
+
+.traffic-minmax .sep {
+    opacity: 0.5;
+}
+
+/* Light mode */
+[data-theme^="light"] .traffic-card {
+    background: linear-gradient(180deg, rgba(59,130,246,0.04) 0%, #ffffff 100%);
+}
+
+[data-theme^="light"] .traffic-card.out {
+    background: linear-gradient(180deg, rgba(16,185,129,0.04) 0%, #ffffff 100%);
+}
+
+[data-theme^="light"] .traffic-now .num {
+    color: #0f172a;
+}
+
+[data-theme^="light"] .traffic-minmax strong {
+    color: #334155;
+}
+
+/* Light mode */
+[data-theme^="light"] .resource-track {
+    background: #e2e8f0;
+}
+
+[data-theme^="light"] .resource-value,
+[data-theme^="light"] .port-summary-row strong,
+[data-theme^="light"] .traffic-summary-table td {
+    color: #0f172a;
+}
+
+[data-theme^="light"] .port-summary-row > span:not(.ps-dot):not(.ps-pct),
+[data-theme^="light"] .port-summary-row.total span,
+[data-theme^="light"] .port-summary-row .ps-pct,
+[data-theme^="light"] .traffic-summary-table th {
+    color: #64748b;
+}
+
+[data-theme^="light"] .traffic-summary-table th {
+    border-bottom-color: #eef2f7;
+}
+
+[data-theme^="light"] .port-summary-row.total {
+    border-bottom-color: #eef2f7;
+}
+
 /* 정보 행 - 글래스모피즘 */
 .info-row {
     display: flex;
@@ -2412,7 +2991,7 @@ select:focus {
 .info-row .edit-select {
     flex: 1;
     max-width: 58%;
-    padding: 8px 12px;
+    padding: 3px 10px;
     font-size: 12px;
     font-weight: 500;
     color: #f1f5f9;
@@ -2420,7 +2999,7 @@ select:focus {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
+    border-radius: 6px;
     outline: none;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     text-align: center;
@@ -2905,6 +3484,9 @@ select:focus {
     display: flex;
     flex-direction: column;
     height: 100%;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
 }
 
 /* 트래픽 박스 내 설정 드롭다운 z-index */
@@ -2914,7 +3496,7 @@ select:focus {
 }
 
 .traffic-box .global-settings-dropdown {
-    z-index: 500;
+    z-index: var(--z-sticky);
     max-height: 240px;
     overflow-y: auto;
     scrollbar-width: thin;
@@ -3413,7 +3995,7 @@ select:focus {
     max-width: 350px;
     min-width: 200px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    z-index: 1000;
+    z-index: var(--z-sidebar);
     opacity: 0;
     visibility: hidden;
     transition: all 0.2s ease;
@@ -3430,7 +4012,7 @@ select:focus {
     transform: translateX(-50%);
     border: 6px solid transparent;
     border-top-color: rgba(255, 255, 255, 0.15);
-    z-index: 1001;
+    z-index: var(--z-popover);
     opacity: 0;
     visibility: hidden;
     transition: all 0.2s ease;
@@ -3474,7 +4056,7 @@ select:focus {
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.4);
-    z-index: 100;
+    z-index: var(--z-dropdown);
     display: flex;
     align-items: stretch;
     border-radius: inherit;
@@ -3842,11 +4424,11 @@ select:focus {
 .port-ctx-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 10000;
+    z-index: var(--z-modal);
 }
 .port-ctx-menu {
     position: fixed;
-    z-index: 10001;
+    z-index: var(--z-popover);
     background: rgba(15, 15, 35, 0.97);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 8px;
@@ -3877,7 +4459,7 @@ select:focus {
 .port-check-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 10000;
+    z-index: var(--z-modal);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3973,85 +4555,85 @@ select:focus {
 
 /* ==================================================================================
    LIGHT THEME OVERRIDES — Apple Design System
-   [data-theme="light"]
+   [data-theme^="light"]
    ================================================================================== */
 
 /* ------------------------------------------
    Scrollbar
    ------------------------------------------ */
-[data-theme="light"] ::-webkit-scrollbar-track {
+[data-theme^="light"] ::-webkit-scrollbar-track {
     background: transparent;
 }
 
-[data-theme="light"] ::-webkit-scrollbar-thumb {
+[data-theme^="light"] ::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.12);
     border: 2px solid transparent;
     background-clip: content-box;
 }
 
-[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+[data-theme^="light"] ::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.2);
     border: 2px solid transparent;
     background-clip: content-box;
 }
 
-[data-theme="light"] ::-webkit-scrollbar-corner {
+[data-theme^="light"] ::-webkit-scrollbar-corner {
     background: transparent;
 }
 
 /* ------------------------------------------
    Checkbox
    ------------------------------------------ */
-[data-theme="light"] input[type="checkbox"] {
+[data-theme^="light"] input[type="checkbox"] {
     background: linear-gradient(135deg, #ffffff 0%, #f5f5f7 100%) !important;
     border-color: rgba(0, 0, 0, 0.15) !important;
 }
 
-[data-theme="light"] input[type="checkbox"]:hover {
+[data-theme^="light"] input[type="checkbox"]:hover {
     border-color: rgba(79, 70, 229, 0.4) !important;
     background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(79, 70, 229, 0.04) 100%) !important;
 }
 
-[data-theme="light"] input[type="checkbox"]:checked {
+[data-theme^="light"] input[type="checkbox"]:checked {
     background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
     border-color: rgba(79, 70, 229, 0.5) !important;
 }
 
-[data-theme="light"] input[type="checkbox"]:focus {
+[data-theme^="light"] input[type="checkbox"]:focus {
     box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
 }
 
 /* ------------------------------------------
    Radio Button
    ------------------------------------------ */
-[data-theme="light"] input[type="radio"] {
+[data-theme^="light"] input[type="radio"] {
     background: linear-gradient(135deg, #ffffff 0%, #f5f5f7 100%);
     border-color: rgba(0, 0, 0, 0.15);
 }
 
-[data-theme="light"] input[type="radio"]:hover {
+[data-theme^="light"] input[type="radio"]:hover {
     border-color: rgba(79, 70, 229, 0.4);
     background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(79, 70, 229, 0.04) 100%);
 }
 
-[data-theme="light"] input[type="radio"]:checked {
+[data-theme^="light"] input[type="radio"]:checked {
     border-color: rgba(79, 70, 229, 0.6);
     background: linear-gradient(135deg, #ffffff 0%, #f5f5f7 100%);
 }
 
-[data-theme="light"] input[type="radio"]:checked::after {
+[data-theme^="light"] input[type="radio"]:checked::after {
     background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
     box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
 }
 
-[data-theme="light"] input[type="radio"]:focus {
+[data-theme^="light"] input[type="radio"]:focus {
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
 
 /* ------------------------------------------
    Select Box
    ------------------------------------------ */
-[data-theme="light"] select:focus {
+[data-theme^="light"] select:focus {
     border-color: rgba(79, 70, 229, 0.5);
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
 }
@@ -4059,13 +4641,13 @@ select:focus {
 /* ------------------------------------------
    Template Download Link
    ------------------------------------------ */
-[data-theme="light"] .template-download-link {
+[data-theme^="light"] .template-download-link {
     color: #4f46e5;
     background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(124, 58, 237, 0.05) 100%);
     border-color: rgba(79, 70, 229, 0.2);
 }
 
-[data-theme="light"] .template-download-link:hover {
+[data-theme^="light"] .template-download-link:hover {
     color: #4338ca;
     background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(124, 58, 237, 0.1) 100%);
     border-color: rgba(79, 70, 229, 0.35);
@@ -4075,34 +4657,34 @@ select:focus {
 /* ------------------------------------------
    Table Wrapper & Device Table
    ------------------------------------------ */
-[data-theme="light"] .table-wrapper {
+[data-theme^="light"] .table-wrapper {
     border-color: rgba(0, 0, 0, 0.06);
     background: #ffffff;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.04), 0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .device-table thead {
+[data-theme^="light"] .device-table thead {
     background: linear-gradient(135deg, rgba(79, 70, 229, 0.06) 0%, rgba(124, 58, 237, 0.04) 100%);
 }
 
-[data-theme="light"] .device-table th {
+[data-theme^="light"] .device-table th {
     color: #3a3a3c;
     border-bottom-color: rgba(79, 70, 229, 0.12);
 }
 
-[data-theme="light"] .device-table td {
+[data-theme^="light"] .device-table td {
     color: #3a3a3c;
     border-bottom-color: rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .device-table tbody tr:hover {
+[data-theme^="light"] .device-table tbody tr:hover {
     background: linear-gradient(135deg, rgba(79, 70, 229, 0.04) 0%, rgba(124, 58, 237, 0.02) 100%);
 }
 
 /* ------------------------------------------
    No Data Message
    ------------------------------------------ */
-[data-theme="light"] .no-data-message {
+[data-theme^="light"] .no-data-message {
     color: #8e8e93;
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.01) 100%);
     border-color: rgba(0, 0, 0, 0.06);
@@ -4111,69 +4693,70 @@ select:focus {
 /* ------------------------------------------
    Pagination
    ------------------------------------------ */
-[data-theme="light"] .items-per-page label {
+[data-theme^="light"] .items-per-page label {
     color: #8e8e93;
 }
 
-[data-theme="light"] .items-per-page select {
+[data-theme^="light"] .items-per-page select {
     background: #ffffff;
     border-color: rgba(0, 0, 0, 0.08);
     color: #3a3a3c;
 }
 
-[data-theme="light"] .pagination button {
+[data-theme^="light"] .pagination button {
     background: linear-gradient(135deg, rgba(79, 70, 229, 0.06) 0%, rgba(124, 58, 237, 0.04) 100%);
     border-color: rgba(79, 70, 229, 0.15);
     color: #4f46e5;
 }
 
-[data-theme="light"] .pagination button:hover:not(:disabled) {
+[data-theme^="light"] .pagination button:hover:not(:disabled) {
     background: linear-gradient(135deg, rgba(79, 70, 229, 0.12) 0%, rgba(124, 58, 237, 0.08) 100%);
     color: #4338ca;
     box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
 }
 
-[data-theme="light"] .pagination button:disabled {
+[data-theme^="light"] .pagination button:disabled {
     background: rgba(0, 0, 0, 0.03);
     border-color: rgba(0, 0, 0, 0.06);
     color: #aeaeb2;
 }
 
-[data-theme="light"] .pagination span {
+[data-theme^="light"] .pagination span {
     color: #1d1d1f;
 }
 
 /* ------------------------------------------
    Modal
    ------------------------------------------ */
-[data-theme="light"] .modal {
+[data-theme^="light"] .modal {
     background: rgba(0, 0, 0, 0.3);
 }
 
-[data-theme="light"] .modal-content {
-    background: rgba(255, 255, 255, 0.97);
-    border-color: rgba(0, 0, 0, 0.08);
+[data-theme^="light"] .modal-content {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #dbe2ec;
     box-shadow:
-        0 0 0 1px rgba(0, 0, 0, 0.03),
-        0 20px 60px rgba(0, 0, 0, 0.15);
+        0 0 0 1px rgba(15, 23, 42, 0.03),
+        0 10px 30px rgba(15, 23, 42, 0.08),
+        0 30px 80px rgba(15, 23, 42, 0.15);
 }
 
-[data-theme="light"] .modal-content::before {
+[data-theme^="light"] .modal-content::before {
     background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.04), transparent);
 }
 
-[data-theme="light"] .close-btn {
+[data-theme^="light"] .close-btn {
     color: #8e8e93;
     background: rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .close-btn:hover,
-[data-theme="light"] .close-btn:focus {
+[data-theme^="light"] .close-btn:hover,
+[data-theme^="light"] .close-btn:focus {
     color: #1d1d1f;
     background: rgba(239, 68, 68, 0.1);
 }
 
-[data-theme="light"] #modal-title {
+[data-theme^="light"] #modal-title {
     background: linear-gradient(135deg, #1d1d1f 0%, #4f46e5 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -4183,47 +4766,47 @@ select:focus {
 /* ------------------------------------------
    Form
    ------------------------------------------ */
-[data-theme="light"] .form-group label {
+[data-theme^="light"] .form-group label {
     color: #8e8e93;
 }
 
-[data-theme="light"] .form-group input,
-[data-theme="light"] .form-group select {
+[data-theme^="light"] .form-group input,
+[data-theme^="light"] .form-group select {
     background: #ffffff;
     border-color: rgba(0, 0, 0, 0.08);
     color: #3a3a3c;
 }
 
-[data-theme="light"] .form-group input:focus,
-[data-theme="light"] .form-group select:focus {
+[data-theme^="light"] .form-group input:focus,
+[data-theme^="light"] .form-group select:focus {
     border-color: rgba(79, 70, 229, 0.5);
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
-[data-theme="light"] #snmp-v3-fields {
+[data-theme^="light"] #snmp-v3-fields {
     border-top-color: rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] #snmp-v3-fields h4 {
+[data-theme^="light"] #snmp-v3-fields h4 {
     color: #3a3a3c;
 }
 
 /* ------------------------------------------
    Action Buttons
    ------------------------------------------ */
-[data-theme="light"] .action-btn {
+[data-theme^="light"] .action-btn {
     background: rgba(0, 0, 0, 0.03);
     border-color: rgba(0, 0, 0, 0.06);
     color: #8e8e93;
 }
 
-[data-theme="light"] .action-btn.edit-btn:hover {
+[data-theme^="light"] .action-btn.edit-btn:hover {
     color: #4f46e5;
     background: rgba(79, 70, 229, 0.08);
     border-color: rgba(79, 70, 229, 0.2);
 }
 
-[data-theme="light"] .action-btn.delete-btn:hover {
+[data-theme^="light"] .action-btn.delete-btn:hover {
     color: #ef4444;
     background: rgba(239, 68, 68, 0.08);
     border-color: rgba(239, 68, 68, 0.2);
@@ -4232,38 +4815,38 @@ select:focus {
 /* ------------------------------------------
    FAB
    ------------------------------------------ */
-[data-theme="light"] .fab {
+[data-theme^="light"] .fab {
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 /* ------------------------------------------
    Device Detail Modal
    ------------------------------------------ */
-[data-theme="light"] .device-detail-modal {
+[data-theme^="light"] .device-detail-modal {
     scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
 }
 
-[data-theme="light"] .device-detail-modal::-webkit-scrollbar-track {
+[data-theme^="light"] .device-detail-modal::-webkit-scrollbar-track {
     background: transparent;
 }
 
-[data-theme="light"] .device-detail-modal::-webkit-scrollbar-thumb {
+[data-theme^="light"] .device-detail-modal::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.12);
 }
 
-[data-theme="light"] .device-detail-modal::-webkit-scrollbar-thumb:hover {
+[data-theme^="light"] .device-detail-modal::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.2);
 }
 
-[data-theme="light"] .detail-modal-title {
+[data-theme^="light"] .detail-modal-title {
     border-bottom-color: rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .detail-modal-title i {
+[data-theme^="light"] .detail-modal-title i {
     color: #4f46e5;
 }
 
-[data-theme="light"] .detail-modal-title span {
+[data-theme^="light"] .detail-modal-title span {
     background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -4273,200 +4856,230 @@ select:focus {
 /* ------------------------------------------
    Detail Sections
    ------------------------------------------ */
-[data-theme="light"] .detail-section {
+[data-theme^="light"] .detail-section {
     background: rgba(0, 0, 0, 0.01);
     border-color: rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .detail-section-header {
+[data-theme^="light"] .detail-section-header {
     border-bottom-color: rgba(0, 0, 0, 0.06);
     color: #4f46e5;
 }
 
-[data-theme="light"] .detail-section-header i {
+[data-theme^="light"] .detail-section-header i {
     color: #4f46e5;
 }
 
-[data-theme="light"] .detail-item {
+[data-theme^="light"] .detail-item {
     background: rgba(0, 0, 0, 0.02);
     border-color: rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .detail-item:hover {
+[data-theme^="light"] .detail-item:hover {
     background: linear-gradient(135deg, rgba(79, 70, 229, 0.04) 0%, rgba(124, 58, 237, 0.02) 100%);
     border-color: rgba(79, 70, 229, 0.12);
 }
 
-[data-theme="light"] .detail-label {
+[data-theme^="light"] .detail-label {
     color: #8e8e93;
 }
 
-[data-theme="light"] .detail-value {
+[data-theme^="light"] .detail-value {
     color: #3a3a3c;
 }
 
-[data-theme="light"] .detail-value.highlight {
+[data-theme^="light"] .detail-value.highlight {
     color: #4f46e5;
 }
 
 /* ------------------------------------------
    Detail Tooltip
    ------------------------------------------ */
-[data-theme="light"] .detail-item.has-tooltip .detail-tooltip {
+[data-theme^="light"] .detail-item.has-tooltip .detail-tooltip {
     background: rgba(255, 255, 255, 0.98);
     color: #3a3a3c;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.12);
     border-color: rgba(0, 0, 0, 0.08);
 }
 
-[data-theme="light"] .detail-item.has-tooltip .detail-tooltip::after {
+[data-theme^="light"] .detail-item.has-tooltip .detail-tooltip::after {
     border-color: rgba(255, 255, 255, 0.98) transparent transparent transparent;
 }
 
-[data-theme="light"] .detail-modal-footer {
+[data-theme^="light"] .detail-modal-footer {
     border-top-color: rgba(0, 0, 0, 0.06);
 }
 
 /* ------------------------------------------
    Scope Settings (Collection Config)
    ------------------------------------------ */
-[data-theme="light"] .scope-loading {
+[data-theme^="light"] .scope-loading {
     color: #8e8e93;
 }
 
-[data-theme="light"] .scope-item {
-    background: rgba(0, 0, 0, 0.02);
-    border-color: rgba(0, 0, 0, 0.06);
+[data-theme^="light"] .scope-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
 }
 
-[data-theme="light"] .scope-item:hover {
-    background: linear-gradient(135deg, rgba(79, 70, 229, 0.04) 0%, rgba(124, 58, 237, 0.02) 100%);
-    border-color: rgba(79, 70, 229, 0.12);
+[data-theme^="light"] .scope-item:hover {
+    background: #eef2ff;
+    border-color: rgba(79, 70, 229, 0.25);
+    box-shadow: 0 2px 6px rgba(79, 70, 229, 0.08);
 }
 
-[data-theme="light"] .scope-title {
-    color: #3a3a3c;
+[data-theme^="light"] .scope-title {
+    color: #0f172a;
+    font-weight: 600;
 }
 
-[data-theme="light"] .scope-desc {
-    color: #8e8e93;
+[data-theme^="light"] .scope-desc {
+    color: #64748b;
 }
 
 /* ------------------------------------------
    Tabs
    ------------------------------------------ */
-[data-theme="light"] .detail-tabs {
-    border-bottom-color: rgba(0, 0, 0, 0.06);
+[data-theme^="light"] .detail-tabs {
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0 4px;
+    gap: 2px;
 }
 
-[data-theme="light"] .detail-tab {
-    color: #8e8e93;
+[data-theme^="light"] .detail-tab {
+    color: #64748b;
+    font-weight: 500;
+    padding: 10px 16px;
+    border-radius: 8px 8px 0 0;
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
 }
 
-[data-theme="light"] .detail-tab:hover {
-    color: #3a3a3c;
-    background: linear-gradient(135deg, rgba(79, 70, 229, 0.04) 0%, rgba(124, 58, 237, 0.02) 100%);
-}
-
-[data-theme="light"] .detail-tab.active {
+[data-theme^="light"] .detail-tab:hover {
     color: #4f46e5;
+    background: linear-gradient(180deg, rgba(79, 70, 229, 0.05) 0%, transparent 100%);
+}
+
+[data-theme^="light"] .detail-tab.active {
+    color: #4f46e5;
+    background: linear-gradient(180deg, #eef2ff 0%, #ffffff 100%);
     border-bottom-color: #4f46e5;
-    background: linear-gradient(135deg, rgba(79, 70, 229, 0.06) 0%, rgba(124, 58, 237, 0.04) 100%);
+    font-weight: 700;
+    box-shadow: 0 -2px 4px rgba(79, 70, 229, 0.06);
 }
 
-[data-theme="light"] .tab-badge {
-    background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(124, 58, 237, 0.06) 100%);
-    color: #4f46e5;
+[data-theme^="light"] .detail-tab.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #6366f1 20%, #8b5cf6 50%, #6366f1 80%, transparent);
+    border-radius: 2px;
+    opacity: 0.6;
+}
+
+[data-theme^="light"] .tab-badge {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: #ffffff;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
 }
 
 /* ------------------------------------------
    Port Tab
    ------------------------------------------ */
-[data-theme="light"] .port-loading {
+[data-theme^="light"] .port-loading {
     color: #8e8e93;
 }
 
-[data-theme="light"] .port-empty {
+[data-theme^="light"] .port-empty {
     color: #8e8e93;
 }
 
-[data-theme="light"] .port-table-wrapper {
+[data-theme^="light"] .port-table-wrapper {
     border-color: rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .port-table thead {
+[data-theme^="light"] .port-table thead {
     background: rgba(0, 0, 0, 0.02);
 }
 
-[data-theme="light"] .port-table thead th {
+[data-theme^="light"] .port-table thead th {
     background: rgba(0, 0, 0, 0.03);
 }
 
-[data-theme="light"] .port-table th {
+[data-theme^="light"] .port-table th {
     color: #3a3a3c;
     border-bottom-color: rgba(79, 70, 229, 0.12);
 }
 
-[data-theme="light"] .port-table td {
+[data-theme^="light"] .port-table td {
     color: #3a3a3c;
     border-bottom-color: rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .port-table tbody tr:hover {
+[data-theme^="light"] .port-table tbody tr:hover {
     background: linear-gradient(135deg, rgba(79, 70, 229, 0.04) 0%, rgba(124, 58, 237, 0.02) 100%);
 }
 
-[data-theme="light"] .port-type-badge {
+[data-theme^="light"] .port-type-badge {
     color: #8e8e93;
     background: rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .port-type-badge.ethernet {
+[data-theme^="light"] .port-type-badge.ethernet {
     background: rgba(79, 70, 229, 0.08);
     color: #4f46e5;
 }
 
-[data-theme="light"] .port-speed {
+[data-theme^="light"] .port-speed {
     color: #4f46e5;
 }
 
-[data-theme="light"] .port-mac {
+[data-theme^="light"] .port-mac {
     color: #8e8e93;
 }
 
 /* ------------------------------------------
    Port Detail Modal
    ------------------------------------------ */
-[data-theme="light"] .port-detail-modal-content .form-group label {
+[data-theme^="light"] .port-detail-modal-content .form-group label {
     color: #8e8e93;
 }
 
-[data-theme="light"] .port-detail-modal-content .form-group input,
-[data-theme="light"] .port-detail-modal-content .form-group select {
+[data-theme^="light"] .port-detail-modal-content .form-group input,
+[data-theme^="light"] .port-detail-modal-content .form-group select {
     background: #ffffff;
     border-color: rgba(0, 0, 0, 0.08);
     color: #3a3a3c;
 }
 
-[data-theme="light"] .port-detail-modal-content .readonly-input {
+[data-theme^="light"] .port-detail-modal-content .readonly-input {
     background: rgba(0, 0, 0, 0.02);
     color: #8e8e93;
 }
 
-[data-theme="light"] .port-detail-modal-content .detail-modal-footer {
+[data-theme^="light"] .port-detail-modal-content .detail-modal-footer {
     border-top-color: rgba(0, 0, 0, 0.06);
 }
 
 /* ------------------------------------------
    Secondary Button
    ------------------------------------------ */
-[data-theme="light"] .btn-secondary {
+[data-theme^="light"] .btn-secondary {
     background: rgba(0, 0, 0, 0.04);
     border-color: rgba(0, 0, 0, 0.08);
     color: #8e8e93;
 }
 
-[data-theme="light"] .btn-secondary:hover {
+[data-theme^="light"] .btn-secondary:hover {
     background: rgba(0, 0, 0, 0.06);
     color: #3a3a3c;
 }
@@ -4474,38 +5087,38 @@ select:focus {
 /* ------------------------------------------
    Tooltip
    ------------------------------------------ */
-[data-theme="light"] .tooltip-cell .tooltip-text {
+[data-theme^="light"] .tooltip-cell .tooltip-text {
     background: rgba(255, 255, 255, 0.98);
     color: #3a3a3c;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.12);
     border-color: rgba(0, 0, 0, 0.08);
 }
 
-[data-theme="light"] .tooltip-cell .tooltip-text::after {
+[data-theme^="light"] .tooltip-cell .tooltip-text::after {
     border-color: transparent transparent rgba(255, 255, 255, 0.98) transparent;
 }
 
 /* ------------------------------------------
    Device Detail Modal — Edit Mode
    ------------------------------------------ */
-[data-theme="light"] .device-detail-modal .detail-input,
-[data-theme="light"] .device-detail-modal .detail-select {
+[data-theme^="light"] .device-detail-modal .detail-input,
+[data-theme^="light"] .device-detail-modal .detail-select {
     background: #ffffff;
     border-color: rgba(0, 0, 0, 0.1);
     color: #3a3a3c;
 }
 
-[data-theme="light"] .device-detail-modal .detail-input:focus,
-[data-theme="light"] .device-detail-modal .detail-select:focus {
+[data-theme^="light"] .device-detail-modal .detail-input:focus,
+[data-theme^="light"] .device-detail-modal .detail-select:focus {
     border-color: rgba(79, 70, 229, 0.5);
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
-[data-theme="light"] .device-detail-modal .detail-input.ip-input {
+[data-theme^="light"] .device-detail-modal .detail-input.ip-input {
     color: #4f46e5;
 }
 
-[data-theme="light"] .device-detail-modal .detail-select option {
+[data-theme^="light"] .device-detail-modal .detail-select option {
     background: #ffffff;
     color: #3a3a3c;
 }
@@ -4513,12 +5126,12 @@ select:focus {
 /* ------------------------------------------
    Toggle Switch
    ------------------------------------------ */
-[data-theme="light"] .device-detail-modal .toggle-slider {
+[data-theme^="light"] .device-detail-modal .toggle-slider {
     background: rgba(0, 0, 0, 0.1);
     border-color: rgba(0, 0, 0, 0.08);
 }
 
-[data-theme="light"] .device-detail-modal .toggle-slider:before {
+[data-theme^="light"] .device-detail-modal .toggle-slider:before {
     background: #ffffff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
@@ -4526,13 +5139,13 @@ select:focus {
 /* ------------------------------------------
    Success Button
    ------------------------------------------ */
-[data-theme="light"] .device-detail-modal .btn-success {
+[data-theme^="light"] .device-detail-modal .btn-success {
     background: rgba(16, 185, 129, 0.08);
     border-color: rgba(16, 185, 129, 0.2);
     color: #059669;
 }
 
-[data-theme="light"] .device-detail-modal .btn-success:hover {
+[data-theme^="light"] .device-detail-modal .btn-success:hover {
     background: rgba(16, 185, 129, 0.12);
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
 }
@@ -4540,7 +5153,7 @@ select:focus {
 /* ------------------------------------------
    Compact Detail Section
    ------------------------------------------ */
-[data-theme="light"] .detail-section.compact {
+[data-theme^="light"] .detail-section.compact {
     background: rgba(0, 0, 0, 0.01);
     border-color: rgba(0, 0, 0, 0.06);
 }
@@ -4548,27 +5161,27 @@ select:focus {
 /* ------------------------------------------
    Detail Row (key-value pairs)
    ------------------------------------------ */
-[data-theme="light"] .detail-row {
+[data-theme^="light"] .detail-row {
     background: rgba(0, 0, 0, 0.02);
     border-color: rgba(0, 0, 0, 0.03);
 }
 
-[data-theme="light"] .detail-row .detail-label {
+[data-theme^="light"] .detail-row .detail-label {
     color: #8e8e93;
 }
 
-[data-theme="light"] .detail-row .detail-value {
+[data-theme^="light"] .detail-row .detail-value {
     color: #3a3a3c;
 }
 
-[data-theme="light"] .detail-row .detail-value.highlight {
+[data-theme^="light"] .detail-row .detail-value.highlight {
     color: #4f46e5;
 }
 
 /* ------------------------------------------
    CPU/MEM Charts
    ------------------------------------------ */
-[data-theme="light"] .cpu-mem-charts .chart-container {
+[data-theme^="light"] .cpu-mem-charts .chart-container {
     background: rgba(0, 0, 0, 0.02);
     border-color: rgba(0, 0, 0, 0.04);
 }
@@ -4576,19 +5189,19 @@ select:focus {
 /* ------------------------------------------
    Port Status Grid
    ------------------------------------------ */
-[data-theme="light"] .port-count-label {
+[data-theme^="light"] .port-count-label {
     color: #8e8e93;
 }
 
-[data-theme="light"] .port-box:hover {
+[data-theme^="light"] .port-box:hover {
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-[data-theme="light"] .no-ports {
+[data-theme^="light"] .no-ports {
     color: #8e8e93;
 }
 
-[data-theme="light"] .port-more-info {
+[data-theme^="light"] .port-more-info {
     color: #8e8e93;
     background: rgba(0, 0, 0, 0.03);
 }
@@ -4596,11 +5209,11 @@ select:focus {
 /* ------------------------------------------
    Traffic Section
    ------------------------------------------ */
-[data-theme="light"] .traffic-info-label {
+[data-theme^="light"] .traffic-info-label {
     color: #8e8e93;
 }
 
-[data-theme="light"] .traffic-chart-container {
+[data-theme^="light"] .traffic-chart-container {
     background: rgba(0, 0, 0, 0.02);
     border-color: rgba(0, 0, 0, 0.04);
 }
@@ -4608,72 +5221,72 @@ select:focus {
 /* ------------------------------------------
    Info Compact Table
    ------------------------------------------ */
-[data-theme="light"] .info-compact-table {
+[data-theme^="light"] .info-compact-table {
     background: #ffffff;
     border-color: rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .info-compact-table th,
-[data-theme="light"] .info-compact-table td {
+[data-theme^="light"] .info-compact-table th,
+[data-theme^="light"] .info-compact-table td {
     border-bottom-color: rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .info-compact-table th {
+[data-theme^="light"] .info-compact-table th {
     background: rgba(0, 0, 0, 0.02);
     color: #8e8e93;
 }
 
-[data-theme="light"] .info-compact-table td {
+[data-theme^="light"] .info-compact-table td {
     color: #3a3a3c;
 }
 
-[data-theme="light"] .info-compact-table td.highlight {
+[data-theme^="light"] .info-compact-table td.highlight {
     color: #4f46e5;
 }
 
 /* ------------------------------------------
    CPU/MEM Section & Port Status Section
    ------------------------------------------ */
-[data-theme="light"] .cpu-mem-section {
+[data-theme^="light"] .cpu-mem-section {
     background: rgba(0, 0, 0, 0.01);
     border-color: rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .section-title {
+[data-theme^="light"] .section-title {
     color: #8e8e93;
     border-bottom-color: rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .section-title i {
+[data-theme^="light"] .section-title i {
     color: #4f46e5;
 }
 
-[data-theme="light"] .section-title .info-label {
+[data-theme^="light"] .section-title .info-label {
     color: #8e8e93;
 }
 
-[data-theme="light"] .gauge-item {
+[data-theme^="light"] .gauge-item {
     background: rgba(0, 0, 0, 0.02);
     border-color: rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .port-status-section {
+[data-theme^="light"] .port-status-section {
     background: rgba(0, 0, 0, 0.01);
     border-color: rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .no-ports-sm {
+[data-theme^="light"] .no-ports-sm {
     color: #8e8e93;
 }
 
-[data-theme="light"] .port-more-sm {
+[data-theme^="light"] .port-more-sm {
     color: #8e8e93;
 }
 
 /* ------------------------------------------
    Traffic Section Full Width
    ------------------------------------------ */
-[data-theme="light"] .traffic-section-full {
+[data-theme^="light"] .traffic-section-full {
     background: rgba(0, 0, 0, 0.01);
     border-color: rgba(0, 0, 0, 0.06);
 }
@@ -4681,72 +5294,72 @@ select:focus {
 /* ------------------------------------------
    Detail Card
    ------------------------------------------ */
-[data-theme="light"] .detail-card {
+[data-theme^="light"] .detail-card {
     background: #ffffff;
     border-color: rgba(0, 0, 0, 0.06);
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .detail-card-title {
+[data-theme^="light"] .detail-card-title {
     color: #8e8e93;
     border-bottom-color: rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .detail-card-title i {
+[data-theme^="light"] .detail-card-title i {
     color: #4f46e5;
 }
 
 /* ------------------------------------------
    Detail Info Row
    ------------------------------------------ */
-[data-theme="light"] .detail-info-row {
+[data-theme^="light"] .detail-info-row {
     background: rgba(0, 0, 0, 0.02);
 }
 
-[data-theme="light"] .detail-info-row .label {
+[data-theme^="light"] .detail-info-row .label {
     color: #8e8e93;
 }
 
-[data-theme="light"] .detail-info-row .value {
+[data-theme^="light"] .detail-info-row .value {
     color: #3a3a3c;
 }
 
-[data-theme="light"] .detail-info-row .value.highlight {
+[data-theme^="light"] .detail-info-row .value.highlight {
     color: #4f46e5;
 }
 
 /* ------------------------------------------
    Usage Meters (CPU/MEM bars)
    ------------------------------------------ */
-[data-theme="light"] .usage-label {
+[data-theme^="light"] .usage-label {
     color: #8e8e93;
 }
 
-[data-theme="light"] .usage-percent.cpu {
+[data-theme^="light"] .usage-percent.cpu {
     color: #4f46e5;
 }
 
-[data-theme="light"] .usage-bar {
+[data-theme^="light"] .usage-bar {
     background: rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .usage-bar-fill.cpu {
+[data-theme^="light"] .usage-bar-fill.cpu {
     background: linear-gradient(90deg, #4f46e5 0%, #818cf8 100%);
 }
 
 /* ------------------------------------------
    Port Badge
    ------------------------------------------ */
-[data-theme="light"] .port-summary-badge .separator,
-[data-theme="light"] .port-badge .sep,
-[data-theme="light"] .port-count-badge .sep {
+[data-theme^="light"] .port-summary-badge .separator,
+[data-theme^="light"] .port-badge .sep,
+[data-theme^="light"] .port-count-badge .sep {
     color: #aeaeb2;
 }
 
 /* ------------------------------------------
    Switch Chassis (Network Switch Visual)
    ------------------------------------------ */
-[data-theme="light"] .switch-chassis {
+[data-theme^="light"] .switch-chassis {
     background: linear-gradient(180deg, #f5f5f7 0%, #e5e5ea 100%);
     border-color: rgba(0, 0, 0, 0.12);
     box-shadow:
@@ -4755,156 +5368,237 @@ select:focus {
         0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-[data-theme="light"] .switch-port {
+[data-theme^="light"] .switch-port {
     background: linear-gradient(180deg, #e5e5ea 0%, #d1d1d6 100%);
     border-color: rgba(0, 0, 0, 0.12);
 }
 
-[data-theme="light"] .switch-port .port-num {
+[data-theme^="light"] .switch-port .port-num {
     color: #8e8e93;
 }
 
-[data-theme="light"] .switch-port .port-led {
+[data-theme^="light"] .switch-port .port-led {
     background: #d1d1d6;
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
-[data-theme="light"] .switch-port.up .port-num {
+[data-theme^="light"] .switch-port.up .port-num {
     color: #059669;
 }
 
-[data-theme="light"] .switch-port:hover {
+[data-theme^="light"] .switch-port:hover {
     border-color: #4f46e5;
     box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
 }
 
-[data-theme="light"] .no-ports-msg {
+[data-theme^="light"] .no-ports-msg {
     color: #8e8e93;
 }
 
-[data-theme="light"] .port-overflow {
+[data-theme^="light"] .port-overflow {
     color: #8e8e93;
     background: rgba(0, 0, 0, 0.03);
 }
 
 /* ------------------------------------------
-   Info Box (Glassmorphism panels)
+   Info Box (Premium Card)
    ------------------------------------------ */
-[data-theme="light"] .info-box {
+[data-theme^="light"] .info-box {
+    position: relative;
     background: #ffffff;
-    border-color: rgba(0, 0, 0, 0.06);
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.04), 0 6px 16px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 4px 12px rgba(15, 23, 42, 0.06);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.2s ease,
+                border-color 0.2s ease;
 }
 
-[data-theme="light"] .info-box:hover {
-    border-color: rgba(0, 0, 0, 0.1);
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 4px 8px rgba(0, 0, 0, 0.06), 0 12px 24px rgba(0, 0, 0, 0.08);
+/* 좌측 컬러 인디케이터 스트립 */
+[data-theme^="light"] .info-box::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%);
+    opacity: 0.85;
 }
 
-[data-theme="light"] .info-box-header {
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, transparent 100%);
-    border-bottom-color: rgba(0, 0, 0, 0.04);
-    color: #8e8e93;
+/* 유형별 컬러 오버라이드 */
+[data-theme^="light"] .info-box.cpu-mem-box::before {
+    background: linear-gradient(180deg, #3b82f6 0%, #06b6d4 100%);
 }
 
-[data-theme="light"] .info-box-header i {
+[data-theme^="light"] .info-box.traffic-box::before {
+    background: linear-gradient(180deg, #10b981 0%, #06b6d4 100%);
+}
+
+[data-theme^="light"] .info-box:hover {
+    border-color: #cbd5e1;
+    transform: translateY(-2px);
+    box-shadow:
+        0 4px 10px rgba(15, 23, 42, 0.06),
+        0 14px 32px rgba(15, 23, 42, 0.1);
+}
+
+[data-theme^="light"] .info-box-header {
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    border-bottom: 1px solid #eef2f7;
+    color: #1e293b;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    font-size: 13px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+[data-theme^="light"] .info-box-header i {
     color: #4f46e5;
+    font-size: 16px;
+    padding: 6px;
+    background: rgba(79, 70, 229, 0.1);
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+
+[data-theme^="light"] .info-box.cpu-mem-box .info-box-header i {
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.1);
+}
+
+[data-theme^="light"] .info-box.traffic-box .info-box-header i {
+    color: #059669;
+    background: rgba(16, 185, 129, 0.1);
 }
 
 /* ------------------------------------------
    Info Row (label/value pairs in info-box)
    ------------------------------------------ */
-[data-theme="light"] .info-row {
-    border-bottom-color: rgba(0, 0, 0, 0.04);
+[data-theme^="light"] .info-row {
+    border-bottom: 1px solid #f1f5f9;
+    padding: 10px 14px;
+    transition: background 0.15s ease;
 }
 
-[data-theme="light"] .info-row .label {
-    color: #8e8e93;
+[data-theme^="light"] .info-row:last-child {
+    border-bottom: none;
 }
 
-[data-theme="light"] .info-row .value {
-    color: #1d1d1f;
+[data-theme^="light"] .info-row:hover {
+    background: #fafbfc;
 }
 
-[data-theme="light"] .info-row .value.ip {
+[data-theme^="light"] .info-row .label {
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+[data-theme^="light"] .info-row .value {
+    color: #0f172a;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+[data-theme^="light"] .info-row .value.ip {
     color: #4f46e5;
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    padding: 2px 10px;
+    background: rgba(79, 70, 229, 0.08);
+    border-radius: 6px;
+    display: inline-block;
 }
 
 /* ------------------------------------------
    Inline Edit Fields (Glassmorphism)
    ------------------------------------------ */
-[data-theme="light"] .info-row .edit-input,
-[data-theme="light"] .info-row .edit-select {
+[data-theme^="light"] .info-row .edit-input,
+[data-theme^="light"] .info-row .edit-select {
     color: #1d1d1f;
     background: #ffffff;
     border-color: rgba(0, 0, 0, 0.1);
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .info-row .edit-input:hover,
-[data-theme="light"] .info-row .edit-select:hover {
+[data-theme^="light"] .info-row .edit-input:hover,
+[data-theme^="light"] .info-row .edit-select:hover {
     background: #ffffff;
     border-color: rgba(0, 0, 0, 0.15);
 }
 
-[data-theme="light"] .info-row .edit-input:focus,
-[data-theme="light"] .info-row .edit-select:focus {
+[data-theme^="light"] .info-row .edit-input:focus,
+[data-theme^="light"] .info-row .edit-select:focus {
     background: #ffffff;
     border-color: rgba(79, 70, 229, 0.5);
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12), 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .info-row .edit-input.ip {
+[data-theme^="light"] .info-row .edit-input.ip {
     color: #4f46e5;
 }
 
-[data-theme="light"] .info-row .edit-input::placeholder {
+[data-theme^="light"] .info-row .edit-input::placeholder {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .info-row .edit-select option {
+[data-theme^="light"] .info-row .edit-select option {
     background: #ffffff;
     color: #1d1d1f;
 }
 
-[data-theme="light"] .info-row.triple .label,
-[data-theme="light"] .info-row.dual .label {
+[data-theme^="light"] .info-row.triple .label,
+[data-theme^="light"] .info-row.dual .label {
     color: #8e8e93;
 }
 
 /* ------------------------------------------
    Pie Chart Labels
    ------------------------------------------ */
-[data-theme="light"] .pie-name {
+[data-theme^="light"] .pie-name {
     color: #8e8e93;
 }
 
-[data-theme="light"] .pie-label {
+[data-theme^="light"] .pie-label {
     color: #8e8e93;
 }
 
 /* ------------------------------------------
    Port Panel & Connectors (RJ45 visual)
    ------------------------------------------ */
-[data-theme="light"] .port-panel {
+[data-theme^="light"] .port-panel {
     background: linear-gradient(180deg, #e5e5ea 0%, #d1d1d6 100%);
     border-color: rgba(0, 0, 0, 0.1);
 }
 
-[data-theme="light"] .port-num {
+[data-theme^="light"] .port-num {
     color: #8e8e93;
 }
 
-[data-theme="light"] .port-connector {
+[data-theme^="light"] .port-connector {
     background: linear-gradient(180deg, #e5e5ea 0%, #d1d1d6 100%);
     border-color: rgba(0, 0, 0, 0.12);
 }
 
-[data-theme="light"] .port-connector::before {
+[data-theme^="light"] .port-connector::before {
     background: #c7c7cc;
 }
 
-[data-theme="light"] .port-connector::after {
+[data-theme^="light"] .port-connector::after {
     background: repeating-linear-gradient(
         90deg,
         rgba(0, 0, 0, 0.15) 0px,
@@ -4914,69 +5608,69 @@ select:focus {
     );
 }
 
-[data-theme="light"] .port-led {
+[data-theme^="light"] .port-led {
     background: #d1d1d6;
 }
 
-[data-theme="light"] .port-jack.up .port-num {
+[data-theme^="light"] .port-jack.up .port-num {
     color: #059669;
 }
 
-[data-theme="light"] .port-jack.up .port-connector {
+[data-theme^="light"] .port-jack.up .port-connector {
     border-color: rgba(16, 185, 129, 0.4);
 }
 
-[data-theme="light"] .port-jack.down .port-connector {
+[data-theme^="light"] .port-jack.down .port-connector {
     border-color: rgba(0, 0, 0, 0.1);
 }
 
-[data-theme="light"] .port-jack.down .port-num {
+[data-theme^="light"] .port-jack.down .port-num {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .port-jack:hover {
+[data-theme^="light"] .port-jack:hover {
     border-color: #4f46e5;
     box-shadow: 0 2px 8px rgba(79, 70, 229, 0.15);
 }
 
-[data-theme="light"] .port-connector.sfp {
+[data-theme^="light"] .port-connector.sfp {
     background: linear-gradient(180deg, #e5e5ea 0%, #d1d1d6 100%);
     border-color: rgba(0, 0, 0, 0.12);
 }
 
-[data-theme="light"] .port-connector.sfp::before {
+[data-theme^="light"] .port-connector.sfp::before {
     background: linear-gradient(180deg, #c7c7cc 0%, #d1d1d6 100%);
 }
 
-[data-theme="light"] .uplink-divider {
+[data-theme^="light"] .uplink-divider {
     background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.1) 50%, transparent 100%);
 }
 
-[data-theme="light"] .port-group-label {
+[data-theme^="light"] .port-group-label {
     color: #8e8e93;
 }
 
-[data-theme="light"] .no-port {
+[data-theme^="light"] .no-port {
     color: #8e8e93;
 }
 
 /* ------------------------------------------
    Traffic Box & Time Label
    ------------------------------------------ */
-[data-theme="light"] .time-label {
+[data-theme^="light"] .time-label {
     color: #8e8e93;
 }
 
 /* ------------------------------------------
    Chart Clear Button
    ------------------------------------------ */
-[data-theme="light"] .chart-clear-btn {
+[data-theme^="light"] .chart-clear-btn {
     color: #ef4444;
     background: rgba(239, 68, 68, 0.06);
     border-color: rgba(239, 68, 68, 0.15);
 }
 
-[data-theme="light"] .chart-clear-btn:hover {
+[data-theme^="light"] .chart-clear-btn:hover {
     background: rgba(239, 68, 68, 0.1);
     border-color: rgba(239, 68, 68, 0.25);
 }
@@ -4984,246 +5678,246 @@ select:focus {
 /* ------------------------------------------
    Traffic Settings Dropdown
    ------------------------------------------ */
-[data-theme="light"] .traffic-box .global-settings-dropdown {
+[data-theme^="light"] .traffic-box .global-settings-dropdown {
     scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
 }
 
 /* ------------------------------------------
    Quality Area (Error/Discard charts)
    ------------------------------------------ */
-[data-theme="light"] .ptc-quality-area {
+[data-theme^="light"] .ptc-quality-area {
     border-top-color: rgba(0, 0, 0, 0.04);
 }
 
 /* ------------------------------------------
    Device Info Header
    ------------------------------------------ */
-[data-theme="light"] .device-info-header {
+[data-theme^="light"] .device-info-header {
     background: linear-gradient(135deg, rgba(79, 70, 229, 0.06) 0%, rgba(124, 58, 237, 0.04) 100%);
     border-color: rgba(79, 70, 229, 0.12);
 }
 
-[data-theme="light"] .device-name-display {
+[data-theme^="light"] .device-name-display {
     color: #1d1d1f;
 }
 
-[data-theme="light"] .device-name-display i {
+[data-theme^="light"] .device-name-display i {
     color: #4f46e5;
 }
 
-[data-theme="light"] .device-name-display .device-ip {
+[data-theme^="light"] .device-name-display .device-ip {
     color: #4f46e5;
     background: rgba(79, 70, 229, 0.08);
 }
 
-[data-theme="light"] .device-meta {
+[data-theme^="light"] .device-meta {
     color: #8e8e93;
 }
 
-[data-theme="light"] .device-meta strong {
+[data-theme^="light"] .device-meta strong {
     color: #3a3a3c;
 }
 
 /* ------------------------------------------
    Info Card
    ------------------------------------------ */
-[data-theme="light"] .info-card {
+[data-theme^="light"] .info-card {
     background: #ffffff;
     border-color: rgba(0, 0, 0, 0.06);
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .info-card-header {
+[data-theme^="light"] .info-card-header {
     background: rgba(0, 0, 0, 0.02);
     border-bottom-color: rgba(0, 0, 0, 0.06);
     color: #8e8e93;
 }
 
-[data-theme="light"] .info-card-header i {
+[data-theme^="light"] .info-card-header i {
     color: #4f46e5;
 }
 
 /* ------------------------------------------
    Info Table (SNMP info)
    ------------------------------------------ */
-[data-theme="light"] .info-table th,
-[data-theme="light"] .info-table td {
+[data-theme^="light"] .info-table th,
+[data-theme^="light"] .info-table td {
     border-bottom-color: rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .info-table th {
+[data-theme^="light"] .info-table th {
     background: rgba(0, 0, 0, 0.02);
     color: #8e8e93;
 }
 
-[data-theme="light"] .info-table td {
+[data-theme^="light"] .info-table td {
     color: #3a3a3c;
 }
 
 /* ------------------------------------------
    No Data Message (generic)
    ------------------------------------------ */
-[data-theme="light"] .no-data-msg {
+[data-theme^="light"] .no-data-msg {
     color: #8e8e93;
 }
 
-[data-theme="light"] .chart-period-label {
+[data-theme^="light"] .chart-period-label {
     color: #8e8e93;
 }
 
 /* ------------------------------------------
    Fault LED (keep colors, reduce glow)
    ------------------------------------------ */
-[data-theme="light"] .fault-led-C {
+[data-theme^="light"] .fault-led-C {
     box-shadow: 0 0 4px 1px rgba(239, 68, 68, 0.35);
 }
 
-[data-theme="light"] .fault-led-M {
+[data-theme^="light"] .fault-led-M {
     box-shadow: 0 0 4px 1px rgba(245, 158, 11, 0.35);
 }
 
-[data-theme="light"] .fault-led-N {
+[data-theme^="light"] .fault-led-N {
     box-shadow: 0 0 4px 1px rgba(99, 102, 241, 0.35);
 }
 
-[data-theme="light"] .fault-led-W {
+[data-theme^="light"] .fault-led-W {
     box-shadow: 0 0 4px 1px rgba(6, 182, 212, 0.35);
 }
 
 /* ------------------------------------------
    SysDescr Tooltip
    ------------------------------------------ */
-[data-theme="light"] .sys-descr-tooltip i {
+[data-theme^="light"] .sys-descr-tooltip i {
     color: #8e8e93;
 }
 
-[data-theme="light"] .sys-descr-tooltip:hover i {
+[data-theme^="light"] .sys-descr-tooltip:hover i {
     color: #4f46e5;
 }
 
-[data-theme="light"] .sys-descr-tooltip::after {
+[data-theme^="light"] .sys-descr-tooltip::after {
     background: rgba(255, 255, 255, 0.98);
     border-color: rgba(0, 0, 0, 0.08);
     color: #3a3a3c;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-[data-theme="light"] .sys-descr-tooltip::before {
+[data-theme^="light"] .sys-descr-tooltip::before {
     border-top-color: rgba(0, 0, 0, 0.08);
 }
 
-[data-theme="light"] .sys-descr-icon i {
+[data-theme^="light"] .sys-descr-icon i {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .sys-descr-icon:hover i {
+[data-theme^="light"] .sys-descr-icon:hover i {
     color: #4f46e5;
 }
 
-[data-theme="light"] .sys-descr-value {
+[data-theme^="light"] .sys-descr-value {
     color: #8e8e93;
 }
 
 /* ------------------------------------------
    Settings Sidebar
    ------------------------------------------ */
-[data-theme="light"] .settings-sidebar-overlay {
+[data-theme^="light"] .settings-sidebar-overlay {
     background: rgba(0, 0, 0, 0.2);
 }
 
-[data-theme="light"] .settings-sidebar {
+[data-theme^="light"] .settings-sidebar {
     background: rgba(255, 255, 255, 0.98);
     border-right-color: rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .settings-sidebar-header {
+[data-theme^="light"] .settings-sidebar-header {
     border-bottom-color: rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .settings-sidebar-title {
+[data-theme^="light"] .settings-sidebar-title {
     color: #1d1d1f;
 }
 
-[data-theme="light"] .settings-sidebar-title i {
+[data-theme^="light"] .settings-sidebar-title i {
     color: #8e8e93;
 }
 
-[data-theme="light"] .settings-sidebar-close {
+[data-theme^="light"] .settings-sidebar-close {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .settings-sidebar-close:hover {
+[data-theme^="light"] .settings-sidebar-close:hover {
     color: #1d1d1f;
 }
 
-[data-theme="light"] .settings-sidebar-body::-webkit-scrollbar-thumb {
+[data-theme^="light"] .settings-sidebar-body::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.08);
 }
 
-[data-theme="light"] .settings-section {
+[data-theme^="light"] .settings-section {
     background: rgba(0, 0, 0, 0.02);
     border-color: rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .settings-section-title {
+[data-theme^="light"] .settings-section-title {
     color: #8e8e93;
 }
 
-[data-theme="light"] .settings-scope-item {
+[data-theme^="light"] .settings-scope-item {
     background: rgba(0, 0, 0, 0.02);
     border-color: rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .settings-scope-item:hover {
+[data-theme^="light"] .settings-scope-item:hover {
     background: rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .scope-item-info .scope-icon.ping {
+[data-theme^="light"] .scope-item-info .scope-icon.ping {
     background: rgba(79, 70, 229, 0.08);
     color: #4f46e5;
 }
 
-[data-theme="light"] .scope-item-info .scope-icon.snmp {
+[data-theme^="light"] .scope-item-info .scope-icon.snmp {
     background: rgba(16, 185, 129, 0.08);
 }
 
-[data-theme="light"] .scope-item-info .scope-icon.agent {
+[data-theme^="light"] .scope-item-info .scope-icon.agent {
     background: rgba(139, 92, 246, 0.08);
 }
 
-[data-theme="light"] .scope-item-title {
+[data-theme^="light"] .scope-item-title {
     color: #1d1d1f;
 }
 
-[data-theme="light"] .scope-item-desc {
+[data-theme^="light"] .scope-item-desc {
     color: #aeaeb2;
 }
 
 /* ------------------------------------------
    Settings Form
    ------------------------------------------ */
-[data-theme="light"] .settings-form-group label {
+[data-theme^="light"] .settings-form-group label {
     color: #8e8e93;
 }
 
-[data-theme="light"] .settings-form-group input,
-[data-theme="light"] .settings-form-group select {
+[data-theme^="light"] .settings-form-group input,
+[data-theme^="light"] .settings-form-group select {
     background: #ffffff;
     border-color: rgba(0, 0, 0, 0.08);
     color: #1d1d1f;
 }
 
-[data-theme="light"] .settings-form-group input:focus,
-[data-theme="light"] .settings-form-group select:focus {
+[data-theme^="light"] .settings-form-group input:focus,
+[data-theme^="light"] .settings-form-group select:focus {
     border-color: rgba(79, 70, 229, 0.5);
     box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
 }
 
-[data-theme="light"] .settings-form-group input::placeholder {
+[data-theme^="light"] .settings-form-group input::placeholder {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .settings-form-group select option {
+[data-theme^="light"] .settings-form-group select option {
     background: #ffffff;
     color: #1d1d1f;
 }
@@ -5231,30 +5925,30 @@ select:focus {
 /* ------------------------------------------
    Settings Sidebar Footer
    ------------------------------------------ */
-[data-theme="light"] .settings-sidebar-footer {
+[data-theme^="light"] .settings-sidebar-footer {
     border-top-color: rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .settings-sidebar-footer .btn-secondary {
+[data-theme^="light"] .settings-sidebar-footer .btn-secondary {
     background: rgba(0, 0, 0, 0.04);
     border-color: rgba(0, 0, 0, 0.08);
     color: #3a3a3c;
 }
 
-[data-theme="light"] .settings-sidebar-footer .btn-secondary:hover {
+[data-theme^="light"] .settings-sidebar-footer .btn-secondary:hover {
     background: rgba(0, 0, 0, 0.06);
 }
 
 /* ------------------------------------------
    Settings Gear Button
    ------------------------------------------ */
-[data-theme="light"] .settings-gear-btn {
+[data-theme^="light"] .settings-gear-btn {
     background: rgba(0, 0, 0, 0.03);
     border-color: rgba(0, 0, 0, 0.06);
     color: #8e8e93;
 }
 
-[data-theme="light"] .settings-gear-btn:hover {
+[data-theme^="light"] .settings-gear-btn:hover {
     background: rgba(79, 70, 229, 0.08);
     border-color: rgba(79, 70, 229, 0.2);
     color: #4f46e5;
@@ -5263,13 +5957,13 @@ select:focus {
 /* ------------------------------------------
    Edit Button
    ------------------------------------------ */
-[data-theme="light"] .btn-edit {
+[data-theme^="light"] .btn-edit {
     background: linear-gradient(135deg, rgba(79, 70, 229, 0.06) 0%, rgba(124, 58, 237, 0.04) 100%);
     border-color: rgba(79, 70, 229, 0.15);
     color: #4f46e5;
 }
 
-[data-theme="light"] .btn-edit:hover {
+[data-theme^="light"] .btn-edit:hover {
     background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(124, 58, 237, 0.08) 100%);
     border-color: rgba(79, 70, 229, 0.25);
 }
@@ -5277,17 +5971,17 @@ select:focus {
 /* ------------------------------------------
    Port Context Menu
    ------------------------------------------ */
-[data-theme="light"] .port-ctx-menu {
+[data-theme^="light"] .port-ctx-menu {
     background: rgba(255, 255, 255, 0.98);
     border-color: rgba(0, 0, 0, 0.08);
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-[data-theme="light"] .port-ctx-item {
+[data-theme^="light"] .port-ctx-item {
     color: #3a3a3c;
 }
 
-[data-theme="light"] .port-ctx-item:hover {
+[data-theme^="light"] .port-ctx-item:hover {
     background: rgba(79, 70, 229, 0.08);
     color: #4f46e5;
 }
@@ -5295,45 +5989,45 @@ select:focus {
 /* ------------------------------------------
    Port Check Card
    ------------------------------------------ */
-[data-theme="light"] .port-check-backdrop {
+[data-theme^="light"] .port-check-backdrop {
     background: rgba(0, 0, 0, 0.2);
 }
 
-[data-theme="light"] .port-check-card {
+[data-theme^="light"] .port-check-card {
     background: rgba(255, 255, 255, 0.98);
     border-color: rgba(0, 0, 0, 0.08);
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 16px 48px rgba(0, 0, 0, 0.15);
 }
 
-[data-theme="light"] .port-check-header {
+[data-theme^="light"] .port-check-header {
     border-bottom-color: rgba(0, 0, 0, 0.06);
     color: #1d1d1f;
 }
 
-[data-theme="light"] .port-check-header button {
+[data-theme^="light"] .port-check-header button {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .port-check-header button:hover {
+[data-theme^="light"] .port-check-header button:hover {
     color: #1d1d1f;
 }
 
-[data-theme="light"] .port-check-loading {
+[data-theme^="light"] .port-check-loading {
     color: #8e8e93;
 }
 
-[data-theme="light"] .port-check-label {
+[data-theme^="light"] .port-check-label {
     color: #8e8e93;
 }
 
-[data-theme="light"] .port-check-error {
+[data-theme^="light"] .port-check-error {
     color: #ef4444;
 }
 
 /* ------------------------------------------
    Monitor Badge
    ------------------------------------------ */
-[data-theme="light"] .monitor-badge.off {
+[data-theme^="light"] .monitor-badge.off {
     color: #8e8e93;
     background: rgba(0, 0, 0, 0.04);
 }
@@ -5341,19 +6035,19 @@ select:focus {
 /* ------------------------------------------
    Flag Badge
    ------------------------------------------ */
-[data-theme="light"] .flag-badge.inactive {
+[data-theme^="light"] .flag-badge.inactive {
     color: #8e8e93;
     background: rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .flag-badge.clickable:hover {
+[data-theme^="light"] .flag-badge.clickable:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 /* ------------------------------------------
    Status Badge
    ------------------------------------------ */
-[data-theme="light"] .status-badge.unknown {
+[data-theme^="light"] .status-badge.unknown {
     color: #8e8e93;
     background: rgba(0, 0, 0, 0.04);
 }
@@ -5361,7 +6055,7 @@ select:focus {
 /* ------------------------------------------
    Port Overflow Message
    ------------------------------------------ */
-[data-theme="light"] .port-overflow-msg {
+[data-theme^="light"] .port-overflow-msg {
     color: #8e8e93;
     background: rgba(0, 0, 0, 0.03);
 }

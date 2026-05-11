@@ -1,0 +1,877 @@
+/* ============================================================
+   Dashboard Light Mode — 전문적 디자인 (Linear/Datadog/Supabase 참고)
+   모든 light-v1 ~ light-v4 variant에 공통 적용
+   Specificity: dark CSS를 확실히 덮을 수 있도록 html 태그 포함
+   ============================================================ */
+
+/* ==========================
+   1. 기본 레이아웃 — 페이지 틴트 + 카드 white 대비
+   ========================== */
+html[data-theme^="light"] body,
+html[data-theme^="light"] .app-layout {
+  color: var(--theme-text-primary);
+}
+/* .app-main 배경은 _sidebar.css 의 라벤더 gradient 에 맡김 — 여기서 덮지 않음 */
+html[data-theme^="light"] .dashboard-page {
+  background: transparent;
+  color: var(--theme-text-primary);
+}
+/* 글래스 배경 그라데이션 제거 (라이트 모드에서 탁해짐) */
+html[data-theme^="light"] .dashboard-page::before,
+html[data-theme^="light"] .app-main::before {
+  display: none !important;
+}
+
+/* ==========================
+   2. 사이드바 (V4 제외)
+   ========================== */
+/* 사이드바 - 페이지보다 살짝 진한 라이트 그레이 */
+html[data-theme^="light"] .app-sidebar {
+  background: var(--theme-nav-bg);
+  border-right: 1px solid var(--theme-nav-border);
+  box-shadow: none;
+}
+html[data-theme^="light"] .sidebar-logo,
+html[data-theme^="light"] .menu-link {
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .menu-link:hover {
+  background: var(--theme-nav-item-hover);
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .menu-link.active {
+  background: var(--theme-nav-item-active);
+  color: var(--theme-accent-primary);
+  font-weight: 600;
+}
+/* 사이드바 토글 버튼 - 가시성 강화 */
+html[data-theme^="light"] .sidebar-toggle {
+  color: var(--theme-text-primary);
+  background: #ffffff;
+  border: 1px solid var(--theme-border-default);
+  box-shadow: var(--theme-shadow-sm);
+}
+html[data-theme^="light"] .sidebar-toggle:hover {
+  color: var(--theme-accent-primary);
+  background: var(--theme-bg-card);
+  border-color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .submenu-link {
+  color: var(--theme-text-secondary);
+}
+html[data-theme^="light"] .submenu-link:hover {
+  background: var(--theme-nav-item-hover);
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .submenu-link.active {
+  background: var(--theme-nav-item-active);
+  color: var(--theme-accent-primary);
+  font-weight: 600;
+}
+html[data-theme^="light"] .submenu-arrow {
+  color: var(--theme-text-tertiary);
+}
+
+/* ==========================
+   3. 대시보드 헤더
+   ========================== */
+/* === 대시보드 헤더 - 심플 클린 === */
+html[data-theme^="light"] .dashboard-header {
+  background: transparent;
+  border-bottom: 1px solid var(--theme-border-default);
+  padding: 12px 20px;
+  margin-bottom: 0;
+  align-items: center;
+}
+html[data-theme^="light"] .widget-grid-container {
+  padding-top: 12px;
+}
+html[data-theme^="light"] .dashboard-title h1 {
+  color: var(--theme-text-primary);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+html[data-theme^="light"] .dashboard-actions {
+  align-items: center;
+  gap: 8px;
+}
+html[data-theme^="light"] .widget-count {
+  color: var(--theme-text-tertiary);
+  background: var(--theme-bg-tertiary);
+  border: 1px solid var(--theme-border-subtle);
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+/* ==========================
+   4. 헤더 액션 버튼
+   ========================== */
+html[data-theme^="light"] .btn-add-widget,
+html[data-theme^="light"] .btn-edit-mode,
+html[data-theme^="light"] .btn-create-dashboard {
+  background: var(--theme-accent-primary);
+  color: #ffffff;
+  border: 1px solid transparent;
+  box-shadow: var(--theme-shadow-sm);
+  font-weight: 500;
+}
+html[data-theme^="light"] .btn-add-widget:hover,
+html[data-theme^="light"] .btn-edit-mode:hover,
+html[data-theme^="light"] .btn-create-dashboard:hover {
+  background: var(--theme-accent-hover);
+  box-shadow: var(--theme-shadow-md);
+}
+html[data-theme^="light"] .btn-edit-mode.active {
+  background: var(--theme-success);
+  color: #ffffff;
+}
+html[data-theme^="light"] .btn-reset {
+  background: var(--theme-bg-card);
+  color: var(--theme-text-primary);
+  border: 1px solid var(--theme-border-default);
+  font-weight: 500;
+}
+html[data-theme^="light"] .btn-reset:hover {
+  background: var(--theme-bg-hover);
+  border-color: var(--theme-accent-primary);
+  color: var(--theme-accent-primary);
+}
+
+/* ==========================
+   5. 위젯 카드
+   ========================== */
+html[data-theme^="light"] .widget-card {
+  background: var(--theme-widget-bg);
+  border: 1px solid var(--theme-widget-border);
+  box-shadow: var(--theme-shadow-sm);
+  color: var(--theme-text-primary);
+  border-radius: 12px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  overflow: hidden;
+}
+html[data-theme^="light"] .widget-card:hover {
+  border-color: var(--theme-border-hover);
+  box-shadow: var(--theme-shadow-md);
+}
+html[data-theme^="light"] .widget-card.editable:hover {
+  border-color: var(--theme-accent-primary);
+  box-shadow: var(--theme-shadow-md);
+}
+html[data-theme^="light"] .widget-card.dragging {
+  box-shadow: var(--theme-shadow-xl);
+  opacity: 0.8;
+}
+html[data-theme^="light"] .widget-card.drag-over {
+  border-color: var(--theme-accent-primary);
+  background: var(--theme-accent-bg);
+}
+
+/* ==========================
+   6. 위젯 헤더/타이틀
+   ========================== */
+html[data-theme^="light"] .widget-header {
+  background: var(--theme-widget-header-bg);
+  border-bottom: 1px solid var(--theme-border-default);
+}
+
+/* 테이블 zebra 패턴 - 행 구분 명확 */
+html[data-theme^="light"] .widget-alert-table tbody tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.015);
+}
+html[data-theme^="light"] .widget-alert-table tbody tr {
+  border-bottom: 1px solid var(--theme-border-subtle);
+}
+
+/* 위젯 내 섹션 구분선 강화 */
+html[data-theme^="light"] .widget-filter-bar {
+  background: var(--theme-bg-tertiary);
+  border: 1px solid var(--theme-border-default);
+  border-radius: 6px;
+}
+html[data-theme^="light"] .widget-pagination {
+  background: var(--theme-bg-tertiary);
+  border-top: 1px solid var(--theme-border-default);
+}
+html[data-theme^="light"] .widget-title {
+  color: var(--theme-text-primary);
+  font-weight: 600;
+}
+html[data-theme^="light"] .widget-title i {
+  color: var(--theme-accent-primary);
+  background: var(--theme-accent-bg);
+  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+html[data-theme^="light"] .widget-title .drag-handle {
+  color: var(--theme-text-muted);
+}
+html[data-theme^="light"] .widget-title .drag-handle:hover {
+  color: var(--theme-text-primary);
+  background: var(--theme-bg-hover);
+}
+
+/* ==========================
+   7. 위젯 액션 (삭제/설정/리사이즈)
+   ========================== */
+html[data-theme^="light"] .widget-action-btn {
+  background: transparent;
+  color: var(--theme-text-tertiary);
+  border: none;
+}
+html[data-theme^="light"] .widget-action-btn:hover {
+  background: var(--theme-bg-hover);
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .widget-action-btn.delete:hover {
+  background: var(--theme-danger-bg);
+  color: var(--theme-danger);
+}
+html[data-theme^="light"] .widget-floating-delete {
+  background: var(--theme-danger);
+  color: #ffffff;
+  box-shadow: var(--theme-shadow-md);
+}
+html[data-theme^="light"] .widget-floating-delete:hover {
+  background: #dc2626;
+}
+html[data-theme^="light"] .widget-resize-controls {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  box-shadow: var(--theme-shadow-sm);
+}
+html[data-theme^="light"] .widget-size-select {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .widget-size-select:hover {
+  border-color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .widget-size-select:focus {
+  border-color: var(--theme-accent-primary);
+  box-shadow: 0 0 0 3px var(--theme-accent-bg);
+  outline: none;
+}
+
+/* ==========================
+   8. 위젯 컨텐츠 (공통)
+   ========================== */
+html[data-theme^="light"] .widget-content,
+html[data-theme^="light"] .widget-content-inner {
+  background: transparent;
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .widget-placeholder {
+  color: var(--theme-text-muted);
+}
+html[data-theme^="light"] .widget-placeholder i {
+  color: var(--theme-text-disabled);
+}
+html[data-theme^="light"] .widget-loading,
+html[data-theme^="light"] .widget-empty {
+  color: var(--theme-text-muted);
+}
+html[data-theme^="light"] .widget-empty i {
+  color: var(--theme-success-text);
+}
+
+/* ==========================
+   9. 실시간 장애 위젯 — 검색 박스
+   ========================== */
+html[data-theme^="light"] .widget-search-box label,
+html[data-theme^="light"] .widget-search-field label {
+  color: var(--theme-text-tertiary);
+  font-weight: 500;
+}
+html[data-theme^="light"] .widget-search-box input,
+html[data-theme^="light"] .widget-search-field input {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .widget-search-box input:focus,
+html[data-theme^="light"] .widget-search-field input:focus {
+  border-color: var(--theme-accent-primary);
+  box-shadow: 0 0 0 3px var(--theme-accent-bg);
+}
+html[data-theme^="light"] .widget-search-box input::placeholder,
+html[data-theme^="light"] .widget-search-field input::placeholder {
+  color: var(--theme-text-muted);
+}
+
+/* ==========================
+   10. 실시간 장애 위젯 — 필터 토글
+   ========================== */
+html[data-theme^="light"] .widget-filter-toggle {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  color: var(--theme-text-tertiary);
+}
+html[data-theme^="light"] .widget-filter-toggle:hover {
+  background: var(--theme-bg-hover);
+  color: var(--theme-accent-primary);
+  border-color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .widget-filter-toggle.active {
+  background: var(--theme-accent-primary);
+  color: #ffffff;
+  border-color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .widget-filter-toggle.has-filters::after {
+  background: var(--theme-danger);
+}
+html[data-theme^="light"] .widget-filter-reset {
+  color: var(--theme-text-muted);
+}
+html[data-theme^="light"] .widget-filter-reset:hover {
+  color: var(--theme-danger);
+}
+html[data-theme^="light"] .widget-filter-bar {
+  background: var(--theme-bg-secondary);
+  border: 1px solid var(--theme-border-subtle);
+}
+
+/* ==========================
+   11. 실시간 장애 위젯 — 페이지네이션 (★ 중요)
+   ========================== */
+html[data-theme^="light"] .widget-pagination {
+  background: var(--theme-bg-secondary);
+  border-top: 1px solid var(--theme-border-subtle);
+}
+html[data-theme^="light"] .widget-pagination-info {
+  color: var(--theme-text-tertiary);
+  font-weight: 500;
+}
+html[data-theme^="light"] .widget-pagination-controls button {
+  background: transparent;
+  color: var(--theme-text-secondary);
+  border: none;
+}
+html[data-theme^="light"] .widget-pagination-controls button:hover:not(:disabled) {
+  background: var(--theme-bg-hover);
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .widget-pagination-controls button:disabled {
+  color: var(--theme-text-disabled);
+  cursor: default;
+}
+html[data-theme^="light"] .widget-pagination-page {
+  color: var(--theme-text-primary);
+  font-weight: 600;
+}
+
+/* ==========================
+   12. 실시간 장애 위젯 — 테이블
+   ========================== */
+html[data-theme^="light"] .widget-alert-table-container {
+  background: transparent;
+}
+html[data-theme^="light"] .widget-alert-table-container::-webkit-scrollbar-track {
+  background: var(--theme-scrollbar-track);
+}
+html[data-theme^="light"] .widget-alert-table-container::-webkit-scrollbar-thumb {
+  background: var(--theme-scrollbar-thumb);
+  border-radius: 4px;
+}
+html[data-theme^="light"] .widget-alert-table-container::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-scrollbar-thumb-hover);
+}
+html[data-theme^="light"] .widget-alert-table {
+  background: transparent;
+}
+html[data-theme^="light"] .widget-alert-table thead {
+  background: var(--theme-bg-secondary);
+  border-bottom: 1px solid var(--theme-border-default);
+}
+html[data-theme^="light"] .widget-alert-table thead th {
+  color: var(--theme-text-secondary);
+  font-weight: 600;
+  border-bottom: 1px solid var(--theme-border-default);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+html[data-theme^="light"] .widget-alert-table tbody tr {
+  border-bottom: 1px solid var(--theme-border-subtle);
+}
+html[data-theme^="light"] .widget-alert-table tbody tr:hover {
+  background: var(--theme-bg-hover);
+}
+html[data-theme^="light"] .widget-alert-table tbody tr:last-child td {
+  border-bottom: none;
+}
+html[data-theme^="light"] .widget-alert-table td {
+  color: var(--theme-text-primary);
+  border-bottom: 1px solid var(--theme-border-subtle);
+}
+html[data-theme^="light"] .widget-alert-table .device-name {
+  color: var(--theme-text-primary);
+  font-weight: 500;
+}
+html[data-theme^="light"] .widget-alert-table .device-ip {
+  color: var(--theme-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+html[data-theme^="light"] .widget-alert-table .alert-time {
+  color: var(--theme-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================
+   13. 실시간 장애 리스트 (list 뷰)
+   ========================== */
+html[data-theme^="light"] .widget-alert-list {
+  background: transparent;
+}
+html[data-theme^="light"] .widget-alert-list::-webkit-scrollbar-thumb {
+  background: var(--theme-scrollbar-thumb);
+}
+html[data-theme^="light"] .widget-alert-item {
+  background: var(--theme-bg-secondary);
+  border: 1px solid var(--theme-border-subtle);
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .widget-alert-item:hover {
+  background: var(--theme-bg-hover);
+  border-color: var(--theme-border-hover);
+}
+
+/* ==========================
+   14. 심각도/상태 배지 (공통)
+   ========================== */
+html[data-theme^="light"] .level-badge,
+html[data-theme^="light"] .alert-badge,
+html[data-theme^="light"] .status-badge {
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+html[data-theme^="light"] .level-badge.critical,
+html[data-theme^="light"] .alert-badge.critical {
+  background: var(--theme-danger-bg);
+  color: var(--theme-danger-text);
+  border-color: var(--theme-danger-border);
+}
+html[data-theme^="light"] .level-badge.major,
+html[data-theme^="light"] .alert-badge.major {
+  background: var(--theme-warning-bg);
+  color: var(--theme-warning-text);
+  border-color: var(--theme-warning-border);
+}
+html[data-theme^="light"] .level-badge.minor {
+  background: rgba(217, 119, 6, 0.1);
+  color: #b45309;
+  border-color: rgba(217, 119, 6, 0.25);
+}
+html[data-theme^="light"] .level-badge.warning,
+html[data-theme^="light"] .alert-badge.warning,
+html[data-theme^="light"] .alert-badge.info {
+  background: var(--theme-info-bg);
+  color: var(--theme-info-text);
+  border-color: var(--theme-info-border);
+}
+html[data-theme^="light"] .status-badge.active {
+  background: var(--theme-danger-bg);
+  color: var(--theme-danger-text);
+  border-color: var(--theme-danger-border);
+}
+html[data-theme^="light"] .status-badge.ack {
+  background: var(--theme-success-bg);
+  color: var(--theme-success-text);
+  border-color: var(--theme-success-border);
+}
+
+/* ==========================
+   15. 장비/알림 요약 카드 (대형 카드)
+   ========================== */
+html[data-theme^="light"] .summary-card,
+html[data-theme^="light"] .device-card {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  box-shadow: var(--theme-shadow-sm);
+  color: var(--theme-text-primary);
+  border-radius: 10px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+html[data-theme^="light"] .summary-card::before,
+html[data-theme^="light"] .device-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--theme-accent-primary);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+html[data-theme^="light"] .summary-card.critical::before { background: var(--theme-danger); opacity: 1; }
+html[data-theme^="light"] .summary-card.major::before    { background: var(--theme-warning); opacity: 1; }
+html[data-theme^="light"] .summary-card.minor::before    { background: #d97706; opacity: 1; }
+html[data-theme^="light"] .summary-card.warning::before  { background: var(--theme-info); opacity: 1; }
+html[data-theme^="light"] .summary-card:hover,
+html[data-theme^="light"] .device-card:hover {
+  border-color: var(--theme-border-hover);
+  box-shadow: var(--theme-shadow-md);
+  transform: translateY(-2px);
+}
+html[data-theme^="light"] .summary-card:hover::before,
+html[data-theme^="light"] .device-card:hover::before {
+  opacity: 1;
+}
+html[data-theme^="light"] .summary-card .summary-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background: var(--theme-accent-bg);
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .summary-card.critical .summary-icon { background: var(--theme-danger-bg);  color: var(--theme-danger); }
+html[data-theme^="light"] .summary-card.major    .summary-icon { background: var(--theme-warning-bg); color: var(--theme-warning-text); }
+html[data-theme^="light"] .summary-card.minor    .summary-icon { background: rgba(217, 119, 6, 0.1); color: #b45309; }
+html[data-theme^="light"] .summary-card.warning  .summary-icon { background: var(--theme-info-bg);    color: var(--theme-info-text); }
+html[data-theme^="light"] .summary-card .summary-count,
+html[data-theme^="light"] .device-card .device-count {
+  color: var(--theme-text-primary);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+html[data-theme^="light"] .summary-card .summary-label,
+html[data-theme^="light"] .device-card .device-label {
+  color: var(--theme-text-tertiary);
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+html[data-theme^="light"] .summary-card.card-highlight {
+  border-color: var(--theme-accent-primary);
+  box-shadow: 0 0 0 3px var(--theme-accent-bg);
+}
+
+/* ==========================
+   16. 토폴로지 위젯
+   ========================== */
+html[data-theme^="light"] .topology-graph-container {
+  background: var(--theme-bg-secondary);
+  border: 1px solid var(--theme-border-subtle);
+  border-radius: 8px;
+}
+html[data-theme^="light"] .topology-fullscreen-btn,
+html[data-theme^="light"] .topology-graph-container .topology-expand-btn,
+html[data-theme^="light"] .topology-graph-container .topology-back-btn {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  color: var(--theme-text-primary);
+  box-shadow: var(--theme-shadow-sm);
+}
+html[data-theme^="light"] .topology-fullscreen-btn:hover,
+html[data-theme^="light"] .topology-graph-container .topology-expand-btn:hover,
+html[data-theme^="light"] .topology-graph-container .topology-back-btn:hover {
+  background: var(--theme-bg-hover);
+  border-color: var(--theme-accent-primary);
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .topology-graph-container .topology-current-group {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-subtle);
+  color: var(--theme-text-primary);
+  box-shadow: var(--theme-shadow-sm);
+}
+html[data-theme^="light"] .topology-graph-container .topology-current-group i {
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .topology-overlay {
+  background: rgba(248, 250, 252, 0.85);
+  color: var(--theme-text-primary);
+  backdrop-filter: blur(8px);
+}
+html[data-theme^="light"] .topology-edit-placeholder {
+  background: var(--theme-bg-secondary);
+  border: 2px dashed var(--theme-border-default);
+  color: var(--theme-text-muted);
+}
+html[data-theme^="light"] .topology-edit-placeholder i {
+  color: var(--theme-text-disabled);
+}
+
+/* ==========================
+   17. 토폴로지 장애 툴팁
+   ========================== */
+html[data-theme^="light"] .topology-fault-tooltip {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  box-shadow: var(--theme-shadow-lg);
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .topology-fault-tooltip-title {
+  color: var(--theme-text-primary);
+  border-bottom: 1px solid var(--theme-border-subtle);
+  font-weight: 600;
+}
+html[data-theme^="light"] .topology-fault-row {
+  color: var(--theme-text-secondary);
+  border-bottom: 1px solid var(--theme-border-subtle);
+}
+html[data-theme^="light"] .topology-fault-row:hover {
+  background: var(--theme-bg-hover);
+}
+html[data-theme^="light"] .topology-fault-row strong {
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .topology-fault-chevron {
+  color: var(--theme-text-muted);
+}
+html[data-theme^="light"] .topology-fault-detail-name {
+  color: var(--theme-text-primary);
+  font-weight: 500;
+}
+html[data-theme^="light"] .topology-fault-detail-ip {
+  color: var(--theme-text-muted);
+}
+html[data-theme^="light"] .topology-fault-detail-msg {
+  color: var(--theme-text-secondary);
+}
+html[data-theme^="light"] .topology-fault-total {
+  border-top: 1px solid var(--theme-border-default);
+  color: var(--theme-text-secondary);
+}
+html[data-theme^="light"] .topology-fault-total strong {
+  color: var(--theme-text-primary);
+}
+
+/* ==========================
+   18. 로딩/오버레이
+   ========================== */
+html[data-theme^="light"] .dashboard-loading {
+  color: var(--theme-text-muted);
+}
+html[data-theme^="light"] .dashboard-reload-overlay {
+  background: rgba(248, 250, 252, 0.85);
+  backdrop-filter: blur(8px);
+}
+html[data-theme^="light"] .dashboard-reload-overlay .reload-content {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  box-shadow: var(--theme-shadow-lg);
+}
+html[data-theme^="light"] .dashboard-reload-overlay .reload-content span {
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .loading-spinner {
+  border-color: var(--theme-border-default);
+  border-top-color: var(--theme-accent-primary);
+}
+
+/* ==========================
+   19. Top-N 차트
+   ========================== */
+html[data-theme^="light"] .topn-chart {
+  background: transparent;
+}
+html[data-theme^="light"] .topn-header {
+  border-bottom: 1px solid var(--theme-border-subtle);
+}
+html[data-theme^="light"] .chart-type-btn {
+  background: var(--theme-bg-tertiary);
+  color: var(--theme-text-secondary);
+  border: 1px solid var(--theme-border-default);
+}
+html[data-theme^="light"] .chart-type-btn:hover {
+  background: var(--theme-bg-hover);
+  color: var(--theme-accent-primary);
+  border-color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .chart-type-btn.active {
+  background: var(--theme-accent-primary);
+  color: #ffffff;
+  border-color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .topn-item {
+  border-bottom: 1px solid var(--theme-border-subtle);
+}
+html[data-theme^="light"] .topn-item:last-child {
+  border-bottom: none;
+}
+html[data-theme^="light"] .topn-rank {
+  background: var(--theme-bg-tertiary);
+  color: var(--theme-text-primary);
+  font-weight: 600;
+}
+html[data-theme^="light"] .topn-name {
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .topn-bar {
+  background: var(--theme-bg-tertiary);
+}
+html[data-theme^="light"] .topn-bar-fill {
+  background: var(--theme-accent-gradient);
+}
+html[data-theme^="light"] .topn-value {
+  color: var(--theme-text-secondary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================
+   20. 상태 그리드/게이지
+   ========================== */
+html[data-theme^="light"] .status-count {
+  color: var(--theme-text-primary);
+  font-weight: 700;
+}
+html[data-theme^="light"] .status-label {
+  color: var(--theme-text-tertiary);
+  font-weight: 500;
+}
+html[data-theme^="light"] .gauge-value {
+  color: var(--theme-text-primary);
+  font-weight: 700;
+}
+html[data-theme^="light"] .gauge-label {
+  color: var(--theme-text-tertiary);
+}
+
+/* ==========================
+   21. 커스텀 위젯
+   ========================== */
+html[data-theme^="light"] .custom-element-item {
+  background: var(--theme-bg-secondary);
+  border: 1px solid var(--theme-border-subtle);
+}
+html[data-theme^="light"] .custom-element-item .element-header {
+  color: var(--theme-text-secondary);
+}
+html[data-theme^="light"] .custom-element-item .element-header i {
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .custom-element-item .element-value,
+html[data-theme^="light"] .custom-element-item .value-text {
+  color: var(--theme-text-primary);
+  font-weight: 600;
+}
+html[data-theme^="light"] .custom-element-item .mini-bar {
+  background: var(--theme-bg-tertiary);
+  border: 1px solid var(--theme-border-subtle);
+}
+html[data-theme^="light"] .custom-element-item .bar-fill {
+  background: var(--theme-accent-gradient);
+}
+
+/* ==========================
+   22. 새로고침/리사이즈 핸들
+   ========================== */
+html[data-theme^="light"] .widget-refresh-btn {
+  background: transparent;
+  color: var(--theme-text-tertiary);
+}
+html[data-theme^="light"] .widget-refresh-btn:hover {
+  background: var(--theme-bg-hover);
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .widget-refresh-btn.refreshing {
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .widget-grid-container.edit-mode .react-resizable-handle {
+  border-color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .widget-grid-container.edit-mode .react-resizable-handle-se::after {
+  background: var(--theme-accent-primary);
+}
+
+/* ==========================
+   22b. 편집 모드 placeholder (실시간 장애 위젯 등)
+   ========================== */
+html[data-theme^="light"] .realtime-alert-widget.edit-mode-placeholder {
+  background: linear-gradient(135deg, var(--theme-bg-tertiary) 0%, var(--theme-bg-secondary) 100%) !important;
+  border: 1px dashed var(--theme-border-default);
+  border-radius: 8px;
+}
+html[data-theme^="light"] .widget-edit-placeholder .placeholder-title {
+  color: var(--theme-text-secondary);
+}
+html[data-theme^="light"] .widget-edit-placeholder .placeholder-desc {
+  color: var(--theme-text-muted);
+}
+html[data-theme^="light"] .widget-edit-placeholder i {
+  color: var(--theme-warning);
+  opacity: 0.8;
+}
+
+/* ==========================
+   23. 스크롤바 (전역)
+   ========================== */
+html[data-theme^="light"] .widget-grid-container::-webkit-scrollbar-track,
+html[data-theme^="light"] .widget-grid::-webkit-scrollbar-track,
+html[data-theme^="light"] .widget-content-inner::-webkit-scrollbar-track {
+  background: var(--theme-scrollbar-track);
+}
+html[data-theme^="light"] .widget-grid-container::-webkit-scrollbar-thumb,
+html[data-theme^="light"] .widget-grid::-webkit-scrollbar-thumb,
+html[data-theme^="light"] .widget-content-inner::-webkit-scrollbar-thumb {
+  background: var(--theme-scrollbar-thumb);
+  border-radius: 4px;
+}
+html[data-theme^="light"] .widget-grid-container::-webkit-scrollbar-thumb:hover,
+html[data-theme^="light"] .widget-grid::-webkit-scrollbar-thumb:hover,
+html[data-theme^="light"] .widget-content-inner::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-scrollbar-thumb-hover);
+}
+
+/* ==========================
+   24. 위젯 추가 모달
+   ========================== */
+html[data-theme^="light"] .custom-widget-modal {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  box-shadow: var(--theme-shadow-2xl);
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .custom-widget-section label,
+html[data-theme^="light"] .custom-widget-section h3 {
+  color: var(--theme-text-primary);
+  font-weight: 600;
+}
+html[data-theme^="light"] .widget-name-input {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .widget-name-input:focus {
+  border-color: var(--theme-accent-primary);
+  box-shadow: 0 0 0 3px var(--theme-accent-bg);
+  outline: none;
+}
+html[data-theme^="light"] .group-card,
+html[data-theme^="light"] .monitoring-element-card {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .group-card:hover,
+html[data-theme^="light"] .monitoring-element-card:hover {
+  border-color: var(--theme-accent-primary);
+  background: var(--theme-bg-hover);
+}
+html[data-theme^="light"] .group-card.selected,
+html[data-theme^="light"] .monitoring-element-card.selected {
+  background: var(--theme-accent-bg);
+  border-color: var(--theme-accent-primary);
+  color: var(--theme-accent-primary);
+}

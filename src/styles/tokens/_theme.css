@@ -156,50 +156,50 @@
     --theme-glass-bg-input-focus: rgba(30, 41, 59, 0.8);
 }
 
-/* 라이트 모드 - 깔끔하고 세련된 UI */
+/* 라이트 모드 - Hybrid Ops (다크 사이드바 + 라이트 콘텐츠) */
 [data-theme="light"] {
-    /* 배경색 - 밝고 깨끗한 톤 */
-    --theme-bg-primary: #ffffff;
-    --theme-bg-secondary: #f8fafc;
-    --theme-bg-tertiary: #f1f5f9;
-    --theme-bg-card: #ffffff;
-    --theme-bg-elevated: #ffffff;
+    /* 배경색 - 카드(흰색)와 페이지(라벤더 회색)의 명확한 대비 */
+    --theme-bg-primary: #e8ecf1;
+    --theme-bg-secondary: #fbfcfd;
+    --theme-bg-tertiary: #f2f5f8;          /* 중첩 */
+    --theme-bg-card: #fbfcfd;
+    --theme-bg-elevated: #fbfcfd;
     --theme-bg-input: #ffffff;
-    --theme-bg-hover: rgba(99, 102, 241, 0.04);
+    --theme-bg-hover: rgba(37, 99, 235, 0.06);
 
-    /* 테이블/필터 배경 - 소프트 그레이 */
-    --theme-bg-panel: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
-    --theme-bg-panel-header: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-    --theme-bg-panel-hover: linear-gradient(180deg, #f1f5f9 0%, #e8ecf2 100%);
+    /* 테이블/필터 배경 */
+    --theme-bg-panel: #f5f7fa;
+    --theme-bg-panel-header: #e8ecf1;
+    --theme-bg-panel-hover: #e3e9f0;
 
     /* 테이블 행 */
-    --theme-bg-table-row: #ffffff;
-    --theme-bg-table-row-hover: #f8fafc;
-    --theme-bg-table-row-selected: rgba(99, 102, 241, 0.08);
+    --theme-bg-table-row: #f7f9fb;
+    --theme-bg-table-row-hover: #edf1f6;
+    --theme-bg-table-row-selected: rgba(37, 99, 235, 0.1);
 
-    /* 텍스트 - 선명한 대비 */
-    --theme-text-primary: #1e293b;
-    --theme-text-secondary: #475569;
-    --theme-text-tertiary: #64748b;
-    --theme-text-muted: #94a3b8;
-    --theme-text-disabled: #cbd5e1;
+    /* 텍스트 - 선명한 블랙 톤 */
+    --theme-text-primary: #0a0e17;         /* 거의 블랙 */
+    --theme-text-secondary: #2d3748;        /* 진한 그레이 */
+    --theme-text-tertiary: #4a5568;
+    --theme-text-muted: #718096;
+    --theme-text-disabled: #a0aec0;
 
-    /* 테두리 - 깔끔한 구분선 */
-    --theme-border-default: #e2e8f0;
-    --theme-border-hover: #cbd5e1;
-    --theme-border-panel: #e2e8f0;
-    --theme-border-input: #d1d5db;
-    --theme-border-subtle: #f1f5f9;
+    /* 테두리 - 카드와 배경 구분이 명확하게 */
+    --theme-border-default: #c5cdd9;
+    --theme-border-hover: #b0bcc9;
+    --theme-border-panel: #c0cbd8;
+    --theme-border-input: #bcc8d5;
+    --theme-border-subtle: #d5dce5;
 
-    /* 액센트 (인디고) - 라이트 모드에서 더 선명하게 */
-    --theme-accent-primary: #4f46e5;
-    --theme-accent-light: #6366f1;
-    --theme-accent-lighter: #a5b4fc;
-    --theme-accent-dark: #3730a3;
-    --theme-accent-bg: rgba(79, 70, 229, 0.08);
-    --theme-accent-bg-hover: rgba(79, 70, 229, 0.12);
-    --theme-accent-border: rgba(79, 70, 229, 0.25);
-    --theme-accent-glow: rgba(79, 70, 229, 0.2);
+    /* 액센트 (로열 블루 - V4 Ops) */
+    --theme-accent-primary: #2563eb;
+    --theme-accent-light: #3b82f6;
+    --theme-accent-lighter: #93c5fd;
+    --theme-accent-dark: #1d4ed8;
+    --theme-accent-bg: rgba(37, 99, 235, 0.08);
+    --theme-accent-bg-hover: rgba(37, 99, 235, 0.14);
+    --theme-accent-border: rgba(37, 99, 235, 0.25);
+    --theme-accent-glow: rgba(37, 99, 235, 0.2);
 
     /* 글래스 효과 - 라이트 모드용 (Frosted Glass) */
     --theme-glass-bg: rgba(255, 255, 255, 0.85);
@@ -213,16 +213,16 @@
     --theme-glass-blur-heavy: blur(24px);
     --theme-glass-saturate: saturate(120%);
 
-    /* 그림자 - 부드럽고 정교한 그림자 */
-    --theme-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
-    --theme-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03);
-    --theme-shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.06), 0 4px 8px rgba(0, 0, 0, 0.04);
-    --theme-shadow-xl: 0 15px 30px rgba(0, 0, 0, 0.08), 0 5px 15px rgba(0, 0, 0, 0.05);
-    --theme-shadow-2xl: 0 20px 40px rgba(0, 0, 0, 0.1);
-    --theme-shadow-inner: inset 0 1px 2px rgba(0, 0, 0, 0.05);
-    --theme-shadow-glow: 0 0 15px rgba(79, 70, 229, 0.1);
-    --theme-shadow-accent: 0 4px 12px rgba(79, 70, 229, 0.12);
-    --theme-shadow-accent-lg: 0 8px 20px rgba(79, 70, 229, 0.15);
+    /* 그림자 - 카드 부유감이 명확하게 느껴지도록 강화 */
+    --theme-shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+    --theme-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.05), 0 2px 5px rgba(0, 0, 0, 0.03);
+    --theme-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.06), 0 4px 8px rgba(0, 0, 0, 0.04);
+    --theme-shadow-xl: 0 14px 34px rgba(0, 0, 0, 0.07), 0 6px 12px rgba(0, 0, 0, 0.05);
+    --theme-shadow-2xl: 0 22px 48px rgba(0, 0, 0, 0.08), 0 8px 18px rgba(0, 0, 0, 0.06);
+    --theme-shadow-inner: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+    --theme-shadow-glow: 0 0 15px rgba(37, 99, 235, 0.14);
+    --theme-shadow-accent: 0 4px 14px rgba(37, 99, 235, 0.18);
+    --theme-shadow-accent-lg: 0 8px 24px rgba(37, 99, 235, 0.22);
 
     /* 모달/오버레이 */
     --theme-modal-backdrop: rgba(15, 23, 42, 0.5);
@@ -265,10 +265,10 @@
     --theme-info-text: #2563eb;
     --theme-info-glow: 0 0 12px rgba(59, 130, 246, 0.15);
 
-    /* 카드/패널 - 글래스 스타일 */
+    /* 카드/패널 - 배경 위에 명확하게 부유하는 흰색 카드 */
     --theme-card-bg: rgba(255, 255, 255, 0.9);
     --theme-card-border: rgba(226, 232, 240, 0.7);
-    --theme-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    --theme-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 
     /* 입력 필드 */
     --theme-input-bg: rgba(255, 255, 255, 0.95);
@@ -277,28 +277,23 @@
     --theme-input-focus-ring: rgba(79, 70, 229, 0.12);
     --theme-input-focus-glow: 0 0 0 3px var(--theme-input-focus-ring);
 
-    /* 네비게이션/사이드바 */
-    --theme-nav-bg: rgba(255, 255, 255, 0.98);
-    --theme-nav-border: rgba(226, 232, 240, 0.6);
-    --theme-nav-item-hover: rgba(99, 102, 241, 0.06);
-    --theme-nav-item-active: rgba(99, 102, 241, 0.1);
+    /* 네비게이션/사이드바 - 페이지보다 살짝 진한 그레이 (조화) */
+    --theme-nav-bg: #dde3ec;
+    --theme-nav-border: #b8c3d1;
+    --theme-nav-item-hover: rgba(37, 99, 235, 0.1);
+    --theme-nav-item-active: rgba(37, 99, 235, 0.16);
 
-    /* 위젯/대시보드 */
-    --theme-widget-bg: rgba(255, 255, 255, 0.95);
-    --theme-widget-border: rgba(226, 232, 240, 0.6);
-    --theme-widget-header-bg: rgba(248, 250, 252, 0.8);
+    /* 위젯/대시보드 - 헤더는 명확하게 구분 */
+    --theme-widget-bg: #fbfcfd;              /* 따뜻한 오프화이트 */
+    --theme-widget-border: #d0d7e0;
+    --theme-widget-header-bg: #f0f3f7;       /* 위젯 헤더 - 카드보다 약간 어둡게 */
 
-    /* 액센트 그라데이션 */
-    --theme-accent-gradient: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-    --theme-accent-gradient-hover: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
-    --theme-accent-hover: #4338ca;
-    --theme-accent-darker: #3730a3;
-    --theme-accent-secondary: #8b5cf6;
-}
-
-/* 테마 전환 애니메이션 */
-html {
-    transition: background-color 0.3s ease, color 0.3s ease;
+    /* 액센트 그라데이션 - 로열 블루 */
+    --theme-accent-gradient: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+    --theme-accent-gradient-hover: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+    --theme-accent-hover: #1d4ed8;
+    --theme-accent-darker: #1e40af;
+    --theme-accent-secondary: #3b82f6;
 }
 
 html *,

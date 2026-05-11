@@ -1,133 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import ReactECharts from 'echarts-for-react';
-import { devicesApi } from '../api';
+import SafeECharts from './SafeECharts';
+import { devicesApi } from '../api/devices';
 import { watchApi } from '../api/watch';
 import { useGroupTree } from '../hooks/useGroups';
 import { useAlert } from './CustomAlert';
+import { PortMiniChart, PortMiniPeak, GroupFilterNode } from '../features/watch-group-modal/PortAndGroupHelpers';
 
-// 트래픽 포맷팅 함수
-const formatBps = (bps) => {
-  if (bps === null || bps === undefined || bps === 0) return '0';
-  if (bps >= 1e9) return `${(bps / 1e9).toFixed(1)}G`;
-  if (bps >= 1e6) return `${(bps / 1e6).toFixed(1)}M`;
-  if (bps >= 1e3) return `${(bps / 1e3).toFixed(1)}K`;
-  return `${bps.toFixed(0)}`;
-};
-
-// 포트별 미니 차트 컴포넌트 (테이블용)
-function PortMiniChart({ deviceId, ifIndex }) {
-  const { data: trafficData, isLoading } = useQuery({
-    queryKey: ['portTraffic', deviceId, ifIndex],
-    queryFn: async () => {
-      const response = await devicesApi.getPortTraffic(deviceId, ifIndex, 30);
-      return response.data?.data || [];
-    },
-    staleTime: 300000,
-    enabled: !!deviceId && !!ifIndex,
-  });
-
-  const { peakIn, peakOut } = useMemo(() => {
-    if (!trafficData || trafficData.length === 0) {
-      return { peakIn: 0, peakOut: 0 };
-    }
-    const inValues = trafficData.map(d => d.IN_BPS || 0);
-    const outValues = trafficData.map(d => d.OUT_BPS || 0);
-    return {
-      peakIn: Math.max(...inValues),
-      peakOut: Math.max(...outValues),
-    };
-  }, [trafficData]);
-
-  const chartOption = useMemo(() => {
-    if (!trafficData || trafficData.length === 0) return null;
-    const inData = trafficData.map(d => d.IN_BPS || 0);
-    const outData = trafficData.map(d => d.OUT_BPS || 0);
-    return {
-      grid: { left: 0, right: 0, top: 2, bottom: 2 },
-      xAxis: { type: 'category', show: false, data: trafficData.map((_, i) => i) },
-      yAxis: { type: 'value', show: false },
-      series: [
-        { type: 'line', data: inData, smooth: true, symbol: 'none', lineStyle: { width: 1.5, color: '#3b82f6' }, areaStyle: { color: 'rgba(59, 130, 246, 0.2)' } },
-        { type: 'line', data: outData, smooth: true, symbol: 'none', lineStyle: { width: 1.5, color: '#10b981' }, areaStyle: { color: 'rgba(16, 185, 129, 0.2)' } },
-      ],
-    };
-  }, [trafficData]);
-
-  if (isLoading) return <div className="port-mini-chart loading"><div className="mini-spinner"></div></div>;
-  if (!chartOption) return <div className="port-mini-chart no-data"><span>-</span></div>;
-
-  return (
-    <div className="port-mini-chart-wrapper">
-      <div className="port-mini-chart">
-        <ReactECharts option={chartOption} style={{ width: 120, height: 32 }} opts={{ renderer: 'svg' }} />
-      </div>
-      <div className="port-traffic-info">
-        <span className="traffic-peak">
-          <span className="in">▲{formatBps(peakIn)}</span>
-          <span className="out">▼{formatBps(peakOut)}</span>
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// 그룹별 장비 수 계산 (자기 자신 + 하위 그룹 재귀)
-function countDevicesInGroup(group, countMap) {
-  let count = countMap.get(group.GROUP_ID) || 0;
-  if (group.children) {
-    for (const child of group.children) {
-      count += countDevicesInGroup(child, countMap);
-    }
-  }
-  return count;
-}
-
-// 그룹 필터 트리 노드 (경량 - 필터링 전용)
-function GroupFilterNode({ group, selectedGroupId, onSelect, depth, deviceCountMap }) {
-  const [expanded, setExpanded] = useState(depth < 2);
-  const hasChildren = group.children?.length > 0;
-  const totalCount = useMemo(() => countDevicesInGroup(group, deviceCountMap), [group, deviceCountMap]);
-  return (
-    <div>
-      <div
-        className={`group-filter-node ${selectedGroupId === group.GROUP_ID ? 'active' : ''}`}
-        style={{ paddingLeft: `${(depth + 1) * 16}px` }}
-        onClick={() => onSelect(group.GROUP_ID)}
-      >
-        {hasChildren ? (
-          <i
-            className={`bi bi-chevron-${expanded ? 'down' : 'right'} expand-icon`}
-            onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-          />
-        ) : (
-          <span className="expand-icon-placeholder" />
-        )}
-        {(() => {
-          const iconName = group.ICON_NAME;
-          if (iconName) {
-            if (iconName.startsWith('fa-')) return <i className={`fa-solid ${iconName} group-icon custom-icon`} />;
-            if (iconName.startsWith('bi-')) return <i className={`${iconName} group-icon custom-icon`} />;
-            return <span className="material-icons group-icon custom-icon">{iconName}</span>;
-          }
-          return <i className="bi bi-folder2 group-icon default-icon" />;
-        })()}
-        <span className="group-name">{group.GROUP_NAME}</span>
-        <span className="group-device-count">{totalCount}</span>
-      </div>
-      {expanded && hasChildren && group.children.map(child => (
-        <GroupFilterNode
-          key={child.GROUP_ID}
-          group={child}
-          selectedGroupId={selectedGroupId}
-          onSelect={onSelect}
-          depth={depth + 1}
-          deviceCountMap={deviceCountMap}
-        />
-      ))}
-    </div>
-  );
-}
 
 export default function WatchGroupModal({ isOpen, onClose, onSave, editingGroup = null, parentGroupId = null, mode = null }) {
   const { warning: showWarning } = useAlert();
@@ -216,6 +95,23 @@ export default function WatchGroupModal({ isOpen, onClose, onSave, editingGroup 
     return ports.filter(p => p.IF_OPER_STATUS === 1);
   }, [ports]);
 
+  // 포트 트래픽 batch 조회 (UP 포트 전체에 대해 단일 호출)
+  const portTrafficBatchKey = useMemo(() => {
+    if (!browsingDeviceId || upPorts.length === 0) return null;
+    return upPorts.map(p => `${browsingDeviceId}_${p.IF_INDEX}`).join(',');
+  }, [browsingDeviceId, upPorts]);
+
+  const { data: portTrafficMap = {}, isLoading: portTrafficLoading } = useQuery({
+    queryKey: ['portTrafficBatch', portTrafficBatchKey],
+    queryFn: async () => {
+      const portsArg = upPorts.map(p => ({ deviceId: browsingDeviceId, ifIndex: p.IF_INDEX }));
+      const response = await devicesApi.getPortTrafficBatch(portsArg, 30);
+      return response.data?.data || {};
+    },
+    staleTime: 300000,
+    enabled: !!portTrafficBatchKey,
+  });
+
   // 연동 그룹 여부
   const isLinkedGroup = !!editingGroup?.linkedGroupId;
 
@@ -249,7 +145,35 @@ export default function WatchGroupModal({ isOpen, onClose, onSave, editingGroup 
     }
   }, [groupDetailData]);
 
-  // 장비 선택 토글
+  // 자동 포트 선택: browsingDeviceId의 ports 로드 시 해당 장비가 selectedDevices에 있고
+  // ifIndexes가 비어있으면 화면에 보이는(필터 통과한 UP+Ethernet) 포트 최대 5개 자동 선택.
+  // 한 번 자동 선택된 장비는 다시 자동 채우지 않음(사용자가 의도적으로 비웠을 수 있음).
+  const autoFilledRef = useRef(new Set());
+  useEffect(() => {
+    if (!isOpen) autoFilledRef.current = new Set();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!browsingDeviceId || upPorts.length === 0) return;
+    if (autoFilledRef.current.has(browsingDeviceId)) return;
+
+    setSelectedDevices(prev => {
+      const device = prev.find(d => d.deviceId === browsingDeviceId);
+      if (!device) return prev;
+
+      autoFilledRef.current.add(browsingDeviceId);
+
+      // 이미 선택된 포트가 있으면 자동 채우기 스킵
+      if (device.ifIndexes.length > 0) return prev;
+
+      const autoIfIndexes = upPorts.slice(0, MAX_PORTS_PER_DEVICE).map(p => p.IF_INDEX);
+      return prev.map(d => d.deviceId === browsingDeviceId
+        ? { ...d, ifIndexes: autoIfIndexes }
+        : d);
+    });
+  }, [browsingDeviceId, upPorts]);
+
+  // 장비 선택 토글 (선택 시 자동으로 browsingDeviceId 세팅 → ports 로드 → 자동 포트 선택 트리거)
   const toggleDeviceSelection = (deviceId) => {
     setSelectedDevices(prev => {
       const exists = prev.find(d => d.deviceId === deviceId);
@@ -259,6 +183,10 @@ export default function WatchGroupModal({ isOpen, onClose, onSave, editingGroup 
         return [...prev, { deviceId, ifIndexes: [] }];
       }
     });
+    // 신규 선택 시 즉시 ports 로드 + 자동 포트 선택을 위해 browsingDeviceId 설정
+    if (!selectedDevices.find(d => d.deviceId === deviceId)) {
+      setBrowsingDeviceId(deviceId);
+    }
   };
 
   // 장비가 선택되었는지 확인
@@ -475,7 +403,8 @@ export default function WatchGroupModal({ isOpen, onClose, onSave, editingGroup 
                             </th>
                             <th>포트명</th>
                             <th style={{ width: '80px' }}>속도</th>
-                            <th style={{ width: '180px' }}>최근 30분 트래픽</th>
+                            <th style={{ width: '140px' }}>차트</th>
+                            <th style={{ width: '120px' }}>피크 트래픽</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -504,7 +433,15 @@ export default function WatchGroupModal({ isOpen, onClose, onSave, editingGroup 
                                     : `${port.IF_SPEED || '-'}`}
                                 </td>
                                 <td className="port-chart-cell">
-                                  <PortMiniChart deviceId={browsingDeviceId} ifIndex={port.IF_INDEX} />
+                                  <PortMiniChart
+                                    trafficData={portTrafficMap[`${browsingDeviceId}_${port.IF_INDEX}`]}
+                                    isLoading={portTrafficLoading}
+                                  />
+                                </td>
+                                <td className="port-peak-cell">
+                                  <PortMiniPeak
+                                    trafficData={portTrafficMap[`${browsingDeviceId}_${port.IF_INDEX}`]}
+                                  />
                                 </td>
                               </tr>
                             );

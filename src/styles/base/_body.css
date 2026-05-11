@@ -59,7 +59,7 @@ body {
 }
 
 /* Animated Background - 라이트 모드: 따뜻한 그레이 기반 */
-[data-theme="light"] body::before {
+[data-theme^="light"] body::before {
     content: '';
     position: fixed;
     top: 0;
@@ -76,7 +76,7 @@ body {
 }
 
 /* 라이트 모드: 노이즈 텍스처 OFF (깔끔한 표면 유지) */
-[data-theme="light"] body::after {
+[data-theme^="light"] body::after {
     display: none;
 }
 

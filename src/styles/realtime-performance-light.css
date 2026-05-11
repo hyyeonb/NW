@@ -1,0 +1,422 @@
+/* ============================================================
+   Realtime Performance Light Mode — 전면 커버
+   ============================================================ */
+
+/* === 페이지 컨테이너/레이아웃 === */
+html[data-theme^="light"] .realtime-performance-container {
+  background: transparent;
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .realtime-panels-wrapper {
+  background: transparent;
+}
+html[data-theme^="light"] .realtime-panels-wrapper::before {
+  display: none !important;
+}
+
+/* === 관제 사이드바 === */
+html[data-theme^="light"] .watch-sidebar {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08), 0 1px 4px rgba(15, 23, 42, 0.04);
+}
+html[data-theme^="light"] .watch-sidebar::before {
+  display: none !important;
+}
+html[data-theme^="light"] .watch-sidebar:hover {
+  border-color: rgba(15, 23, 42, 0.07);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08), 0 1px 4px rgba(15, 23, 42, 0.04);
+}
+
+/* === 사이드바 헤더 === */
+html[data-theme^="light"] .sidebar-header-fixed {
+  background: #ffffff;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+html[data-theme^="light"] .sidebar-header-fixed h2 {
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .sidebar-header-fixed h2 i {
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .sidebar-header-fixed h2::after {
+  background: var(--theme-accent-gradient);
+}
+
+/* === 사이드바 액션 버튼 === */
+html[data-theme^="light"] .sidebar-actions button {
+  background: var(--theme-bg-card);
+  color: var(--theme-text-tertiary);
+  border: 1px solid var(--theme-border-default);
+}
+html[data-theme^="light"] .sidebar-actions button:hover {
+  background: var(--theme-bg-hover);
+  color: var(--theme-accent-primary);
+  border-color: var(--theme-accent-primary);
+}
+
+/* === 일반그룹 / 커스텀그룹 탭 바 === */
+html[data-theme^="light"] .ws-tab-bar {
+  background: #e8ecf2;
+  border: 1px solid #d6dce5;
+}
+html[data-theme^="light"] .ws-tab-btn {
+  color: #64748b;
+  font-weight: 500;
+}
+html[data-theme^="light"] .ws-tab-btn:hover:not(.active) {
+  background: #d8dde6;
+  color: #374151;
+}
+html[data-theme^="light"] .ws-tab-btn.active {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+/* === 그룹 검색 인풋 === */
+html[data-theme^="light"] .ws-search-box input.ws-search-input {
+  background: #ffffff;
+  border-color: var(--theme-border-input);
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .ws-search-box input.ws-search-input:focus {
+  border-color: var(--theme-accent-primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+/* === 사이드바 컨텐츠 스크롤바 === */
+html[data-theme^="light"] .sidebar-content::-webkit-scrollbar-track,
+html[data-theme^="light"] .watch-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+html[data-theme^="light"] .sidebar-content::-webkit-scrollbar-thumb,
+html[data-theme^="light"] .watch-content::-webkit-scrollbar-thumb {
+  background: var(--theme-scrollbar-thumb);
+}
+html[data-theme^="light"] .sidebar-content::-webkit-scrollbar-thumb:hover,
+html[data-theme^="light"] .watch-content::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-scrollbar-thumb-hover);
+}
+
+/* === 빈 상태 === */
+html[data-theme^="light"] .watch-empty-state {
+  color: var(--theme-text-muted);
+}
+html[data-theme^="light"] .watch-empty-state i {
+  color: var(--theme-text-disabled);
+}
+html[data-theme^="light"] .watch-empty-state p {
+  color: var(--theme-text-tertiary);
+}
+
+/* === 메인 관제 영역 === */
+html[data-theme^="light"] .watch-main {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08), 0 1px 4px rgba(15, 23, 42, 0.04);
+  padding: 16px 18px;
+}
+html[data-theme^="light"] .watch-main:hover {
+  border-color: rgba(15, 23, 42, 0.07);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08), 0 1px 4px rgba(15, 23, 42, 0.04);
+}
+
+/* === 관제 헤더 === */
+html[data-theme^="light"] .watch-header {
+  background: transparent;
+  border-bottom: 1px solid var(--theme-border-subtle);
+}
+html[data-theme^="light"] .watch-header-left h1 {
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .watch-header-left h1 i {
+  color: var(--theme-accent-primary);
+}
+
+/* === 관제 상태 배지 === */
+html[data-theme^="light"] .watch-status {
+  font-weight: 600;
+}
+html[data-theme^="light"] .watch-status.active {
+  background: var(--theme-success-bg);
+  color: var(--theme-success-text);
+  border: 1px solid var(--theme-success-border);
+}
+html[data-theme^="light"] .watch-status.inactive {
+  background: var(--theme-bg-tertiary);
+  color: var(--theme-text-muted);
+  border: 1px solid var(--theme-border-default);
+}
+html[data-theme^="light"] .watch-status.connecting {
+  background: var(--theme-warning-bg);
+  color: var(--theme-warning-text);
+  border: 1px solid var(--theme-warning-border);
+}
+html[data-theme^="light"] .watch-status .pulse-dot {
+  background: currentColor;
+}
+
+/* === 최근 업데이트 === */
+html[data-theme^="light"] .last-updated {
+  color: var(--theme-text-tertiary);
+}
+
+/* === 장비 메트릭 카드 === */
+html[data-theme^="light"] .device-metric-card {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  box-shadow: var(--theme-shadow-sm);
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .device-metric-card:hover {
+  border-color: var(--theme-border-hover);
+  box-shadow: var(--theme-shadow-md);
+}
+html[data-theme^="light"] .device-metric-card-header {
+  background: var(--theme-widget-header-bg);
+  border-bottom: 1px solid var(--theme-border-subtle);
+}
+html[data-theme^="light"] .device-metric-card-header:hover {
+  background: var(--theme-bg-hover);
+}
+
+/* === 장비 상태 인디케이터 === */
+html[data-theme^="light"] .device-status-indicator.online {
+  background: var(--theme-success);
+  box-shadow: 0 0 0 3px var(--theme-success-bg);
+}
+html[data-theme^="light"] .device-status-indicator.offline {
+  background: var(--theme-danger);
+  box-shadow: 0 0 0 3px var(--theme-danger-bg);
+}
+html[data-theme^="light"] .device-status-indicator.unknown {
+  background: var(--theme-text-muted);
+  box-shadow: 0 0 0 3px var(--theme-bg-tertiary);
+}
+
+/* === 장비 정보 === */
+html[data-theme^="light"] .device-details h3 {
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .device-details .device-ip {
+  color: var(--theme-text-tertiary);
+}
+
+/* === 빠른 통계 === */
+html[data-theme^="light"] .quick-stat-label {
+  color: var(--theme-text-tertiary);
+}
+html[data-theme^="light"] .quick-stat-value {
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .quick-stat-value.cpu { color: var(--theme-info-text); }
+html[data-theme^="light"] .quick-stat-value.mem { color: #7c3aed; }
+html[data-theme^="light"] .quick-stat-value.ping { color: var(--theme-success-text); }
+html[data-theme^="light"] .quick-stat-value.ping.warning { color: var(--theme-warning-text); }
+html[data-theme^="light"] .quick-stat-value.ping.critical { color: var(--theme-danger-text); }
+
+/* === 차트 영역 (ECharts 컨테이너) === */
+html[data-theme^="light"] .chart-mini,
+html[data-theme^="light"] .metric-chart-container {
+  background: transparent;
+}
+html[data-theme^="light"] .chart-accent-cpu {
+  background: rgba(99, 102, 241, 0.03);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+}
+html[data-theme^="light"] .chart-accent-traffic {
+  background: rgba(16, 185, 129, 0.03);
+  border: 1px solid rgba(16, 185, 129, 0.1);
+}
+html[data-theme^="light"] .chart-accent-error {
+  background: rgba(239, 68, 68, 0.03);
+  border: 1px solid rgba(239, 68, 68, 0.1);
+}
+
+/* === 포트 미니 차트 === */
+html[data-theme^="light"] .port-mini-chart {
+  background: var(--theme-bg-tertiary);
+  border: 1px solid var(--theme-border-subtle);
+  border-radius: 4px;
+}
+html[data-theme^="light"] .port-traffic-info {
+  color: var(--theme-text-secondary);
+}
+html[data-theme^="light"] .traffic-peak .in {
+  color: var(--theme-info-text);
+}
+html[data-theme^="light"] .traffic-peak .out {
+  color: var(--theme-success-text);
+}
+
+/* === 포트 테이블 === */
+html[data-theme^="light"] .port-table thead {
+  background: var(--theme-bg-tertiary);
+}
+html[data-theme^="light"] .port-table th {
+  color: var(--theme-text-secondary);
+  border-bottom: 1px solid var(--theme-border-default);
+}
+html[data-theme^="light"] .port-table td {
+  color: var(--theme-text-primary);
+  border-bottom: 1px solid var(--theme-border-subtle);
+}
+html[data-theme^="light"] .port-table tr.selected {
+  background: var(--theme-accent-bg);
+}
+
+/* === 장비 카드 (미니) === */
+html[data-theme^="light"] .device-card-mini {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  box-shadow: var(--theme-shadow-sm);
+}
+html[data-theme^="light"] .device-card-mini:hover {
+  border-color: var(--theme-border-hover);
+  box-shadow: var(--theme-shadow-md);
+}
+html[data-theme^="light"] .card-header-mini {
+  background: var(--theme-widget-header-bg);
+  border-bottom: 1px solid var(--theme-border-subtle);
+}
+
+/* === LIVE chip — 화이트 톤 (라이트 모드) === */
+html[data-theme^="light"] .fault-live-chip {
+  background: var(--theme-bg-card);
+  box-shadow: var(--theme-shadow-sm);
+}
+html[data-theme^="light"] .fault-live-chip:hover {
+  background: var(--theme-bg-hover);
+}
+/* fault-live-border의 dark navy padding-box → 라이트 카드 배경으로 */
+html[data-theme^="light"] .fault-live-border {
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    linear-gradient(var(--border-angle, 0deg), rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.15) 30%, var(--border-color, #10b981) 90%, var(--border-color, #10b981) 100%) border-box !important;
+}
+html[data-theme^="light"] .fault-live-chip.live-inactive .fault-live-border {
+  background: none !important;
+  border-color: var(--theme-border-default) !important;
+}
+html[data-theme^="light"] .fault-live-label {
+  color: var(--theme-text-primary);
+  font-weight: 600;
+}
+html[data-theme^="light"] .fault-live-chip.live-inactive {
+  background: var(--theme-bg-tertiary);
+  border-color: var(--theme-border-default);
+}
+html[data-theme^="light"] .fault-live-chip.live-inactive .fault-live-border {
+  border-color: var(--theme-border-default);
+}
+html[data-theme^="light"] .fault-live-chip.live-inactive .fault-live-dot {
+  background: var(--theme-text-muted);
+}
+html[data-theme^="light"] .fault-live-chip.live-inactive .fault-live-label {
+  color: var(--theme-text-muted);
+}
+
+/* === 관제 시작/중지 버튼 === */
+html[data-theme^="light"] .watch-header .btn.btn-primary {
+  background: var(--theme-accent-primary);
+  color: #ffffff;
+  border: 1px solid var(--theme-accent-primary);
+  font-weight: 600;
+  box-shadow: var(--theme-shadow-sm);
+}
+html[data-theme^="light"] .watch-header .btn.btn-primary:hover {
+  background: var(--theme-accent-hover);
+  box-shadow: var(--theme-shadow-md);
+}
+html[data-theme^="light"] .watch-header .btn.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 관제 중지 - 빨강 톤 (다크/라이트 공통) */
+.watch-header .btn.btn-secondary {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border: 1px solid #ef4444 !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2) !important;
+}
+.watch-header .btn.btn-secondary:hover {
+  background: #dc2626 !important;
+  border-color: #dc2626 !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3) !important;
+}
+.watch-header .btn.btn-secondary i {
+  color: #ffffff !important;
+}
+
+/* === Watch 그룹 모달 (sidebar에서 사용) === */
+html[data-theme^="light"] .watch-group-modal {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  box-shadow: var(--theme-shadow-2xl);
+  color: var(--theme-text-primary);
+}
+
+/* === 그룹 트리 (사이드바 내부) === */
+html[data-theme^="light"] .watch-sidebar .gm-tree {
+  background: transparent;
+}
+
+/* === 포트 상태 잭 === */
+html[data-theme^="light"] .port-jack {
+  background: var(--theme-bg-tertiary);
+  border: 1px solid var(--theme-border-default);
+}
+html[data-theme^="light"] .port-jack.up .port-connector {
+  background: var(--theme-success);
+}
+html[data-theme^="light"] .port-jack.down .port-connector {
+  background: var(--theme-danger);
+}
+html[data-theme^="light"] .port-jack .port-num {
+  color: var(--theme-text-primary);
+}
+
+/* === 차트 no-data === */
+html[data-theme^="light"] .chart-no-data {
+  color: var(--theme-text-muted);
+  background: var(--theme-bg-tertiary);
+}
+
+/* === 장비 확인 필요 (chart-disabled) — 다크 배경 #1a1a1a 오버라이드 === */
+html[data-theme^="light"] .chart-disabled {
+  background: var(--theme-danger-bg);
+  border: 1px solid var(--theme-danger-border);
+}
+html[data-theme^="light"] .chart-disabled i {
+  color: var(--theme-danger-text);
+}
+html[data-theme^="light"] .chart-disabled span {
+  color: var(--theme-danger-text);
+}
+
+/* === 관제 컨텍스트 메뉴 === */
+html[data-theme^="light"] .watch-context-menu {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  box-shadow: var(--theme-shadow-lg);
+}
+html[data-theme^="light"] .watch-context-menu-item {
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .watch-context-menu-item:hover {
+  background: var(--theme-bg-hover);
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .watch-context-menu-item.danger {
+  color: var(--theme-danger-text);
+}
+html[data-theme^="light"] .watch-context-menu-item.danger:hover {
+  background: var(--theme-danger-bg);
+}
+html[data-theme^="light"] .watch-context-menu-divider {
+  background: var(--theme-border-default);
+}

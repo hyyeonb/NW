@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
-import { useAuthStore } from '../stores';
-import { authApi } from '../api';
+import { useAuthStore } from '../stores/authStore';
+import { useThemeStore } from '../stores/themeStore';
+import { authApi } from '../api/auth';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { isAuthenticated, isLoading, error, socialLogin, handleOAuthCallback, localLogin, clearError } = useAuthStore();
+  const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
+  const logoTextSrc = resolvedTheme === 'light' ? '/logo-text-light.svg' : '/logo-text-dark.svg';
   const callbackProcessed = useRef(false);
 
   // 로컬 로그인 폼 상태
@@ -130,14 +134,18 @@ export default function Login() {
         <div className="floating-shape shape-3"></div>
       </div>
 
+      {/* 테마 토글 (오른쪽 상단 고정) */}
+      <ThemeToggle className="fixed-top-right" />
+
       {/* Login Container */}
       <div className="login-wrapper">
         <div className="login-container">
           {/* Logo Section */}
           <div className="logo-section">
             <div className="login-logo-wrapper">
+              <div className="logo-gradient-aura" aria-hidden="true" />
               <img src="/logo-single.svg" alt="Logo" className="login-logo-icon" />
-              <img src="/logo-text-dark.svg" alt="Infomap" className="login-logo-text" />
+              <img src={logoTextSrc} alt="Infomap" className="login-logo-text" />
             </div>
             <p className="subtitle">Network Management System</p>
           </div>
@@ -227,7 +235,7 @@ export default function Login() {
                   onClick={() => handleSocialLogin('kakao')}
                   disabled={isLoading}
                 >
-                  <span className="btn-icon">💬</span>
+                  <span className="btn-icon"><i className="bi bi-chat-fill"></i></span>
                   <span className="btn-text">카카오 로그인</span>
                   <span className="btn-arrow">→</span>
                 </button>

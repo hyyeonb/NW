@@ -1,14 +1,17 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { useAlert } from '../components/CustomAlert';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { ko } from 'date-fns/locale';
 import { format } from 'date-fns';
-import { faultApi, devicesApi } from '../api';
-import { DataTable } from '../components';
+import { faultApi } from '../api/fault';
+import { devicesApi } from '../api/devices';
+import DataTable from '../components/DataTable';
 import WatchSidebar from '../components/WatchSidebar';
 import { useWatchGroupDetail } from '../hooks/useWatch';
 import ConnectivityCheckModal from '../components/ConnectivityCheckModal';
+import DeviceDetailModal from '../components/DeviceDetailModal';
 import SshTerminalModal from '../components/SshTerminalModal';
 import 'react-datepicker/dist/react-datepicker.css';
 import '../styles/fault-monitoring.css';
@@ -19,21 +22,17 @@ import '../styles/fault-stats.css';
 // 한국어 로케일 등록
 registerLocale('ko', ko);
 
-// 장애 등급 설정
-const ERROR_LEVELS = [
-  { id: 'C', label: 'Cr', color: '#ef4444' },
-  { id: 'M', label: 'Mj', color: '#f97316' },
-  { id: 'N', label: 'Mn', color: '#eab308' },
-  { id: 'W', label: 'Wr', color: '#3b82f6' },
-];
+import { ERROR_LEVELS } from '../shared/config/errorLevels';
 
 export default function FaultHistory() {
+  const { error: showError } = useAlert();
   // 등급 체크박스 (기본 전체 선택)
   const [selectedLevels, setSelectedLevels] = useState(['C', 'M', 'N', 'W']);
   const [histories, setHistories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState(null);
   const [checkDevice, setCheckDevice] = useState(null); // 장비 점검 대상 장비
+  const [detailDeviceId, setDetailDeviceId] = useState(null); // 장비 상세 모달
 
   const navigate = useNavigate();
 
@@ -55,7 +54,7 @@ export default function FaultHistory() {
       setSshTerminalInfo({ SSH_USER: data.SSH_USER, SSH_PASS: data.SSH_PASS || '', SSH_PORT: data.SSH_PORT || 22 });
       setSshTerminalDevice(row);
     } catch {
-      alert('SSH 접속 정보를 불러오지 못했습니다.');
+      showError('SSH 접속 정보를 불러오지 못했습니다.');
     }
   }, []);
 
@@ -341,24 +340,23 @@ export default function FaultHistory() {
       hideable: true,
       render: (_, row) => (
         <button
-          className="action-btn"
+          className="action-btn ssh-btn"
           title="SSH 접속"
           onClick={(e) => handleOpenSsh(row, e)}
-          style={{ color: '#38bdf8', fontSize: '16px', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
         >
           <i className="bi bi-terminal"></i>
         </button>
       ),
     },
     {
-      key: 'actions',
-      label: '작업',
+      key: 'check',
+      label: '점검',
       width: '60px',
       align: 'center',
       className: 'cell-actions',
       render: (_, row) => (
         <button
-          className="action-btn"
+          className="action-btn check-btn"
           title="장비 점검"
           onClick={(e) => {
             e.stopPropagation();
@@ -527,7 +525,7 @@ export default function FaultHistory() {
               targetName: `${row.DEVICE_NAME || ''}(${row.DEVICE_IP || ''})`,
               detail: `장애 이력 조회 - ${row.DEVICE_NAME || ''}(${row.DEVICE_IP || ''}) ${row.ERROR_MESSAGE || ''}`,
             });
-            navigate(`/mgmt/assets?deviceId=${row.DEVICE_ID}&tab=fault-info&errorId=hist_${row.ERROR_HISTORY_ID}`);
+            setDetailDeviceId({ id: row.DEVICE_ID, errorId: `hist_${row.ERROR_HISTORY_ID}` });
           }}
           rowClassName={(row) => selectedHistory?.ERROR_HISTORY_ID === row.ERROR_HISTORY_ID ? 'selected' : ''}
           pagination={{
@@ -541,7 +539,7 @@ export default function FaultHistory() {
             },
             pageSizeOptions: [10, 20, 50, 100],
           }}
-          maxHeight="calc(100vh - 300px)"
+          maxHeight="100%"
           exportConfig={{
             fileName: '장애이력',
             fetchAllData: async () => {
@@ -569,6 +567,16 @@ export default function FaultHistory() {
         </div>
       </div>
       </div>
+
+      {/* 장비 상세 모달 */}
+      {detailDeviceId && (
+        <DeviceDetailModal
+          deviceId={detailDeviceId.id}
+          initialTab="fault-info"
+          initialErrorId={detailDeviceId.errorId}
+          onClose={() => setDetailDeviceId(null)}
+        />
+      )}
 
       {/* 장비 점검 모달 */}
       {checkDevice && (

@@ -18,78 +18,10 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   horizontalListSortingStrategy,
-  useSortable,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import Pagination from './Pagination';
 import ExportModal from './ExportModal';
-
-// 드래그 가능한 헤더 셀 컴포넌트
-function DraggableHeader({ column, children, sortable, onSort, sort, enableReorder, resizeHandle, computedWidth, autoWidth, filterIcon, filterDropdown }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
-    id: column.id,
-    disabled: !enableReorder,
-    transition: {
-      duration: 150,
-      easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-    },
-  });
-
-  // X축만 이동 (수평 드래그)
-  const style = {
-    transform: transform ? `translateX(${transform.x}px)` : undefined,
-    transition,
-    width: computedWidth || autoWidth || undefined,
-    textAlign: column.columnDef.align || 'left',
-    zIndex: isDragging ? 100 : undefined,
-    position: 'relative',
-  };
-
-  // 정렬 아이콘 렌더링
-  const renderSortIcon = () => {
-    if (!sortable || !sort) return null;
-    if (sort.field !== column.id) {
-      return <i className="bi bi-chevron-expand sort-icon inactive"></i>;
-    }
-    return sort.order === 'asc'
-      ? <i className="bi bi-chevron-up sort-icon active"></i>
-      : <i className="bi bi-chevron-down sort-icon active"></i>;
-  };
-
-  // 클릭 핸들러 (드래그가 아닐 때만 정렬)
-  const handleClick = (e) => {
-    if (sortable && onSort && !isDragging) {
-      onSort(column.id);
-    }
-  };
-
-  return (
-    <th
-      ref={setNodeRef}
-      style={style}
-      data-col-id={column.id}
-      className={`${sortable ? 'sortable' : ''} ${isDragging ? 'dragging' : ''} ${column.columnDef.className || ''}`}
-      onClick={handleClick}
-      {...attributes}
-      {...listeners}
-    >
-      <div className="th-inner">
-        <span className="th-label">{children}</span>
-        {renderSortIcon()}
-        {filterIcon}
-      </div>
-      {resizeHandle}
-      {filterDropdown}
-    </th>
-  );
-}
+import DraggableHeader from '../features/data-table/components/DraggableHeader';
 
 
 /**
@@ -115,7 +47,7 @@ export default function DataTable({
   onRowClick,
   pagination = null,
   className = '',
-  maxHeight = 'calc(100vh - 350px)',
+  maxHeight = '100%',
   stickyHeader = true,
   rowClassName,
   rowAttrs, // (row) => ({ 'data-error-id': row.ERROR_ID }) 형태
@@ -170,6 +102,27 @@ export default function DataTable({
   // === 컬럼 너비 조절 ===
   const tableRef = useRef(null);
   const columnWidthsRef = useRef(null);
+
+  // === 스크롤 힌트 (아래 더 있을 때만 표시) ===
+  const wrapperRef = useRef(null);
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const update = () => {
+      const scrollable = el.scrollHeight - el.clientHeight > 4;
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 4;
+      el.toggleAttribute('data-scroll-hint', scrollable && !atBottom);
+    };
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    if (tableRef.current) ro.observe(tableRef.current);
+    return () => {
+      el.removeEventListener('scroll', update);
+      ro.disconnect();
+    };
+  });
 
   const [columnWidths, setColumnWidths] = useState(() => {
     try {
@@ -662,6 +615,7 @@ export default function DataTable({
     <div className={`data-table-container ${className}`}>
       {/* 테이블 영역 */}
       <div
+        ref={wrapperRef}
         className={`data-table-wrapper ${stickyHeader ? 'sticky-header' : ''}`}
         style={{ maxHeight: maxHeight }}
       >

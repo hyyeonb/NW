@@ -206,87 +206,87 @@
 /* ==================
    Light Mode Badge Overrides
    ================== */
-[data-theme="light"] .status-badge.up {
+[data-theme^="light"] .status-badge.up {
     background: rgba(5, 150, 105, 0.08);
     color: #047857;
     border-color: rgba(5, 150, 105, 0.20);
 }
 
-[data-theme="light"] .status-badge.down {
+[data-theme^="light"] .status-badge.down {
     background: rgba(220, 38, 38, 0.08);
     color: #b91c1c;
     border-color: rgba(220, 38, 38, 0.20);
 }
 
-[data-theme="light"] .port-badge {
+[data-theme^="light"] .port-badge {
     background: rgba(124, 58, 237, 0.08);
     color: #6d28d9;
     border-color: rgba(124, 58, 237, 0.20);
 }
 
-[data-theme="light"] .port-type-badge {
+[data-theme^="light"] .port-type-badge {
     background: rgba(0, 0, 0, 0.03);
     color: var(--theme-text-tertiary);
     border-color: rgba(0, 0, 0, 0.08);
 }
 
-[data-theme="light"] .port-type-badge.ethernet {
+[data-theme^="light"] .port-type-badge.ethernet {
     background: rgba(6, 182, 212, 0.08);
     color: #0891b2;
     border-color: rgba(6, 182, 212, 0.20);
 }
 
-[data-theme="light"] .port-type-badge.gigabit {
+[data-theme^="light"] .port-type-badge.gigabit {
     background: rgba(22, 163, 74, 0.08);
     color: #15803d;
     border-color: rgba(22, 163, 74, 0.20);
 }
 
-[data-theme="light"] .port-type-badge.loopback {
+[data-theme^="light"] .port-type-badge.loopback {
     background: rgba(234, 88, 12, 0.08);
     color: #c2410c;
     border-color: rgba(234, 88, 12, 0.20);
 }
 
-[data-theme="light"] .version-badge {
+[data-theme^="light"] .version-badge {
     background: rgba(124, 58, 237, 0.08);
     color: #6d28d9;
 }
 
-[data-theme="light"] .selected-group-badge,
-[data-theme="light"] .current-group-name {
+[data-theme^="light"] .selected-group-badge,
+[data-theme^="light"] .current-group-name {
     background: rgba(79, 70, 229, 0.06);
     border-color: rgba(79, 70, 229, 0.18);
     color: #4f46e5;
     -webkit-text-fill-color: #4f46e5;
 }
 
-[data-theme="light"] .current-group-name:hover {
+[data-theme^="light"] .current-group-name:hover {
     background: rgba(79, 70, 229, 0.10);
     border-color: rgba(79, 70, 229, 0.30);
     box-shadow: 0 2px 8px rgba(79, 70, 229, 0.12);
 }
 
-[data-theme="light"] .flag-toggle .toggle-thumb {
+[data-theme^="light"] .flag-toggle .toggle-thumb {
     background: #94a3b8;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
-[data-theme="light"] .flag-toggle .toggle-track {
+[data-theme^="light"] .flag-toggle .toggle-track {
     background: rgba(0, 0, 0, 0.10);
     border-color: rgba(0, 0, 0, 0.08);
 }
 
-[data-theme="light"] .flag-toggle.active .toggle-track {
+[data-theme^="light"] .flag-toggle.active .toggle-track {
     background: rgba(79, 70, 229, 0.15);
     border-color: rgba(79, 70, 229, 0.30);
 }
 
-[data-theme="light"] .flag-toggle.active .toggle-thumb {
+[data-theme^="light"] .flag-toggle.active .toggle-thumb {
     background: #4f46e5;
     box-shadow: 0 0 4px rgba(79, 70, 229, 0.40), 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
-[data-theme="light"] .flag-toggle.active .toggle-label {
+[data-theme^="light"] .flag-toggle.active .toggle-label {
     color: #4f46e5;
 }

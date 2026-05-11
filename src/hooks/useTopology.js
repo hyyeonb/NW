@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { topologyApi, userTopologyApi } from '../api';
+import { topologyApi, userTopologyApi } from '../api/topology';
 
 // 토폴로지 조회 (그룹 또는 장비 기준)
 // id: groupId 또는 deviceId
@@ -9,11 +9,7 @@ export const useTopologyView = (id, type = 'group') => {
     queryKey: ['topology', type, id],
     queryFn: async () => {
       const response = await topologyApi.getTopologyView(id, type);
-      console.log('=== API 원본 응답 ===', response);
-      console.log('=== response.data ===', response.data);
-
       const data = response.data?.data || response.data || { nodes: [], links: [] };
-      console.log('=== 추출된 data ===', data);
 
       // 노드 ID를 nodeType_id 형식으로 변환 (같은 ID의 device/group 구분)
       const nodes = Array.isArray(data.nodes) ? data.nodes.map(node => {
@@ -41,10 +37,6 @@ export const useTopologyView = (id, type = 'group') => {
 
       // 배경 이미지 데이터 (BACK_ICON_DATA)
       const backIconData = data.backIconData || data.BACK_ICON_DATA || null;
-
-      console.log('=== 최종 nodes ===', nodes);
-      console.log('=== 최종 links ===', links);
-      console.log('=== 배경 이미지 ===', backIconData ? backIconData.substring(0, 50) + '...' : null);
 
       return { nodes, links, backIconData };
     },

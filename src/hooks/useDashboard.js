@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { dashboardApi } from '../api';
+import { dashboardApi } from '../api/dashboard';
 
 // ==================== 위젯 마스터 (R_WIDGET_T) ====================
 

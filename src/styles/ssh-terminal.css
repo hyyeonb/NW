@@ -422,172 +422,172 @@
    ================== */
 
 /* -- SFTP Panel -- */
-[data-theme="light"] .sftp-panel {
+[data-theme^="light"] .sftp-panel {
     background: #ffffff;
     border-right: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 /* -- SFTP Header -- */
-[data-theme="light"] .sftp-header {
+[data-theme^="light"] .sftp-header {
     background: #fafafa;
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .sftp-header-title {
+[data-theme^="light"] .sftp-header-title {
     color: #8e8e93;
 }
 
 /* -- SFTP Button -- */
-[data-theme="light"] .sftp-btn {
+[data-theme^="light"] .sftp-btn {
     color: #8e8e93;
 }
 
-[data-theme="light"] .sftp-btn:hover {
+[data-theme^="light"] .sftp-btn:hover {
     background: rgba(56, 189, 248, 0.08);
     color: #0ea5e9;
 }
 
 /* -- SFTP Path Bar -- */
-[data-theme="light"] .sftp-path-bar {
+[data-theme^="light"] .sftp-path-bar {
     background: #fafafa;
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .sftp-path-text {
+[data-theme^="light"] .sftp-path-text {
     color: #0ea5e9;
 }
 
-[data-theme="light"] .sftp-path-text:hover {
+[data-theme^="light"] .sftp-path-text:hover {
     color: #0284c7;
 }
 
-[data-theme="light"] .sftp-path-input {
+[data-theme^="light"] .sftp-path-input {
     color: #0ea5e9;
     background: #ffffff;
     border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
 /* -- SFTP File List -- */
-[data-theme="light"] .sftp-file-list::-webkit-scrollbar-thumb {
+[data-theme^="light"] .sftp-file-list::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.12);
 }
 
-[data-theme="light"] .sftp-file-item {
+[data-theme^="light"] .sftp-file-item {
     border-bottom: 1px solid rgba(0, 0, 0, 0.02);
 }
 
-[data-theme="light"] .sftp-file-item:hover {
+[data-theme^="light"] .sftp-file-item:hover {
     background: rgba(56, 189, 248, 0.05);
 }
 
-[data-theme="light"] .sftp-file-item.selected {
+[data-theme^="light"] .sftp-file-item.selected {
     background: rgba(56, 189, 248, 0.08);
 }
 
-[data-theme="light"] .sftp-file-icon.file {
+[data-theme^="light"] .sftp-file-icon.file {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .sftp-file-icon.parent {
+[data-theme^="light"] .sftp-file-icon.parent {
     color: #8e8e93;
 }
 
-[data-theme="light"] .sftp-file-name {
+[data-theme^="light"] .sftp-file-name {
     color: #3a3a3c;
 }
 
-[data-theme="light"] .sftp-file-meta {
+[data-theme^="light"] .sftp-file-meta {
     color: #aeaeb2;
 }
 
 /* -- SFTP File Actions -- */
-[data-theme="light"] .sftp-file-action-btn {
+[data-theme^="light"] .sftp-file-action-btn {
     color: #8e8e93;
 }
 
-[data-theme="light"] .sftp-file-action-btn:hover {
+[data-theme^="light"] .sftp-file-action-btn:hover {
     background: rgba(56, 189, 248, 0.1);
     color: #0ea5e9;
 }
 
-[data-theme="light"] .sftp-file-action-btn.delete:hover {
+[data-theme^="light"] .sftp-file-action-btn.delete:hover {
     background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
 }
 
 /* -- SFTP Status Bar -- */
-[data-theme="light"] .sftp-status-bar {
+[data-theme^="light"] .sftp-status-bar {
     color: #aeaeb2;
     background: #fafafa;
     border-top: 1px solid rgba(0, 0, 0, 0.04);
 }
 
 /* -- SFTP Loading -- */
-[data-theme="light"] .sftp-loading {
+[data-theme^="light"] .sftp-loading {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .sftp-loading .spinner {
+[data-theme^="light"] .sftp-loading .spinner {
     border: 2px solid rgba(14, 165, 233, 0.15);
     border-top-color: #0ea5e9;
 }
 
 /* -- SFTP Drop Overlay -- */
-[data-theme="light"] .sftp-drop-overlay span {
+[data-theme^="light"] .sftp-drop-overlay span {
     color: #0ea5e9;
     background: rgba(255, 255, 255, 0.9);
 }
 
 /* -- SFTP Toggle Button -- */
-[data-theme="light"] .sftp-toggle-btn {
+[data-theme^="light"] .sftp-toggle-btn {
     background: #ffffff;
     border: 1px solid rgba(0, 0, 0, 0.08);
     color: #8e8e93;
 }
 
-[data-theme="light"] .sftp-toggle-btn:hover {
+[data-theme^="light"] .sftp-toggle-btn:hover {
     background: #fafafa;
     color: #0ea5e9;
 }
 
 /* -- SFTP Upload Progress -- */
-[data-theme="light"] .sftp-upload-progress {
+[data-theme^="light"] .sftp-upload-progress {
     background: rgba(56, 189, 248, 0.04);
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .sftp-upload-progress-bar {
+[data-theme^="light"] .sftp-upload-progress-bar {
     background: rgba(56, 189, 248, 0.1);
 }
 
-[data-theme="light"] .sftp-upload-text {
+[data-theme^="light"] .sftp-upload-text {
     color: #8e8e93;
 }
 
 /* -- SFTP Mkdir Input -- */
-[data-theme="light"] .sftp-mkdir-input {
+[data-theme^="light"] .sftp-mkdir-input {
     background: #fafafa;
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .sftp-mkdir-input input {
+[data-theme^="light"] .sftp-mkdir-input input {
     background: #ffffff;
     border: 1px solid rgba(56, 189, 248, 0.2);
     color: #3a3a3c;
 }
 
-[data-theme="light"] .sftp-mkdir-input button {
+[data-theme^="light"] .sftp-mkdir-input button {
     background: rgba(56, 189, 248, 0.08);
     border: 1px solid rgba(56, 189, 248, 0.2);
     color: #0ea5e9;
 }
 
-[data-theme="light"] .sftp-mkdir-input button:hover {
+[data-theme^="light"] .sftp-mkdir-input button:hover {
     background: rgba(56, 189, 248, 0.15);
 }
 
 /* -- SFTP Error -- */
-[data-theme="light"] .sftp-error {
+[data-theme^="light"] .sftp-error {
     background: rgba(239, 68, 68, 0.04);
     border-bottom: 1px solid rgba(239, 68, 68, 0.1);
 }

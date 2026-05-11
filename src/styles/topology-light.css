@@ -1,0 +1,286 @@
+/* ============================================================
+   Topology Light Mode — 전면 커버
+   - 기존 topology-sidebar.css의 Apple 인디고 → Ops 로열블루
+   - 레거시 변수(--bg-secondary 등)를 테마 토큰으로 매핑
+   - 사이드바/리스트/툴바 전체 라이트 스타일 적용
+   ============================================================ */
+
+/* 레거시 변수 → 테마 토큰 매핑 (라이트 모드일 때) */
+[data-theme^="light"] {
+  --bg-secondary: var(--theme-bg-secondary);
+  --bg-tertiary: var(--theme-bg-tertiary);
+  --border-color: var(--theme-border-default);
+  --text-primary: var(--theme-text-primary);
+  --text-secondary: var(--theme-text-secondary);
+  --text-tertiary: var(--theme-text-tertiary);
+}
+
+/* === 페이지 배경 === */
+html[data-theme^="light"] .topology-page-wrapper,
+html[data-theme^="light"] .topology-canvas-container,
+html[data-theme^="light"] .ut-canvas {
+  background-color: var(--theme-bg-primary) !important;
+}
+html[data-theme^="light"] .ut-main-content,
+html[data-theme^="light"] .ut-page,
+html[data-theme^="light"] .topology-main-content,
+html[data-theme^="light"] .topology-page-wrapper {
+  background-color: transparent !important;
+}
+
+/* === 사이드바 === */
+html[data-theme^="light"] .topology-sidebar {
+  background: var(--theme-bg-secondary);
+  border-right: 1px solid var(--theme-border-default);
+}
+html[data-theme^="light"] .topology-sidebar-wrapper {
+  background: var(--theme-bg-secondary);
+}
+html[data-theme^="light"] .topology-sidebars-wrapper {
+  background: transparent;
+}
+
+/* === 사이드바 토글 버튼 === */
+html[data-theme^="light"] .topology-sidebar-toggle {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  color: var(--theme-text-primary);
+  box-shadow: var(--theme-shadow-sm);
+}
+html[data-theme^="light"] .topology-sidebar-toggle:hover {
+  background: var(--theme-bg-hover);
+  color: var(--theme-accent-primary);
+  border-color: var(--theme-accent-primary);
+}
+
+/* === 사이드바 헤더 === */
+html[data-theme^="light"] .topology-sidebar-header {
+  background: var(--theme-bg-secondary);
+  border-bottom: 1px solid var(--theme-border-default);
+}
+html[data-theme^="light"] .topology-sidebar-header h3 {
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .topology-sidebar-badge {
+  background: var(--theme-bg-tertiary);
+  color: var(--theme-text-tertiary);
+  border: 1px solid var(--theme-border-subtle);
+}
+html[data-theme^="light"] .topology-sidebar-btn {
+  color: var(--theme-text-tertiary);
+}
+html[data-theme^="light"] .topology-sidebar-btn:hover {
+  background: var(--theme-bg-hover);
+  color: var(--theme-accent-primary);
+}
+
+/* === 서브헤더 === */
+html[data-theme^="light"] .topology-sidebar-subheader {
+  background: var(--theme-bg-tertiary);
+  border-bottom: 1px solid var(--theme-border-default);
+  color: var(--theme-text-secondary);
+}
+html[data-theme^="light"] .topology-sidebar-subheader i {
+  color: var(--theme-text-tertiary);
+}
+
+/* === 빈 상태 / 에러 상태 === */
+html[data-theme^="light"] .topology-empty-state,
+html[data-theme^="light"] .topology-error-state {
+  color: var(--theme-text-muted);
+}
+html[data-theme^="light"] .topology-empty-state i {
+  color: var(--theme-text-disabled);
+}
+
+/* === 그룹 트리 === */
+html[data-theme^="light"] .topology-group-item {
+  color: var(--theme-text-primary);
+  background: transparent;
+}
+html[data-theme^="light"] .topology-group-item:hover {
+  background: var(--theme-bg-hover);
+}
+html[data-theme^="light"] .topology-group-item.selected {
+  background: var(--theme-accent-bg);
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .topology-group-item .group-icon.default-icon {
+  color: var(--theme-text-tertiary);
+}
+html[data-theme^="light"] .topology-group-item:hover .group-icon.default-icon {
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .topology-group-item.selected .group-icon.default-icon,
+html[data-theme^="light"] .topology-group-item.selected .group-icon.custom-icon {
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .topology-group-item .group-name {
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .topology-group-item .group-count {
+  color: var(--theme-text-muted);
+  background: var(--theme-bg-tertiary);
+}
+
+/* === 토글 아이콘 === */
+html[data-theme^="light"] .topology-toggle-icon {
+  color: var(--theme-text-muted);
+}
+html[data-theme^="light"] .topology-toggle-icon:hover {
+  background: var(--theme-bg-hover);
+  color: var(--theme-text-primary);
+}
+
+/* === 장비 리스트 === */
+html[data-theme^="light"] .topology-device-item {
+  color: var(--theme-text-primary);
+  background: transparent;
+}
+html[data-theme^="light"] .topology-device-item:hover {
+  background: var(--theme-bg-hover);
+}
+html[data-theme^="light"] .topology-device-item.selected {
+  background: var(--theme-accent-bg);
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .topology-device-item .device-icon {
+  color: var(--theme-text-tertiary);
+}
+html[data-theme^="light"] .topology-device-item.selected .device-icon {
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .topology-device-item .device-name {
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .topology-device-item .device-ip {
+  color: var(--theme-text-muted);
+}
+html[data-theme^="light"] .topology-device-item .drag-handle {
+  color: var(--theme-text-muted);
+}
+
+/* === 메인 툴바 === */
+html[data-theme^="light"] .topology-main-content {
+  background: var(--theme-bg-primary);
+}
+html[data-theme^="light"] .topology-toolbar {
+  background: var(--theme-bg-secondary);
+  border-bottom: 1px solid var(--theme-border-default);
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .topology-toolbar-divider {
+  background: var(--theme-border-default);
+}
+html[data-theme^="light"] .topology-link-draft-badge {
+  background: var(--theme-warning-bg);
+  color: var(--theme-warning-text);
+  border: 1px solid var(--theme-warning-border);
+}
+
+/* === 멀티셀렉트 툴바 === */
+html[data-theme^="light"] .topology-multi-select-toolbar {
+  background: var(--theme-bg-tertiary);
+  border: 1px solid var(--theme-border-default);
+}
+html[data-theme^="light"] .topology-checkbox-label {
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .topology-checkbox-label:hover {
+  background: var(--theme-bg-hover);
+}
+html[data-theme^="light"] .topology-add-selected-btn {
+  background: var(--theme-accent-primary);
+  color: #ffffff;
+  border: none;
+}
+html[data-theme^="light"] .topology-add-selected-btn:hover {
+  background: var(--theme-accent-hover);
+}
+
+/* === 스크롤바 === */
+html[data-theme^="light"] .topology-sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+html[data-theme^="light"] .topology-sidebar-content::-webkit-scrollbar-thumb {
+  background: var(--theme-scrollbar-thumb);
+  border-radius: 3px;
+}
+html[data-theme^="light"] .topology-sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-scrollbar-thumb-hover);
+}
+
+/* === 모달 글래스 (기존 인디고 → 로열 블루) === */
+html[data-theme^="light"] .topology-modal-glass {
+  background: linear-gradient(135deg, var(--theme-bg-card) 0%, var(--theme-bg-secondary) 100%);
+  border: 1px solid var(--theme-border-default);
+  box-shadow: var(--theme-shadow-2xl);
+}
+html[data-theme^="light"] .topology-modal-title {
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .topology-modal-message {
+  color: var(--theme-text-secondary);
+}
+
+/* === 모달 버튼 — Ops 블루 === */
+html[data-theme^="light"] .topology-modal-btn-cancel {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .topology-modal-btn-cancel:hover {
+  background: var(--theme-bg-hover);
+  border-color: var(--theme-border-hover);
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .topology-modal-btn-primary {
+  background: var(--theme-accent-primary);
+  border: 1px solid var(--theme-accent-primary);
+  color: #ffffff;
+  box-shadow: var(--theme-shadow-accent);
+}
+html[data-theme^="light"] .topology-modal-btn-primary:hover {
+  background: var(--theme-accent-hover);
+  box-shadow: var(--theme-shadow-accent-lg);
+}
+
+/* === 상세 모달 === */
+html[data-theme^="light"] .topology-device-detail-modal {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  box-shadow: var(--theme-shadow-2xl);
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .topology-detail-title {
+  color: var(--theme-text-primary);
+  border-bottom: 1px solid var(--theme-border-default);
+}
+html[data-theme^="light"] .topology-detail-title i {
+  color: var(--theme-accent-primary);
+}
+html[data-theme^="light"] .topology-detail-close-btn {
+  background: transparent;
+  color: var(--theme-text-tertiary);
+}
+html[data-theme^="light"] .topology-detail-close-btn:hover {
+  background: var(--theme-danger-bg);
+  color: var(--theme-danger);
+}
+
+/* === 디테일 탭 === */
+html[data-theme^="light"] .topology-detail-tabs {
+  background: var(--theme-bg-tertiary);
+  border-bottom: 1px solid var(--theme-border-default);
+}
+html[data-theme^="light"] .topology-detail-tab {
+  color: var(--theme-text-tertiary);
+}
+html[data-theme^="light"] .topology-detail-tab:hover {
+  color: var(--theme-text-primary);
+  background: var(--theme-bg-hover);
+}
+html[data-theme^="light"] .topology-detail-tab.active {
+  color: var(--theme-accent-primary);
+  border-bottom-color: var(--theme-accent-primary);
+}

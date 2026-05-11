@@ -10,40 +10,8 @@ import { useAlert } from '../components/CustomAlert';
 import { historyApi } from '../api/history';
 import '../styles/MiddlewareManagement.css';
 
-const STATUS_LABEL = {
-  ACTIVE: 'ACTIVE',
-  DOWN: 'DOWN',
-  MAINTENANCE: 'MAINTENANCE',
-};
-
-const STATUS_CLASS = {
-  ACTIVE: 'mw-status-active',
-  DOWN: 'mw-status-down',
-  MAINTENANCE: 'mw-status-maintenance',
-};
-
-const EMPTY_FORM = {
-  middlewareName: '',
-  middlewareUrl: '',
-  apiKey: '',
-  priority: 0,
-  description: '',
-};
-
-function formatDatetime(value) {
-  if (!value) return '-';
-  try {
-    return new Date(value).toLocaleString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return value;
-  }
-}
+import { STATUS_LABEL, STATUS_CLASS, EMPTY_FORM } from '../features/middleware-management/model/constants';
+import { formatDateTimeKo as formatDatetime } from '../shared/lib/format';
 
 function maskApiKey(key) {
   if (!key) return '-';
@@ -200,10 +168,6 @@ export default function MiddlewareManagement() {
           <span className="page-subtitle">Go Middleware 수집 서버를 등록하고 관리합니다</span>
         </div>
         <div className="page-header-right">
-          <button className="mw-btn mw-btn-primary" onClick={openAddModal}>
-            <i className="bi bi-plus-lg" />
-            수집 서버 추가
-          </button>
         </div>
       </div>
 
@@ -217,10 +181,7 @@ export default function MiddlewareManagement() {
         <div className="mw-empty-state">
           <i className="bi bi-hdd-rack" />
           <p>등록된 수집 서버가 없습니다</p>
-          <button className="mw-btn mw-btn-ghost" onClick={openAddModal}>
-            <i className="bi bi-plus-lg" />
-            첫 번째 수집 서버 추가
-          </button>
+          <span style={{ color: '#64748b', fontSize: 13 }}>수집 서버 실행 시 자동으로 등록됩니다</span>
         </div>
       ) : (
         <div className="mw-card-grid">
@@ -345,7 +306,7 @@ export default function MiddlewareManagement() {
             <div className="mw-modal-header">
               <h2>
                 <i className={`bi ${editingItem ? 'bi-pencil-square' : 'bi-plus-circle'}`} />
-                {editingItem ? '수집 서버 수정' : '수집 서버 추가'}
+                수집 서버 수정
               </h2>
               <button className="mw-modal-close" onClick={closeModal}>
                 <i className="bi bi-x-lg" />

@@ -351,6 +351,7 @@ export default function AssetConfigDetail() {
               <i className="bi bi-file-diff"></i>
               Config 정보 비교
             </h1>
+            <span className="page-subtitle">이전/오늘 설정 파일 diff</span>
             <span className="selected-group-badge">
               <i className="bi bi-hdd-network"></i>
               {deviceName ? `${deviceName} (${deviceIp})` : `장비 ID: ${deviceId}`}
@@ -1165,6 +1166,102 @@ export default function AssetConfigDetail() {
         [data-theme="light"] .diff-table-header span {
           color: #8e8e93;
         }
+
+        /* Config 본문 / Diff 본문 텍스트 */
+        [data-theme="light"] .config-text,
+        [data-theme="light"] .diff-text {
+          color: #1d1d1f;
+        }
+        [data-theme="light"] .line-content {
+          color: #1d1d1f;
+        }
+        [data-theme="light"] .line-number {
+          color: #8e8e93;
+          border-right-color: rgba(0, 0, 0, 0.06);
+        }
+        [data-theme="light"] .config-line:hover {
+          background: rgba(79, 70, 229, 0.06);
+        }
+
+        /* Diff 라인 번호 (old/new) */
+        [data-theme="light"] .diff-line-number.old {
+          color: #dc2626;
+        }
+        [data-theme="light"] .diff-line-number.new {
+          color: #059669;
+        }
+        [data-theme="light"] .diff-line.unchanged .diff-line-number.old,
+        [data-theme="light"] .diff-line.unchanged .diff-line-number.new {
+          color: #8e8e93;
+        }
+
+        /* Diff prefix / content 색 */
+        [data-theme="light"] .diff-line.added .diff-prefix { color: #059669; }
+        [data-theme="light"] .diff-line.removed .diff-prefix { color: #dc2626; }
+        [data-theme="light"] .diff-line.added .diff-content { color: #047857; }
+        [data-theme="light"] .diff-line.removed .diff-content {
+          color: #b91c1c;
+          text-decoration-color: rgba(185, 28, 28, 0.5);
+        }
+        [data-theme="light"] .diff-line.unchanged:hover {
+          background: rgba(0, 0, 0, 0.04);
+        }
+        [data-theme="light"] .diff-line.fold {
+          background: rgba(79, 70, 229, 0.08);
+          border-left-color: #4f46e5;
+        }
+        [data-theme="light"] .diff-fold-info {
+          color: #4f46e5;
+        }
+
+        /* no-diff (변경 없음) */
+        [data-theme="light"] .no-diff p { color: #1d1d1f; }
+        [data-theme="light"] .no-diff-sub { color: #8e8e93; }
+        [data-theme="light"] .no-diff i { color: #059669; }
+
+        /* 범례 / 토글 */
+        [data-theme="light"] .legend-item { color: #8e8e93; }
+        [data-theme="light"] .legend-item.added .legend-color {
+          background: rgba(5, 150, 105, 0.2);
+          border-color: #059669;
+        }
+        [data-theme="light"] .legend-item.removed .legend-color {
+          background: rgba(220, 38, 38, 0.2);
+          border-color: #dc2626;
+        }
+        [data-theme="light"] .toggle-compact { color: #3a3a3c; }
+
+        /* 날짜 피커 */
+        [data-theme="light"] .config-date-picker {
+          background: #ffffff;
+          border-color: rgba(0, 0, 0, 0.12);
+          color: #1d1d1f;
+        }
+        [data-theme="light"] .config-date-picker:hover {
+          border-color: rgba(79, 70, 229, 0.5);
+          background: #fafafa;
+        }
+        [data-theme="light"] .config-date-picker:focus {
+          border-color: #4f46e5;
+        }
+        [data-theme="light"] .config-date-picker::-webkit-calendar-picker-indicator {
+          filter: none;
+          opacity: 0.55;
+        }
+
+        /* 스크롤바 */
+        [data-theme="light"] .config-panel-content::-webkit-scrollbar-track {
+          background: #f5f5f7;
+        }
+        [data-theme="light"] .config-panel-content::-webkit-scrollbar-thumb {
+          background: rgba(0, 0, 0, 0.18);
+        }
+        [data-theme="light"] .config-panel-content::-webkit-scrollbar-thumb:hover {
+          background: rgba(0, 0, 0, 0.28);
+        }
+
+        /* Config 빈 상태 / 헤더 구분선 (다크 기본 border 위장) */
+        [data-theme="light"] .config-empty { color: #8e8e93; }
       `}</style>
 
       {/* Config 수집 모달 (로딩 → 결과 전환) */}

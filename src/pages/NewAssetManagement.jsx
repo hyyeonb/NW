@@ -2,7 +2,8 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import GroupTree from '../components/GroupTree';
 import apiClient from '../api/client';
-import { devicesApi, groupsApi } from '../api';
+import { devicesApi } from '../api/devices';
+import { groupsApi } from '../api/groups';
 import { useAlert } from '../components/CustomAlert';
 
 export default function NewAssetManagement() {
@@ -556,17 +557,9 @@ export default function NewAssetManagement() {
     });
 
     const processedIps = new Set();
+    const CONCURRENCY = 10; // 동시 등록 요청 수 (백엔드 SNMP probe 대기 시간 분산)
 
-    for (let i = 0; i < devices.length; i++) {
-      const device = devices[i];
-
-      // 진행 상태 업데이트 (현재 처리 중인 장비)
-      setRegistrationProgress((prev) => ({
-        ...prev,
-        current: i + 1,
-        currentDevice: device.DEVICE_NAME,
-      }));
-
+    const registerOne = async (device) => {
       try {
         const response = await apiClient.post('/mgmt/devices/direct', {
           DEVICE_NAME: device.DEVICE_NAME,
@@ -580,32 +573,35 @@ export default function NewAssetManagement() {
           SNMP_PRIV_PROTOCOL: device.SNMP_PRIV_PROTOCOL || null,
           SNMP_PRIV_PASSWORD: device.SNMP_PRIV_PASSWORD || null,
           GROUP_ID: device.GROUP_ID,
-          // 수집 설정 (사용자가 선택한 값 그대로 전달)
           COLLECT_PING: device.COLLECT_PING === true,
           COLLECT_SNMP: device.COLLECT_SNMP === true,
           COLLECT_AGENT: device.COLLECT_AGENT === true,
         });
 
         const data = response.data?.data || response.data;
-
-        if (data.successList && data.successList.length > 0) {
-          // 실시간으로 성공 목록에 추가
+        if (data?.successList?.length > 0) {
           setRegistrationProgress((prev) => ({
             ...prev,
+            current: prev.current + 1,
             successList: [...prev.successList, ...data.successList],
           }));
           processedIps.add(device.DEVICE_IP);
-        } else if (data.failureList && data.failureList.length > 0) {
-          // 실시간으로 실패 목록에 추가
+        } else if (data?.failureList?.length > 0) {
           setRegistrationProgress((prev) => ({
             ...prev,
+            current: prev.current + 1,
             failureList: [...prev.failureList, ...data.failureList],
+          }));
+        } else {
+          setRegistrationProgress((prev) => ({
+            ...prev,
+            current: prev.current + 1,
           }));
         }
       } catch (error) {
-        // 실시간으로 실패 목록에 추가
         setRegistrationProgress((prev) => ({
           ...prev,
+          current: prev.current + 1,
           failureList: [
             ...prev.failureList,
             {
@@ -616,7 +612,18 @@ export default function NewAssetManagement() {
           ],
         }));
       }
-    }
+    };
+
+    // 동시성 제한 워커 풀 — 큐에서 하나씩 뽑아 처리
+    const queue = [...devices];
+    const workers = Array.from({ length: Math.min(CONCURRENCY, devices.length) }, async () => {
+      while (queue.length > 0) {
+        const device = queue.shift();
+        if (!device) break;
+        await registerOne(device);
+      }
+    });
+    await Promise.all(workers);
 
     // 성공한 장비의 TEMP_DEVICE_ID 수집 (TEMP 테이블에서 삭제용)
     const successfulTempIds = devices
@@ -627,7 +634,6 @@ export default function NewAssetManagement() {
     if (successfulTempIds.length > 0) {
       try {
         await devicesApi.deleteTempDevices(successfulTempIds);
-        console.log(`${successfulTempIds.length}개 임시 장비 삭제됨`);
       } catch (error) {
         console.error('임시 장비 삭제 오류:', error);
       }
@@ -640,7 +646,6 @@ export default function NewAssetManagement() {
     setRegistrationProgress((prev) => ({
       ...prev,
       isComplete: true,
-      currentDevice: null,
     }));
 
     // 자산 관리 페이지로 이동 시 캐시 갱신을 위해 devices 캐시 무효화
@@ -1206,9 +1211,6 @@ export default function NewAssetManagement() {
                 </div>
                 <div className="progress-text">
                   {registrationProgress.current} / {registrationProgress.total}
-                  {registrationProgress.currentDevice && (
-                    <span className="current-device"> - {registrationProgress.currentDevice} 처리 중...</span>
-                  )}
                 </div>
               </div>
             )}
@@ -1258,7 +1260,9 @@ export default function NewAssetManagement() {
                             </td>
                             <td>{device.systemName || '-'}</td>
                             <td>{device.vendorName || '-'}</td>
-                            <td className="desc-column" title={device.deviceDesc}>{device.deviceDesc || '-'}</td>
+                            <td className="desc-column">
+                              <span className="desc-tooltip-host" data-tooltip={device.deviceDesc || ''}>{device.deviceDesc || '-'}</span>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -1339,23 +1343,23 @@ export default function NewAssetManagement() {
 
       {/* 그룹 선택 모달 */}
       {showGroupModal && (
-        <div className="modal" style={{
+        <div className="modal new-asset-group-modal" style={{
           display: 'flex',
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
+          backgroundColor: 'var(--theme-modal-backdrop, rgba(0,0,0,0.7))',
           zIndex: 1000,
           alignItems: 'center',
           justifyContent: 'center'
         }}>
-          <div style={{
-            background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
+          <div className="new-asset-group-modal-content" style={{
+            background: 'var(--theme-bg-elevated, linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%))',
             borderRadius: '16px',
             padding: '24px',
             width: '400px',
             maxHeight: '80vh',
-            border: '1px solid rgba(255,255,255,0.1)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            border: '1px solid var(--theme-border-default, rgba(255,255,255,0.1))',
+            boxShadow: 'var(--theme-shadow-lg, 0 25px 50px -12px rgba(0, 0, 0, 0.5))',
             position: 'relative'
           }}>
             <span
@@ -1366,14 +1370,14 @@ export default function NewAssetManagement() {
                 right: '16px',
                 fontSize: '24px',
                 cursor: 'pointer',
-                color: '#94a3b8'
+                color: 'var(--theme-text-tertiary, #94a3b8)'
               }}
             >&times;</span>
-            <h3 style={{ marginBottom: '16px', color: '#f1f5f9', fontSize: '18px' }}>
+            <h3 style={{ marginBottom: '16px', color: 'var(--theme-text-primary, #f1f5f9)', fontSize: '18px' }}>
               <i className="bi bi-folder-symlink" style={{ marginRight: '8px' }}></i>
               {groupModalTarget === 'bulk' ? '일괄 그룹 지정' : '그룹 선택'}
             </h3>
-            <p style={{ color: '#94a3b8', marginBottom: '16px', fontSize: '14px' }}>
+            <p style={{ color: 'var(--theme-text-tertiary, #94a3b8)', marginBottom: '16px', fontSize: '14px' }}>
               {groupModalTarget === 'bulk'
                 ? `${selectedDeviceIds.size}개의 장비에 적용할 그룹을 선택하세요.`
                 : '장비에 적용할 그룹을 선택하세요.'}
@@ -1391,8 +1395,8 @@ export default function NewAssetManagement() {
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                <i className="bi bi-folder2" style={{ color: '#60a5fa' }}></i>
-                <span style={{ color: '#e2e8f0', fontSize: '14px' }}>
+                <i className="bi bi-folder2" style={{ color: 'var(--theme-accent-light, #60a5fa)' }}></i>
+                <span style={{ color: 'var(--theme-text-secondary, #e2e8f0)', fontSize: '14px' }}>
                   선택: <strong>{tempSelectedGroup.GROUP_NAME}</strong>
                 </span>
               </div>
@@ -1402,9 +1406,9 @@ export default function NewAssetManagement() {
             <div style={{
               maxHeight: '300px',
               overflowY: 'auto',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--theme-border-default, rgba(255,255,255,0.1))',
               borderRadius: '8px',
-              background: 'rgba(15, 23, 42, 0.6)',
+              background: 'var(--theme-bg-panel, rgba(15, 23, 42, 0.6))',
               marginBottom: '16px'
             }}>
               <GroupTree

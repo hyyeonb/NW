@@ -8,7 +8,8 @@
    헤더가 상단에 고정, 아래에 패널 래퍼
    ================== */
 .group-management-container,
-.asset-management-container {
+.asset-management-container,
+.asset-config-container {
     max-width: 100%;
     margin: var(--spacing-3) 0 0;
     padding: 0 var(--spacing-5);
@@ -241,46 +242,131 @@
     border-bottom: none;
 }
 
-/* Page Header (통합 헤더 스타일) */
+/* ==================
+   Page Header (통합 규격)
+   ==================
+   구조:
+   <div class="page-header">
+     <div class="page-header-left">
+       <h1 class="page-title"><i class="bi bi-..."/> 페이지 제목</h1>
+       <span class="page-subtitle">간략 설명</span>
+     </div>
+     <div class="page-header-right">...액션 버튼...</div>
+   </div>
+*/
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--spacing-3);
+    gap: var(--spacing-4);
+    margin-bottom: var(--spacing-4);
     padding-bottom: var(--spacing-3);
-    border-bottom: 1px solid var(--theme-border-subtle);
+    border-bottom: 1px solid var(--theme-border-default);
     flex-shrink: 0;
+    flex-wrap: wrap;
 }
 
 .page-header-left {
     display: flex;
-    align-items: baseline;
-    gap: var(--spacing-4);
+    align-items: center;
+    gap: var(--spacing-3);
     flex-wrap: wrap;
+    min-width: 0;
 }
 
 .page-title {
     font-size: var(--font-size-h2);
     font-weight: var(--font-weight-bold);
     color: var(--theme-text-primary);
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: var(--spacing-3);
+    gap: 10px;
     margin: 0;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
 }
 
+/* 헤더 아이콘 — 카테고리 색상 변수 사용, 없으면 인디고 fallback */
 .page-title i {
-    color: var(--theme-accent-light);
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--ch-bg, rgba(99, 102, 241, 0.15));
+    border: 1px solid var(--ch-bd, rgba(99, 102, 241, 0.30));
+    border-radius: 10px;
+    color: var(--ch-lc, #818cf8);
+    font-size: 16px;
+    line-height: 1;
+    flex-shrink: 0;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+[data-theme^="light"] .page-title i {
+    background: var(--ch-bg, rgba(99, 102, 241, 0.10));
+    border-color: var(--ch-bd, rgba(99, 102, 241, 0.25));
+    color: var(--ch-lc, #4f46e5);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* 페이지 헤더 하단선 */
+.page-header {
+    border-bottom-color: var(--theme-border-default);
+}
+
+[data-theme^="light"] .page-header {
+    border-bottom-color: color-mix(in srgb, var(--cc, #6366f1) 15%, transparent);
+}
+
+[data-theme="dark"] .page-header {
+    border-bottom-color: color-mix(in srgb, var(--cc, #818cf8) 18%, transparent);
 }
 
 .page-subtitle {
+    position: relative;
     font-size: var(--font-size-body);
     color: var(--theme-text-muted);
+    font-weight: 400;
+    line-height: 1.4;
+    padding-left: var(--spacing-3);
+}
+
+.page-subtitle::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 15%;
+    bottom: 15%;
+    width: 1px;
+    background: var(--theme-border-default);
 }
 
 .page-header-right {
     display: flex;
     gap: var(--spacing-2);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        gap: var(--spacing-2);
+        margin-bottom: var(--spacing-3);
+    }
+
+    .page-title {
+        font-size: var(--font-size-h3, 1.25rem);
+    }
+
+    .page-subtitle {
+        padding-left: 0;
+    }
+
+    .page-subtitle::before {
+        display: none;
+    }
 }
 
 .selected-group-badge {
@@ -429,3 +515,4 @@
         gap: var(--spacing-3);
     }
 }
+

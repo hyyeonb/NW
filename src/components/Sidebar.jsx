@@ -1,81 +1,9 @@
 import { useState, useRef, useEffect, memo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuthStore, useThemeStore, usePermissionStore } from '../stores';
-
-// 메뉴 구조 — pageCode 추가
-const MENU_ITEMS = [
-  {
-    icon: 'bi-speedometer2',
-    label: '대시보드',
-    children: [
-      { label: '통합 대시보드', path: '/dashboard', icon: 'bi-grid-1x2', pageCode: 'dashboard' },
-      { label: '토폴로지', path: '/topology', icon: 'bi-diagram-3', pageCode: 'topology' },
-    ],
-  },
-  {
-    icon: 'bi-activity',
-    label: '성능감시',
-    children: [
-      { label: '실시간 성능감시', path: '/watch/realtime', icon: 'bi-speedometer', pageCode: 'watch_realtime' },
-      { label: '성능 통계', path: '/perf/stats', icon: 'bi-bar-chart-line', pageCode: 'perf_stats' },
-    ],
-  },
-  {
-    icon: 'bi-exclamation-triangle',
-    label: '장애감시',
-    children: [
-      { label: '실시간 장애감시', path: '/fault/realtime', icon: 'bi-broadcast', pageCode: 'fault_realtime' },
-      { label: '장애이력', path: '/fault/history', icon: 'bi-clock-history', pageCode: 'fault_history' },
-      { label: '장애통계', path: '/fault/stats', icon: 'bi-bar-chart-line', pageCode: 'fault_stats' },
-    ],
-  },
-  {
-    icon: 'bi-gear',
-    label: '종합분석',
-    children: [
-      { label: '그룹 관리', path: '/mgmt/groups', icon: 'bi-folder', pageCode: 'group_mgmt' },
-      { label: '자산 관리', path: '/mgmt/assets', icon: 'bi-hdd-network', pageCode: 'asset_mgmt' },
-      { label: '자산 Config 관리', path: '/mgmt/asset-config', icon: 'bi-sliders', pageCode: 'asset_config' },
-      { label: '신규 자산 관리', path: '/mgmt/new-assets', icon: 'bi-plus-circle', pageCode: 'new_asset_mgmt' },
-      { label: '모델 관리', path: '/mgmt/models', icon: 'bi-cpu', pageCode: 'model_mgmt' },
-    ],
-  },
-  {
-    icon: 'bi-clock-history',
-    label: '이력 관리',
-    children: [
-      { label: '로그인 이력', path: '/history/login', icon: 'bi-box-arrow-in-right', pageCode: 'login_history' },
-      { label: 'SSH 접속 이력', path: '/history/ssh-sessions', icon: 'bi-terminal', pageCode: 'ssh_sessions' },
-    ],
-  },
-  {
-    icon: 'bi-tools',
-    label: '네트워크 도구',
-    children: [
-      { label: 'Traceroute', path: '/tools/traceroute', icon: 'bi-signpost-split', pageCode: 'traceroute' },
-    ],
-  },
-  {
-    icon: 'bi-clipboard2-data',
-    label: '게시판',
-    children: [
-      { label: '자료실', path: '/board/files', icon: 'bi-folder2-open', pageCode: 'board_files' },
-      { label: '공지사항', path: '/board/notices', icon: 'bi-megaphone', pageCode: 'board_notices' },
-    ],
-  },
-  {
-    icon: 'bi-gear-fill',
-    label: '설정',
-    children: [
-      { label: '테마 설정', icon: 'bi-palette', isThemeToggle: true },
-      { label: '계정 설정', path: '/settings/account', icon: 'bi-person-gear' },
-      { label: '알림 설정', path: '/settings/notifications', icon: 'bi-bell' },
-      { label: '사용자 관리', path: '/settings/admin', icon: 'bi-shield-lock', pageCode: 'system_admin' },
-      { label: '임계치 관리', path: '/settings/threshold', icon: 'bi-speedometer2', pageCode: 'system_admin' },
-      { label: '수집 서버 관리', path: '/settings/middleware', icon: 'bi-hdd-network', pageCode: 'system_admin' },
-    ],
-  },
-];
+import { useAuthStore } from '../stores/authStore';
+import { useThemeStore } from '../stores/themeStore';
+import { usePermissionStore } from '../stores/permissionStore';
+import { MENU_ITEMS } from '../features/sidebar/model/menuItems';
 
 export default memo(function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
@@ -166,7 +94,11 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
         <Link to="/dashboard">
           <img src="/logo-single.svg" alt="Logo" className="logo-single logo-animated" />
           {!collapsed && (
-            <img src="/logo-text-dark.svg" alt="InfoMap" className="logo-text" />
+            <img
+              src={resolvedTheme === 'light' ? '/logo-text-light.svg' : '/logo-text-dark.svg'}
+              alt="InfoMap"
+              className="logo-text"
+            />
           )}
         </Link>
       </div>
@@ -179,16 +111,20 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
             if (item.children && visibleChildren.length === 0) return null;
 
             return (
-            <li key={index} className={`menu-item ${visibleChildren.length > 0 ? 'has-children' : ''} ${isChildActive(visibleChildren) ? 'child-active' : ''}`}>
+            <li key={index} className={`menu-item ${item.colorClass || ''} ${visibleChildren.length > 0 ? 'has-children' : ''} ${isChildActive(visibleChildren) ? 'child-active' : ''}`}>
               {item.path ? (
-                <Link
-                  to={item.path}
+                <a
+                  href={item.path}
                   className={`menu-link ${isActive(item.path) ? 'active' : ''}`}
                   title={collapsed ? item.label : ''}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate(item.path, { state: { _refresh: Date.now() }, replace: location.pathname === item.path });
+                  }}
                 >
-                  <i className={`bi ${item.icon}`}></i>
+                  <div className="icon-box"><i className={`bi ${item.icon}`}></i></div>
                   {!collapsed && <span>{item.label}</span>}
-                </Link>
+                </a>
               ) : (
                 <>
                   <div
@@ -196,7 +132,7 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
                     onClick={() => handleMenuClick(index, true)}
                     title={collapsed ? item.label : ''}
                   >
-                    <i className={`bi ${item.icon}`}></i>
+                    <div className="icon-box"><i className={`bi ${item.icon}`}></i></div>
                     {!collapsed && (
                       <>
                         <span>{item.label}</span>
@@ -210,15 +146,24 @@ export default memo(function Sidebar({ collapsed, onToggle }) {
                       {visibleChildren.map((child, childIndex) => (
                         <li key={childIndex}>
                           {child.isThemeToggle ? (
-                            <div
-                              className="submenu-link theme-toggle-item"
-                              onClick={toggleTheme}
-                            >
-                              {child.icon && <i className={`bi ${child.icon}`}></i>}
-                              <span>{child.label}</span>
-                              <div className="theme-toggle-switch">
-                                <i className={`bi ${resolvedTheme === 'dark' ? 'bi-moon-fill' : 'bi-sun-fill'}`}></i>
-                                <span className="theme-label">{resolvedTheme === 'dark' ? '다크' : '라이트'}</span>
+                            <div className="submenu-link theme-toggle-item">
+                              <div className="theme-toggle-segmented" role="group">
+                                <button
+                                  type="button"
+                                  className={`theme-seg ${resolvedTheme === 'light' ? 'active' : ''}`}
+                                  onClick={(e) => { e.stopPropagation(); if (resolvedTheme !== 'light') toggleTheme(); }}
+                                >
+                                  <i className="bi bi-sun-fill"></i>
+                                  <span>라이트</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`theme-seg ${resolvedTheme === 'dark' ? 'active' : ''}`}
+                                  onClick={(e) => { e.stopPropagation(); if (resolvedTheme !== 'dark') toggleTheme(); }}
+                                >
+                                  <i className="bi bi-moon-fill"></i>
+                                  <span>다크</span>
+                                </button>
                               </div>
                             </div>
                           ) : (

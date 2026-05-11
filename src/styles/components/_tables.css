@@ -189,7 +189,7 @@
 .tooltip-text {
     visibility: hidden;
     position: absolute;
-    z-index: 100;
+    z-index: var(--z-dropdown);
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
@@ -423,7 +423,7 @@
 
 .column-filter-dropdown {
     position: fixed;
-    z-index: 10000;
+    z-index: var(--z-modal);
     min-width: 90px;
     max-height: 250px;
     display: flex;
@@ -496,24 +496,24 @@
 }
 
 /* Light theme */
-[data-theme="light"] .column-filter-dropdown {
+[data-theme^="light"] .column-filter-dropdown {
     background: rgba(255, 255, 255, 0.97);
     border-color: rgba(0, 0, 0, 0.1);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
 
-[data-theme="light"] .filter-item {
+[data-theme^="light"] .filter-item {
     color: #1c1c1e;
 }
 
-[data-theme="light"] .filter-item:hover {
+[data-theme^="light"] .filter-item:hover {
     background: rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .filter-all {
+[data-theme^="light"] .filter-all {
     border-bottom-color: rgba(0, 0, 0, 0.08);
 }
 
-[data-theme="light"] .filter-list::-webkit-scrollbar-thumb {
+[data-theme^="light"] .filter-list::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.15);
 }

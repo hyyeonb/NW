@@ -26,6 +26,10 @@
     min-width: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    background: var(--theme-bg-panel);
+    border-radius: var(--radius-3xl);
+    border: 1px solid var(--theme-border-subtle);
+    box-shadow: var(--theme-shadow-sm);
 }
 
 /* Summary 7칸 그리드 (기본 6칸 → 7칸 오버라이드) */
@@ -121,8 +125,8 @@
 }
 
 .snapshot-card-name {
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 700;
     color: #f8fafc;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -281,59 +285,73 @@
    Light Mode Overrides
    ================== */
 
+/* -- 패널 white card (장애 통계와 동일) -- */
+html[data-theme^="light"] .perf-stats-content {
+    background: #ffffff !important;
+    border: 1px solid rgba(15, 23, 42, 0.07) !important;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08), 0 1px 4px rgba(15, 23, 42, 0.04) !important;
+    border-radius: calc(var(--radius-2xl) - 4px) !important;
+    padding: 4px !important;
+}
+html[data-theme^="light"] .perf-stats-container {
+    padding: 0 var(--spacing-5);
+    margin-top: var(--spacing-3);
+}
+
 /* -- Custom Range Picker -- */
-[data-theme="light"] .custom-range-input {
+[data-theme^="light"] .custom-range-input {
     background: #ffffff;
     border: 1px solid rgba(0, 0, 0, 0.08);
     color: #1d1d1f;
 }
 
-[data-theme="light"] .custom-range-input:focus {
+[data-theme^="light"] .custom-range-input:focus {
     border-color: rgba(79, 70, 229, 0.5);
     box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
 }
 
-[data-theme="light"] .custom-range-input::-webkit-calendar-picker-indicator {
+[data-theme^="light"] .custom-range-input::-webkit-calendar-picker-indicator {
     filter: none;
 }
 
-[data-theme="light"] .custom-range-separator {
+[data-theme^="light"] .custom-range-separator {
     color: #aeaeb2;
 }
 
 /* -- Snapshot Cards -- */
-[data-theme="light"] .snapshot-card {
+[data-theme^="light"] .snapshot-card {
     background: rgba(255, 255, 255, 0.95);
     border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .snapshot-card:hover {
+[data-theme^="light"] .snapshot-card:hover {
     background: #ffffff;
     border-color: rgba(0, 0, 0, 0.1);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
 }
 
-[data-theme="light"] .snapshot-card-header {
+[data-theme^="light"] .snapshot-card-header {
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .snapshot-card-name {
+[data-theme^="light"] .snapshot-card-name {
     color: #1d1d1f;
 }
 
-[data-theme="light"] .snapshot-card-ip {
-    color: #aeaeb2;
+[data-theme^="light"] .snapshot-card-ip {
+    color: #2d3748;
+    font-weight: 600;
 }
 
-[data-theme="light"] .snapshot-metric-label {
+[data-theme^="light"] .snapshot-metric-label {
     color: #8e8e93;
 }
 
-[data-theme="light"] .snapshot-progress {
+[data-theme^="light"] .snapshot-progress {
     background: rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .snapshot-traffic-row {
+[data-theme^="light"] .snapshot-traffic-row {
     border-top: 1px solid rgba(0, 0, 0, 0.04);
     color: #8e8e93;
 }

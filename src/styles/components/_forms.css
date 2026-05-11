@@ -122,15 +122,15 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
 }
 
-[data-theme="light"] input[type="date"],
-[data-theme="light"] input[type="time"],
-[data-theme="light"] input[type="datetime-local"] {
+[data-theme^="light"] input[type="date"],
+[data-theme^="light"] input[type="time"],
+[data-theme^="light"] input[type="datetime-local"] {
     color-scheme: light;
 }
 
-[data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator,
-[data-theme="light"] input[type="time"]::-webkit-calendar-picker-indicator,
-[data-theme="light"] input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+[data-theme^="light"] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme^="light"] input[type="time"]::-webkit-calendar-picker-indicator,
+[data-theme^="light"] input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     filter: none;
 }
 

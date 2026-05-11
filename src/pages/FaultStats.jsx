@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import ReactECharts from 'echarts-for-react';
+import SafeECharts from '../components/SafeECharts';
 import DatePicker from 'react-datepicker';
 import { ko } from 'date-fns/locale';
 import { format, subDays } from 'date-fns';
@@ -9,32 +9,18 @@ import { devicesApi } from '../api/devices';
 import WatchSidebar from '../components/WatchSidebar';
 import PdfPreviewModal from '../components/PdfPreviewModal';
 import { useWatchGroupDetail } from '../hooks/useWatch';
+import { useThemeStore } from '../stores/themeStore';
+import { getChartTheme } from '../constants/chartTheme';
 import '../styles/fault-stats.css';
+import { PERIOD_OPTIONS, LEVEL_MAP, LEVEL_COLORS, TYPE_COLORS, DOW_LABELS } from '../features/fault-stats/model/constants';
+import { formatDuration } from '../shared/lib/duration';
 
-const PERIOD_OPTIONS = [
-  { label: '오늘', days: 0 },
-  { label: '7일', days: 7 },
-  { label: '30일', days: 30 },
-  { label: '90일', days: 90 },
-];
-
-const LEVEL_MAP = { C: 'Critical', M: 'Major', N: 'Minor', W: 'Warning' };
-const LEVEL_COLORS = { C: '#ef4444', M: '#f97316', N: '#eab308', W: '#3b82f6' };
-const TYPE_COLORS = {
-  PING: '#ef4444', SNMP: '#f97316', CPU: '#8b5cf6',
-  MEMORY: '#3b82f6', PORT: '#06b6d4', TRAFFIC: '#10b981',
-};
-const DOW_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
-
-function formatDuration(seconds) {
-  if (!seconds || seconds <= 0) return '-';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}시간 ${m}분`;
-  return `${m}분`;
-}
 
 export default function FaultStats() {
+  const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
+  const chartTheme = getChartTheme(resolvedTheme);
+  const isLightTheme = resolvedTheme?.startsWith('light');
+  const donutBorderColor = isLightTheme ? '#ffffff' : 'rgba(15,15,35,0.8)';
   const [periodIdx, setPeriodIdx] = useState(2); // 기본 30일
   const [customStart, setCustomStart] = useState(null);
   const [customEnd, setCustomEnd] = useState(null);
@@ -93,8 +79,8 @@ export default function FaultStats() {
   const effectiveDeviceIds = canFetch ? deviceIdsParam : undefined;
 
   const { data: summaryData, isLoading: summaryLoading } = useQuery({
-    queryKey: ['faultStats', 'summary', effectiveDeviceIds],
-    queryFn: () => faultApi.getStatsSummary({ deviceIds: effectiveDeviceIds }).then(r => r.data?.data),
+    queryKey: ['faultStats', 'summary', startDate, endDate, effectiveDeviceIds],
+    queryFn: () => faultApi.getStatsSummary({ ...dateParams, deviceIds: effectiveDeviceIds }).then(r => r.data?.data),
     enabled: canFetch,
     refetchInterval: 60000,
   });
@@ -125,12 +111,15 @@ export default function FaultStats() {
 
   // 등급별 카운트
   const levelCounts = useMemo(() => {
-    const map = { C: 0, M: 0, N: 0, W: 0 };
+    const map = { C: 0, M: 0, N: 0, W: 0, UNKNOWN: 0 };
     (summaryData?.byLevel || []).forEach(r => { map[r.LEVEL_CODE] = Number(r.CNT); });
     return map;
   }, [summaryData]);
 
-  const totalActive = Object.values(levelCounts).reduce((a, b) => a + b, 0);
+  const totalActive = useMemo(
+    () => (summaryData?.byLevel || []).reduce((sum, r) => sum + Number(r.CNT), 0),
+    [summaryData]
+  );
 
   // 기간 선택 핸들러
   const handlePeriod = useCallback((idx) => {
@@ -151,25 +140,25 @@ export default function FaultStats() {
     return {
       tooltip: {
         trigger: 'item',
-        backgroundColor: 'rgba(15, 15, 35, 0.95)',
-        borderColor: 'rgba(255,255,255,0.1)',
-        textStyle: { color: '#f8fafc' },
+        backgroundColor: chartTheme.tooltipBg,
+        borderColor: chartTheme.tooltipBorder,
+        textStyle: { color: chartTheme.textPrimary },
         formatter: '{b}: {c}건 ({d}%)',
       },
       legend: {
         orient: 'vertical', right: 10, top: 'center',
-        textStyle: { color: '#94a3b8', fontSize: 12 },
+        textStyle: { color: chartTheme.legendText, fontSize: 12 },
       },
       series: [{
         type: 'pie', radius: ['45%', '70%'], center: ['35%', '50%'],
         avoidLabelOverlap: false,
-        itemStyle: { borderRadius: 6, borderColor: 'rgba(15,15,35,0.8)', borderWidth: 2 },
+        itemStyle: { borderRadius: 6, borderColor: donutBorderColor, borderWidth: 2 },
         label: {
-          show: true, fontSize: 12, color: '#e2e8f0',
+          show: true, fontSize: 12, color: chartTheme.textSecondary,
           formatter: '{b}\n{c}건 ({d}%)',
         },
         emphasis: {
-          label: { fontSize: 14, fontWeight: 'bold', color: '#f8fafc' },
+          label: { fontSize: 14, fontWeight: 'bold', color: chartTheme.textPrimary },
         },
         data: list.map(r => ({
           value: Number(r.CNT), name: r.ERROR_TYPE,
@@ -177,7 +166,7 @@ export default function FaultStats() {
         })),
       }],
     };
-  }, [summaryData]);
+  }, [summaryData, chartTheme, donutBorderColor]);
 
   // 발생/해소 추이 (daily 또는 hourly 자동 전환)
   const trendChartOption = useMemo(() => {
@@ -193,9 +182,9 @@ export default function FaultStats() {
       return {
         tooltip: {
           trigger: 'axis',
-          backgroundColor: 'rgba(15, 15, 35, 0.95)',
-          borderColor: 'rgba(255,255,255,0.1)',
-          textStyle: { color: '#f8fafc' },
+          backgroundColor: chartTheme.tooltipBg,
+          borderColor: chartTheme.tooltipBorder,
+          textStyle: { color: chartTheme.textPrimary },
           formatter: (params) => {
             const h = params[0]?.name;
             const occurred = params.find(p => p.seriesName === '발생')?.value || 0;
@@ -205,20 +194,20 @@ export default function FaultStats() {
         },
         legend: {
           data: ['발생', '해소'],
-          textStyle: { color: '#94a3b8', fontSize: 11 },
+          textStyle: { color: chartTheme.legendText, fontSize: 11 },
           top: 0,
         },
         grid: { left: 40, right: 16, top: 36, bottom: 24 },
         xAxis: {
           type: 'category',
           data: hours.map(h => `${h}`),
-          axisLabel: { color: '#64748b', fontSize: 11, formatter: (v) => `${v}시` },
-          axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+          axisLabel: { color: chartTheme.axisLabel, fontSize: 11, formatter: (v) => `${v}시` },
+          axisLine: { lineStyle: { color: chartTheme.axisLine } },
         },
         yAxis: {
           type: 'value', minInterval: 1,
-          axisLabel: { color: '#64748b', fontSize: 11 },
-          splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
+          axisLabel: { color: chartTheme.axisLabel, fontSize: 11 },
+          splitLine: { lineStyle: { color: chartTheme.splitLine } },
         },
         series: [
           {
@@ -240,26 +229,26 @@ export default function FaultStats() {
     return {
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(15, 15, 35, 0.95)',
-        borderColor: 'rgba(255,255,255,0.1)',
-        textStyle: { color: '#f8fafc' },
+        backgroundColor: chartTheme.tooltipBg,
+        borderColor: chartTheme.tooltipBorder,
+        textStyle: { color: chartTheme.textPrimary },
       },
       legend: {
         data: ['발생', '해소'],
-        textStyle: { color: '#94a3b8', fontSize: 11 },
+        textStyle: { color: chartTheme.legendText, fontSize: 11 },
         top: 0,
       },
       grid: { left: 40, right: 16, top: 36, bottom: 24 },
       xAxis: {
         type: 'category',
         data: daily.map(r => r.STAT_DATE?.substring(5)),
-        axisLabel: { color: '#64748b', fontSize: 11 },
-        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+        axisLabel: { color: chartTheme.axisLabel, fontSize: 11 },
+        axisLine: { lineStyle: { color: chartTheme.axisLine } },
       },
       yAxis: {
         type: 'value', minInterval: 1,
-        axisLabel: { color: '#64748b', fontSize: 11 },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
+        axisLabel: { color: chartTheme.axisLabel, fontSize: 11 },
+        splitLine: { lineStyle: { color: chartTheme.splitLine } },
       },
       series: [
         {
@@ -274,7 +263,7 @@ export default function FaultStats() {
         },
       ],
     };
-  }, [trendData]);
+  }, [trendData, chartTheme]);
 
   // 유형별 추이 (daily: 스택 영역 / hourly: 시간대별 스택)
   const typeTrendOption = useMemo(() => {
@@ -290,26 +279,26 @@ export default function FaultStats() {
       return {
         tooltip: {
           trigger: 'axis',
-          backgroundColor: 'rgba(15, 15, 35, 0.95)',
-          borderColor: 'rgba(255,255,255,0.1)',
-          textStyle: { color: '#f8fafc' },
+          backgroundColor: chartTheme.tooltipBg,
+          borderColor: chartTheme.tooltipBorder,
+          textStyle: { color: chartTheme.textPrimary },
         },
         legend: {
           data: types,
-          textStyle: { color: '#94a3b8', fontSize: 11 },
+          textStyle: { color: chartTheme.legendText, fontSize: 11 },
           top: 0,
         },
         grid: { left: 40, right: 16, top: 36, bottom: 24 },
         xAxis: {
           type: 'category',
           data: hours.map(h => `${h}`),
-          axisLabel: { color: '#64748b', fontSize: 11, formatter: (v) => `${v}시` },
-          axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+          axisLabel: { color: chartTheme.axisLabel, fontSize: 11, formatter: (v) => `${v}시` },
+          axisLine: { lineStyle: { color: chartTheme.axisLine } },
         },
         yAxis: {
           type: 'value', minInterval: 1,
-          axisLabel: { color: '#64748b', fontSize: 11 },
-          splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
+          axisLabel: { color: chartTheme.axisLabel, fontSize: 11 },
+          splitLine: { lineStyle: { color: chartTheme.splitLine } },
         },
         series: types.map(t => ({
           name: t, type: 'bar', stack: 'total', barMaxWidth: 16,
@@ -326,36 +315,37 @@ export default function FaultStats() {
     return {
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(15, 15, 35, 0.95)',
-        borderColor: 'rgba(255,255,255,0.1)',
-        textStyle: { color: '#f8fafc' },
+        backgroundColor: chartTheme.tooltipBg,
+        borderColor: chartTheme.tooltipBorder,
+        textStyle: { color: chartTheme.textPrimary },
       },
       legend: {
         data: types,
-        textStyle: { color: '#94a3b8', fontSize: 11 },
+        textStyle: { color: chartTheme.legendText, fontSize: 11 },
         top: 0,
       },
       grid: { left: 40, right: 16, top: 36, bottom: 24 },
       xAxis: {
         type: 'category',
         data: dates.map(d => d?.substring(5)),
-        axisLabel: { color: '#64748b', fontSize: 11 },
-        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+        axisLabel: { color: chartTheme.axisLabel, fontSize: 11 },
+        axisLine: { lineStyle: { color: chartTheme.axisLine } },
       },
       yAxis: {
         type: 'value', minInterval: 1,
-        axisLabel: { color: '#64748b', fontSize: 11 },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
+        axisLabel: { color: chartTheme.axisLabel, fontSize: 11 },
+        splitLine: { lineStyle: { color: chartTheme.splitLine } },
       },
       series: types.map(t => ({
-        name: t, type: 'line', stack: 'total', smooth: true, showSymbol: false,
-        areaStyle: { opacity: 0.15 },
+        name: t, type: 'line', smooth: false,
+        showSymbol: true, symbolSize: 4,
         lineStyle: { width: 2 },
         itemStyle: { color: TYPE_COLORS[t] || '#64748b' },
+        emphasis: { focus: 'series' },
         data: dates.map(d => map[`${d}_${t}`] || 0),
       })),
     };
-  }, [trendData]);
+  }, [trendData, chartTheme]);
 
   // MTTR 바 차트
   const mttrChartOption = useMemo(() => {
@@ -363,9 +353,9 @@ export default function FaultStats() {
     return {
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(15, 15, 35, 0.95)',
-        borderColor: 'rgba(255,255,255,0.1)',
-        textStyle: { color: '#f8fafc' },
+        backgroundColor: chartTheme.tooltipBg,
+        borderColor: chartTheme.tooltipBorder,
+        textStyle: { color: chartTheme.textPrimary },
         formatter: (params) => {
           const d = params[0];
           const item = list[d.dataIndex];
@@ -380,16 +370,16 @@ export default function FaultStats() {
       xAxis: {
         type: 'value',
         axisLabel: {
-          color: '#64748b', fontSize: 11,
+          color: chartTheme.axisLabel, fontSize: 11,
           formatter: (v) => formatDuration(v),
         },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
+        splitLine: { lineStyle: { color: chartTheme.splitLine } },
       },
       yAxis: {
         type: 'category',
         data: list.map(r => r.ERROR_TYPE),
-        axisLabel: { color: '#94a3b8', fontSize: 12, fontWeight: 500 },
-        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+        axisLabel: { color: chartTheme.textTertiary, fontSize: 12, fontWeight: 500 },
+        axisLine: { lineStyle: { color: chartTheme.axisLine } },
       },
       series: [{
         type: 'bar', barMaxWidth: 24,
@@ -399,7 +389,7 @@ export default function FaultStats() {
         })),
       }],
     };
-  }, [mttrData]);
+  }, [mttrData, chartTheme]);
 
   // 시간대별 패턴 바 차트
   const hourPatternOption = useMemo(() => {
@@ -413,22 +403,22 @@ export default function FaultStats() {
     return {
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(15, 15, 35, 0.95)',
-        borderColor: 'rgba(255,255,255,0.1)',
-        textStyle: { color: '#f8fafc' },
+        backgroundColor: chartTheme.tooltipBg,
+        borderColor: chartTheme.tooltipBorder,
+        textStyle: { color: chartTheme.textPrimary },
         formatter: (params) => `${params[0].name}시: ${params[0].value}건`,
       },
       grid: { left: 36, right: 16, top: 8, bottom: 24 },
       xAxis: {
         type: 'category',
         data: hours.map(h => `${h}`),
-        axisLabel: { color: '#64748b', fontSize: 10 },
-        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+        axisLabel: { color: chartTheme.axisLabel, fontSize: 10 },
+        axisLine: { lineStyle: { color: chartTheme.axisLine } },
       },
       yAxis: {
         type: 'value', minInterval: 1,
-        axisLabel: { color: '#64748b', fontSize: 10 },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
+        axisLabel: { color: chartTheme.axisLabel, fontSize: 10 },
+        splitLine: { lineStyle: { color: chartTheme.splitLine } },
       },
       series: [{
         type: 'bar', barMaxWidth: 16,
@@ -441,7 +431,7 @@ export default function FaultStats() {
         })),
       }],
     };
-  }, [patternData]);
+  }, [patternData, chartTheme]);
 
   // 요일별 패턴
   const dowPatternOption = useMemo(() => {
@@ -454,22 +444,22 @@ export default function FaultStats() {
     return {
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(15, 15, 35, 0.95)',
-        borderColor: 'rgba(255,255,255,0.1)',
-        textStyle: { color: '#f8fafc' },
+        backgroundColor: chartTheme.tooltipBg,
+        borderColor: chartTheme.tooltipBorder,
+        textStyle: { color: chartTheme.textPrimary },
         formatter: (params) => `${params[0].name}: ${params[0].value}건`,
       },
       grid: { left: 36, right: 16, top: 8, bottom: 24 },
       xAxis: {
         type: 'category',
         data: DOW_LABELS,
-        axisLabel: { color: '#64748b', fontSize: 11 },
-        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+        axisLabel: { color: chartTheme.axisLabel, fontSize: 11 },
+        axisLine: { lineStyle: { color: chartTheme.axisLine } },
       },
       yAxis: {
         type: 'value', minInterval: 1,
-        axisLabel: { color: '#64748b', fontSize: 10 },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
+        axisLabel: { color: chartTheme.axisLabel, fontSize: 10 },
+        splitLine: { lineStyle: { color: chartTheme.splitLine } },
       },
       series: [{
         type: 'bar', barMaxWidth: 32,
@@ -482,7 +472,7 @@ export default function FaultStats() {
         })),
       }],
     };
-  }, [patternData]);
+  }, [patternData, chartTheme]);
 
   // Aging 분포
   const agingData = useMemo(() => {
@@ -495,6 +485,11 @@ export default function FaultStats() {
       { label: '24시간 이상', key: '24h_over', color: '#ef4444' },
     ].map(item => ({ ...item, count: map[item.key] }));
   }, [summaryData]);
+
+  const agingTotal = useMemo(
+    () => agingData.reduce((sum, item) => sum + item.count, 0),
+    [agingData]
+  );
 
   // 전체 MTTR 평균
   const avgMttr = useMemo(() => {
@@ -609,7 +604,7 @@ export default function FaultStats() {
       {/* Summary Cards */}
       <div className="stats-summary-row">
         <div className="stats-card summary-total">
-          <div className="stats-card-label">전체 활성 장애</div>
+          <div className="stats-card-label">전체 장애 건수</div>
           <div className="stats-card-value">{totalActive}</div>
         </div>
         {Object.entries(LEVEL_MAP).map(([code, label]) => (
@@ -621,7 +616,7 @@ export default function FaultStats() {
           </div>
         ))}
         <div className="stats-card summary-mttr">
-          <div className="stats-card-label">평균 MTTR</div>
+          <div className="stats-card-label">평균 복구시간</div>
           <div className="stats-card-value">{formatDuration(avgMttr)}</div>
         </div>
       </div>
@@ -669,7 +664,7 @@ export default function FaultStats() {
         <div className="stats-panel panel-mttr">
           <div className="stats-panel-header">
             <i className="bi bi-stopwatch"></i>
-            유형별 평균 처리시간 (MTTR)
+            유형별 평균 복구시간
           </div>
           <div className="stats-panel-body">
             {(!mttrData || mttrData.length === 0)
@@ -708,7 +703,7 @@ export default function FaultStats() {
         <div className="stats-panel panel-aging">
           <div className="stats-panel-header">
             <i className="bi bi-hourglass-split"></i>
-            미해소 장애 Aging
+            미해결 장애 경과시간
           </div>
           <div className="stats-panel-body aging-body">
             {agingData.map(item => (
@@ -718,7 +713,7 @@ export default function FaultStats() {
                   <div
                     className="aging-bar-fill"
                     style={{
-                      width: totalActive > 0 ? `${(item.count / totalActive) * 100}%` : '0%',
+                      width: agingTotal > 0 ? `${(item.count / agingTotal) * 100}%` : '0%',
                       background: item.color,
                     }}
                   />
@@ -732,7 +727,7 @@ export default function FaultStats() {
         <div className="stats-panel panel-top-devices">
           <div className="stats-panel-header">
             <i className="bi bi-exclamation-diamond"></i>
-            상습 장애 장비 Top 10
+            상습 장애 장비 상위 10
           </div>
           <div className="stats-panel-body top-devices-body">
             {(!topDevices || topDevices.length === 0) ? (
@@ -779,16 +774,6 @@ export default function FaultStats() {
 
 // React 19 StrictMode + echarts-for-react ResizeObserver 호환성 래퍼
 // StrictMode의 mount→unmount→remount 사이클에서 ResizeObserver 미생성 시 disconnect() 에러 방지
-function SafeECharts(props) {
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    setReady(true);
-    return () => setReady(false);
-  }, []);
-  if (!ready) return <div style={props.style} />;
-  return <ReactECharts {...props} />;
-}
-
 function LoadingSpinner() {
   return (
     <div className="stats-loading">

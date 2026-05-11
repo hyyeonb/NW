@@ -4,7 +4,7 @@ import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { useThemeStore } from '../stores';
+import { useThemeStore } from '../stores/themeStore';
 
 // 다크 테마
 const darkTheme = createTheme({
@@ -288,6 +288,7 @@ export default function PaginationComponent({
                   onChange={handlePageSizeChange}
                   variant="outlined"
                   MenuProps={{
+                    sx: { zIndex: 1000001 },
                     PaperProps: {
                       sx: {
                         mt: 0.5,

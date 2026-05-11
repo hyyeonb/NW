@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { sshSessionApi } from '../api';
+import { sshSessionApi } from '../api/sshSession';
 
 // SSH 세션 이력 목록 조회
 export const useSshSessions = (page = 1, size = 20, sort = 'session_id', order = 'desc', filters = {}) => {

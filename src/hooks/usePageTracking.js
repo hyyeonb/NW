@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { historyApi } from '../api/history';
-import { useAuthStore } from '../stores';
+import { useAuthStore } from '../stores/authStore';
 
 // 경로 → pageCode 매핑
 const PATH_TO_PAGE_CODE = {

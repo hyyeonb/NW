@@ -376,6 +376,38 @@
   animation: spin 1s linear infinite;
 }
 
+/* ===== Light Mode ===== */
+[data-theme^="light"] .acct-card,
+[data-theme^="light"] .acct-history-card {
+  background: #ffffff;
+  border-color: #d6dce5;
+}
+
+[data-theme^="light"] .acct-card-title {
+  color: var(--theme-text-secondary);
+  border-bottom-color: #e8ecf0;
+}
+
+[data-theme^="light"] .acct-history-table th {
+  background: #f8f9fb;
+  color: var(--theme-text-secondary);
+  border-bottom-color: #e8ecf0;
+}
+
+[data-theme^="light"] .acct-history-table td {
+  color: var(--theme-text-primary);
+  border-bottom-color: #f0f2f5;
+}
+
+[data-theme^="light"] .acct-history-table tr:hover td {
+  background: #f5f7fa;
+}
+
+[data-theme^="light"] .acct-type-badge.local {
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+}
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

@@ -1,0 +1,509 @@
+/* ==========================================================
+   관제 사이드바 디자인 시안 프리뷰
+   ========================================================== */
+
+.tdp-page {
+    padding: var(--spacing-5);
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.tdp-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-4);
+}
+
+@media (min-width: 1400px) {
+    .tdp-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* ── 각 시안 래퍼 (설명 + 패널) ── */
+.tdp-variant {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+.tdp-variant-header h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--theme-text-primary);
+}
+
+.tdp-variant-header p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--theme-text-muted);
+    line-height: 1.45;
+}
+
+/* ── 실제 사이드바 패널 ── */
+.tdp-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--theme-bg-card);
+    border: 1px solid var(--theme-border-subtle);
+    border-radius: 14px;
+    overflow: hidden;
+    height: 640px;
+}
+
+.tdp-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--theme-border-subtle);
+}
+
+.tdp-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--theme-text-primary);
+}
+
+.tdp-panel-title i {
+    color: var(--theme-accent-primary);
+    font-size: 15px;
+}
+
+.tdp-panel-collapse {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--theme-bg-hover);
+    border: 1px solid var(--theme-border-subtle);
+    border-radius: 8px;
+    color: var(--theme-text-muted);
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s ease;
+}
+
+.tdp-panel-collapse:hover {
+    color: var(--theme-text-primary);
+    background: var(--theme-bg-panel-hover);
+}
+
+/* ── 탭 바 (공통 기본) ── */
+.tdp-tab-bar {
+    display: flex;
+    flex-shrink: 0;
+}
+
+.tdp-tab-btn {
+    flex: 1;
+    padding: 10px 0 12px;
+    background: transparent;
+    border: none;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--theme-text-muted);
+    cursor: pointer;
+    position: relative;
+    transition: color 0.15s ease;
+}
+
+/* ── 검색 ── */
+.tdp-search {
+    position: relative;
+    padding: 12px 14px 10px;
+    flex-shrink: 0;
+}
+
+.tdp-search-icon {
+    position: absolute;
+    left: 26px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--theme-text-muted);
+    font-size: 12px;
+    pointer-events: none;
+}
+
+.tdp-search-input {
+    width: 100%;
+    padding: 8px 28px 8px 38px;
+    background: var(--theme-bg-panel);
+    border: 1px solid var(--theme-border-subtle);
+    border-radius: 8px;
+    color: var(--theme-text-primary);
+    font-size: 12px;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease;
+}
+
+.tdp-search-input:focus {
+    border-color: var(--theme-accent-border);
+}
+
+.tdp-search-input::placeholder {
+    color: var(--theme-text-muted);
+}
+
+.tdp-search-clear {
+    position: absolute;
+    right: 22px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--theme-text-muted);
+    cursor: pointer;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* ── 트리 공통 ── */
+.tdp-tree-wrap {
+    flex: 1;
+    padding: 4px 10px 10px;
+    overflow-y: auto;
+}
+
+.tdp-tree,
+.tdp-children {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.tdp-children {
+    padding-left: 16px;
+}
+
+.tdp-node {
+    position: relative;
+    padding: 1px 0;
+}
+
+.tdp-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--theme-text-secondary);
+    position: relative;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.tdp-chevron {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    background: transparent;
+    border: none;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--theme-text-muted);
+    font-size: 10px;
+    transition: transform 0.18s ease;
+}
+
+.tdp-chevron.expanded {
+    transform: rotate(90deg);
+}
+
+.tdp-chevron-hidden {
+    visibility: hidden;
+}
+
+.tdp-icon {
+    width: 16px;
+    text-align: center;
+    font-size: 13px;
+    flex-shrink: 0;
+    color: var(--theme-text-muted);
+    opacity: 0.85;
+}
+
+.tdp-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tdp-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    padding: 0 7px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.6;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+
+/* 공통 스크롤바 */
+.tdp-tree-wrap::-webkit-scrollbar {
+    width: 8px;
+}
+.tdp-tree-wrap::-webkit-scrollbar-thumb {
+    background: var(--theme-scrollbar-thumb);
+    border-radius: 4px;
+}
+.tdp-tree-wrap::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* ==========================================================
+   A. 모노크롬 미니멀
+   ========================================================== */
+.tdp-variant-a .tdp-tab-bar {
+    background: var(--theme-bg-panel);
+    border-bottom: 1px solid var(--theme-border-subtle);
+}
+.tdp-variant-a .tdp-tab-btn {
+    color: var(--theme-text-muted);
+    padding: 10px 0;
+}
+.tdp-variant-a .tdp-tab-btn:hover {
+    color: var(--theme-text-secondary);
+    background: var(--theme-bg-hover);
+}
+.tdp-variant-a .tdp-tab-btn.active {
+    color: var(--theme-text-primary);
+    font-weight: 700;
+    background: var(--theme-bg-card);
+}
+.tdp-variant-a .tdp-tab-btn.active::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--theme-text-primary);
+}
+
+.tdp-variant-a .tdp-item:hover {
+    background: var(--theme-bg-hover);
+}
+.tdp-variant-a .tdp-item.selected {
+    background: var(--theme-bg-panel-hover);
+    color: var(--theme-text-primary);
+    font-weight: 700;
+}
+.tdp-variant-a .tdp-count {
+    background: var(--theme-bg-hover);
+    color: var(--theme-text-muted);
+}
+.tdp-variant-a .tdp-item.selected .tdp-count {
+    background: var(--theme-text-primary);
+    color: var(--theme-bg-card);
+}
+
+/* ==========================================================
+   B. 노션/VSCode — 하단 인디케이터 탭 + 좌측 바 선택
+   ========================================================== */
+.tdp-variant-b .tdp-tab-bar {
+    border-bottom: 1px solid var(--theme-border-subtle);
+    padding: 0 12px;
+    gap: 4px;
+}
+.tdp-variant-b .tdp-tab-btn::after {
+    content: '';
+    position: absolute;
+    left: 12%;
+    right: 12%;
+    bottom: -1px;
+    height: 2px;
+    border-radius: 2px 2px 0 0;
+    background: transparent;
+    transition: background 0.18s ease;
+}
+.tdp-variant-b .tdp-tab-btn:hover {
+    color: var(--theme-text-secondary);
+}
+.tdp-variant-b .tdp-tab-btn.active {
+    color: var(--theme-accent-primary);
+    font-weight: 600;
+}
+.tdp-variant-b .tdp-tab-btn.active::after {
+    background: var(--theme-accent-primary);
+}
+
+.tdp-variant-b .tdp-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 25%;
+    bottom: 25%;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: transparent;
+    transition: background 0.15s ease;
+}
+.tdp-variant-b .tdp-item {
+    padding-left: 12px;
+}
+.tdp-variant-b .tdp-item:hover {
+    background: var(--theme-bg-hover);
+}
+.tdp-variant-b .tdp-item.selected {
+    background: var(--theme-accent-bg);
+    color: var(--theme-accent-primary);
+    font-weight: 600;
+}
+.tdp-variant-b .tdp-item.selected::before {
+    background: var(--theme-accent-primary);
+}
+.tdp-variant-b .tdp-item.selected .tdp-icon {
+    color: var(--theme-accent-primary);
+}
+.tdp-variant-b .tdp-count {
+    background: transparent;
+    color: var(--theme-text-muted);
+    font-weight: 500;
+}
+.tdp-variant-b .tdp-item.selected .tdp-count {
+    color: var(--theme-accent-primary);
+    font-weight: 700;
+}
+
+/* ==========================================================
+   C. 카드/필 — pill 탭 + 카드형 행 + 그라디언트 선택
+   ========================================================== */
+.tdp-variant-c .tdp-tab-bar {
+    padding: 8px 14px 6px;
+    gap: 4px;
+    background: var(--theme-bg-panel);
+}
+.tdp-variant-c .tdp-tab-btn {
+    padding: 7px 0;
+    border-radius: 999px;
+    font-size: 12px;
+}
+.tdp-variant-c .tdp-tab-btn:hover {
+    background: var(--theme-bg-hover);
+    color: var(--theme-text-secondary);
+}
+.tdp-variant-c .tdp-tab-btn.active {
+    background: linear-gradient(135deg, var(--theme-accent-primary), var(--theme-accent-dark));
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+
+.tdp-variant-c .tdp-node {
+    padding: 2px 0;
+}
+.tdp-variant-c .tdp-item {
+    padding: 7px 12px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+}
+.tdp-variant-c .tdp-item:hover {
+    background: var(--theme-bg-hover);
+    border-color: var(--theme-border-subtle);
+}
+.tdp-variant-c .tdp-item.selected {
+    background: linear-gradient(135deg, var(--theme-accent-bg) 0%, var(--theme-accent-bg-hover) 100%);
+    border-color: var(--theme-accent-border);
+    color: var(--theme-accent-primary);
+    font-weight: 600;
+    box-shadow: 0 1px 4px rgba(99, 102, 241, 0.08);
+}
+.tdp-variant-c .tdp-icon {
+    color: var(--theme-accent-light);
+    opacity: 0.85;
+}
+.tdp-variant-c .tdp-item.selected .tdp-icon {
+    color: var(--theme-accent-primary);
+    opacity: 1;
+}
+.tdp-variant-c .tdp-count {
+    background: var(--theme-accent-bg);
+    color: var(--theme-accent-primary);
+    border: 1px solid var(--theme-accent-border);
+}
+.tdp-variant-c .tdp-item.selected .tdp-count {
+    background: var(--theme-accent-primary);
+    color: #ffffff;
+    border-color: var(--theme-accent-primary);
+}
+
+/* ==========================================================
+   D. 컴팩트 / 데이터 우선
+   ========================================================== */
+.tdp-variant-d .tdp-tab-bar {
+    border-bottom: 1px solid var(--theme-border-subtle);
+}
+.tdp-variant-d .tdp-tab-btn {
+    padding: 8px 0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.tdp-variant-d .tdp-tab-btn:hover {
+    color: var(--theme-text-secondary);
+}
+.tdp-variant-d .tdp-tab-btn.active {
+    color: var(--theme-accent-primary);
+    font-weight: 700;
+    background: var(--theme-accent-bg);
+}
+
+.tdp-variant-d .tdp-search {
+    padding: 8px 12px;
+}
+.tdp-variant-d .tdp-search-input {
+    padding: 6px 24px 6px 28px;
+    font-size: 11px;
+}
+.tdp-variant-d .tdp-search-icon {
+    left: 22px;
+    font-size: 11px;
+}
+
+.tdp-variant-d .tdp-node {
+    padding: 0;
+}
+.tdp-variant-d .tdp-item {
+    padding: 3px 10px 3px 14px;
+    border-radius: 0;
+    font-size: 12.5px;
+    gap: 6px;
+}
+.tdp-variant-d .tdp-item:hover {
+    background: var(--theme-bg-hover);
+}
+.tdp-variant-d .tdp-item.selected {
+    background: var(--theme-accent-bg-hover);
+    color: var(--theme-accent-primary);
+    font-weight: 700;
+}
+.tdp-variant-d .tdp-count {
+    background: transparent;
+    color: var(--theme-text-primary);
+    font-weight: 700;
+    font-size: 11px;
+    min-width: auto;
+    padding: 0;
+}
+.tdp-variant-d .tdp-item.selected .tdp-count {
+    color: var(--theme-accent-primary);
+}

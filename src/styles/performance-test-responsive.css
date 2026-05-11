@@ -1,0 +1,87 @@
+/* ============================================================
+   Performance Test — 영역 오버플로우 방지 + PDF 모달 라이트
+   ============================================================ */
+
+/* === PDF 미리보기 모달 — 라이트 모드 === */
+html[data-theme^="light"] .pdf-preview-backdrop {
+  background: rgba(15, 23, 42, 0.4);
+}
+html[data-theme^="light"] .pdf-preview-modal {
+  background: var(--theme-bg-card);
+  border: 1px solid var(--theme-border-default);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.15);
+}
+html[data-theme^="light"] .pdf-preview-header {
+  border-bottom: 1px solid var(--theme-border-default);
+}
+html[data-theme^="light"] .pdf-preview-title {
+  color: var(--theme-text-primary);
+}
+html[data-theme^="light"] .pdf-preview-title i {
+  color: var(--theme-danger);
+}
+html[data-theme^="light"] .pdf-download-btn {
+  background: var(--theme-accent-primary);
+  color: #ffffff;
+  box-shadow: var(--theme-shadow-accent);
+}
+html[data-theme^="light"] .pdf-download-btn:hover:not(:disabled) {
+  background: var(--theme-accent-hover);
+}
+html[data-theme^="light"] .pdf-close-btn {
+  background: var(--theme-bg-tertiary);
+  border: 1px solid var(--theme-border-default);
+  color: var(--theme-text-tertiary);
+}
+html[data-theme^="light"] .pdf-close-btn:hover {
+  background: var(--theme-bg-hover);
+  color: var(--theme-text-primary);
+  border-color: var(--theme-border-hover);
+}
+html[data-theme^="light"] .pdf-preview-body {
+  background: var(--theme-bg-tertiary);
+}
+html[data-theme^="light"] .pdf-preview-loading {
+  color: var(--theme-text-tertiary);
+}
+html[data-theme^="light"] .pdf-preview-loading .loading-spinner {
+  border-color: var(--theme-border-default);
+  border-top-color: var(--theme-accent-primary);
+}
+
+
+
+/* 패널이 자체 너비 이상 확장 안 되게 */
+.perf-stats-content .stats-panel {
+  min-width: 0;
+  overflow: hidden;
+}
+.perf-stats-content .stats-panel-body {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+/* ECharts 컨테이너가 부모를 벗어나지 않게 */
+.perf-stats-content .stats-panel-body > div,
+.perf-stats-content .stats-panel-body > .echarts-for-react {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0;
+  overflow: hidden;
+}
+/* ECharts canvas가 부모 너비 초과하지 않게 */
+.perf-stats-content canvas {
+  max-width: 100% !important;
+}
+
+/* 그리드 셀들이 균등하게 분배되되 overflow 방지 */
+.perf-stats-content .stats-row,
+.perf-stats-content .stats-grid {
+  min-width: 0;
+}
+
+/* DataTable도 오버플로우 방지 */
+.perf-stats-content .data-table-container {
+  min-width: 0;
+  overflow-x: auto;
+}

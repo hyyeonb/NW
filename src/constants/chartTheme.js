@@ -18,16 +18,16 @@ const CHART_THEME = {
     areaOpacity: 0.15,
   },
   light: {
-    textPrimary: '#1e293b',
-    textSecondary: '#475569',
-    textTertiary: '#64748b',
-    textMuted: '#94a3b8',
+    textPrimary: '#0a0e17',
+    textSecondary: '#2d3748',
+    textTertiary: '#4a5568',
+    textMuted: '#a0aec0',
     tooltipBg: 'rgba(255, 255, 255, 0.98)',
     tooltipBorder: '#e2e8f0',
-    legendText: '#64748b',
-    axisLabel: '#94a3b8',
-    axisLine: '#e2e8f0',
-    splitLine: '#f1f5f9',
+    legendText: '#6b7280',
+    axisLabel: '#9ca3af',
+    axisLine: '#edf0f4',        /* 축선 매우 연하게 */
+    splitLine: '#f3f5f8',        /* 그리드선 거의 안 보이게 */
     areaOpacity: 0.08,
   },
 };
@@ -38,7 +38,9 @@ const CHART_THEME = {
  * @returns {object} 차트 테마 색상
  */
 export const getChartTheme = (theme = 'dark') => {
-  return CHART_THEME[theme] || CHART_THEME.dark;
+  // light-v1, light-v2, light-v3, light-v4 모두 light 테마로 처리
+  const key = theme?.startsWith('light') ? 'light' : 'dark';
+  return CHART_THEME[key];
 };
 
 /**
@@ -55,11 +57,17 @@ export const getCurrentChartTheme = () => {
  */
 export const getTooltipConfig = (theme = 'dark') => {
   const t = getChartTheme(theme);
+  const isLight = theme?.startsWith('light');
   return {
     backgroundColor: t.tooltipBg,
     borderColor: t.tooltipBorder,
     borderWidth: 1,
-    textStyle: { color: t.textPrimary, fontSize: 12 },
+    borderRadius: 10,
+    padding: [10, 14],
+    textStyle: { color: t.textPrimary, fontSize: 12, fontWeight: 500 },
+    extraCssText: isLight
+      ? 'box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06); backdrop-filter: blur(8px);'
+      : 'box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5); backdrop-filter: blur(12px);',
   };
 };
 

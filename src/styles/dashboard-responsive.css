@@ -1,0 +1,559 @@
+/* ============================================================
+   Dashboard Responsive — 실사용 폭 기준 보수적 적용
+   - 전체 사이즈(≥1200px)에선 원형 유지
+   - 좁은 뷰포트/위젯에서만 레이아웃 변형
+   ============================================================ */
+
+/* ==========================
+   Container Query — 위젯 레벨 + 요약 그리드
+   ========================== */
+.widget-card {
+  container-type: inline-size;
+  container-name: widget;
+}
+.alert-summary-grid,
+.device-summary-grid {
+  container-type: inline-size;
+  container-name: summary-grid;
+}
+
+/* ==========================
+   실시간 장애 위젯 — 5개 row 제한 + 스크롤바 (모든 뷰포트)
+   ========================== */
+.widget-alert-table-container {
+  max-height: 260px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+/* 상태/등급 배지 줄바꿈 방지 */
+.widget-alert-table td,
+.widget-alert-table th {
+  white-space: nowrap;
+}
+.widget-alert-table .level-badge,
+.widget-alert-table .status-badge {
+  white-space: nowrap;
+  display: inline-block;
+}
+
+/* 좁은 뷰포트에서 컬럼 제한 — 등급/장비명/장애내용만 */
+@media (max-width: 1024px) {
+  .widget-alert-table .col-status,
+  .widget-alert-table .col-ip,
+  .widget-alert-table .col-group,
+  .widget-alert-table .col-time {
+    display: none !important;
+  }
+}
+.widget-alert-table-container::-webkit-scrollbar,
+.widget-content-inner::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.widget-alert-table-container::-webkit-scrollbar-track,
+.widget-content-inner::-webkit-scrollbar-track {
+  background: transparent;
+}
+.widget-alert-table-container::-webkit-scrollbar-thumb,
+.widget-content-inner::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+  border-radius: 4px;
+}
+.widget-alert-table-container::-webkit-scrollbar-thumb:hover,
+.widget-content-inner::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
+}
+
+/* ==========================
+   [0] Summary 카드 — 매우 좁을 때만 아이콘→숫자 치환 + 좌측 컬러바
+   (전체화면에선 아이콘 유지, 뷰포트 좁거나 그리드 극도로 좁을 때만 발동)
+   ========================== */
+@container summary-grid (max-width: 240px) {
+  /* 아이콘 숨김 */
+  .summary-card .summary-icon,
+  .device-card .device-icon {
+    display: none !important;
+  }
+  /* 카드 패딩 + relative 위치 (bar 공간) */
+  .summary-card,
+  .device-card {
+    padding: 12px 12px 12px 16px !important;
+    position: relative;
+    min-height: 64px;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 2px !important;
+  }
+  /* 좌측 심각도 컬러바 (3px, 카드 전체 높이) */
+  .summary-card::before,
+  .device-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    opacity: 1 !important;
+  }
+  .summary-card.critical::before { background: #ef4444 !important; }
+  .summary-card.major::before    { background: #f97316 !important; }
+  .summary-card.minor::before    { background: #eab308 !important; }
+  .summary-card.warning::before  { background: #3b82f6 !important; }
+  .device-card.normal::before    { background: #10b981 !important; }
+  .device-card.fault::before     { background: #ef4444 !important; }
+  .device-card.offline::before   { background: #6b7280 !important; }
+  .device-card::before           { background: #3b82f6; }
+
+  /* 숫자 크기 유지 (심지어 강조) */
+  .summary-card .summary-count,
+  .device-card .device-count {
+    font-size: 24px !important;
+    line-height: 1.1 !important;
+    font-weight: 700 !important;
+    font-variant-numeric: tabular-nums;
+  }
+  /* 라벨 작게 */
+  .summary-card .summary-label,
+  .device-card .device-label {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    margin-top: 2px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+}
+
+/* ==========================
+   [1] 위젯 헤더 액션 — 매우 좁을 때만 아이콘화
+   ========================== */
+@container widget (max-width: 300px) {
+  /* 액션 버튼 텍스트 숨김, 아이콘만 */
+  .widget-action-btn span,
+  .widget-refresh-btn span {
+    display: none;
+  }
+}
+
+/* ==========================
+   [2] Top-N — value 줄 변경
+   ========================== */
+@container widget (max-width: 280px) {
+  .topn-item {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  .topn-value {
+    width: 100%;
+    text-align: right;
+  }
+}
+
+/* ==========================
+   [3] 알림 테이블 — 점진적 컬럼 숨김
+   ========================== */
+
+/* ≤ 420px: IP 컬럼 숨김 */
+@container widget (max-width: 420px) {
+  .widget-alert-table th:nth-child(3),
+  .widget-alert-table td:nth-child(3) {
+    display: none;
+  }
+}
+
+/* ≤ 320px: 시간 컬럼도 숨김 */
+@container widget (max-width: 320px) {
+  .widget-alert-table th:nth-child(1),
+  .widget-alert-table td:nth-child(1) {
+    display: none;
+  }
+}
+
+/* ==========================
+   [4] 필터 바 — 세로 스택
+   ========================== */
+@container widget (max-width: 340px) {
+  .widget-filter-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+  }
+  .widget-search-box,
+  .widget-search-field {
+    max-width: 100% !important;
+    width: 100%;
+  }
+}
+
+/* ==========================
+   [5] 페이지네이션 — 컴팩트
+   ========================== */
+@container widget (max-width: 300px) {
+  .widget-pagination {
+    flex-wrap: wrap;
+    justify-content: center !important;
+    gap: 4px;
+    padding: 6px 8px !important;
+  }
+  .widget-pagination-info {
+    font-size: 10px;
+  }
+}
+
+/* ==========================
+   [6] 대시보드 레벨 — 뷰포트 기준
+   ========================== */
+
+/* 태블릿 및 좁은 뷰포트 (≤ 1024px) — 사이드바 → 상단 바 전환 */
+@media (max-width: 1024px) {
+  /* 레이아웃: 세로 스택 */
+  .app-layout {
+    flex-direction: column !important;
+  }
+
+  /* 사이드바 → 상단 바 (가로 메뉴) */
+  .app-sidebar {
+    position: sticky !important;
+    top: 0;
+    left: 0 !important;
+    right: 0;
+    bottom: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 52px;
+    flex-direction: row !important;
+    align-items: center;
+    padding: 6px 12px !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--theme-border-default);
+    transform: none !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    overflow: visible !important;
+    z-index: var(--z-dropdown);
+  }
+  .app-sidebar.collapsed {
+    width: 100% !important;
+    transform: none !important;
+  }
+
+  /* 토글 버튼 숨김 (상단 바에서 불필요) */
+  .app-sidebar .sidebar-toggle {
+    display: none !important;
+  }
+
+  /* 로고 - 컴팩트 (텍스트 숨김) */
+  .sidebar-logo {
+    flex-shrink: 0;
+    padding: 0 !important;
+    margin-right: 8px;
+    border: none !important;
+  }
+  .sidebar-logo .logo-text {
+    display: none !important;
+  }
+  .sidebar-logo .logo-single {
+    height: 32px !important;
+    width: auto !important;
+  }
+
+  /* 메뉴 - 한 줄 가로 스크롤 + 스크롤바 표시 */
+  .sidebar-menu {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding: 0 0 4px 0 !important;
+    -webkit-overflow-scrolling: touch;
+    min-width: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
+  }
+  .sidebar-menu::-webkit-scrollbar {
+    height: 6px;
+  }
+  .sidebar-menu::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .sidebar-menu::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.4);
+    border-radius: 3px;
+  }
+  .sidebar-menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.6);
+  }
+  .sidebar-menu > ul {
+    display: flex !important;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 2px;
+    padding: 0 !important;
+    margin: 0 !important;
+    list-style: none;
+  }
+
+  /* 메뉴 아이템 - 인라인 */
+  .menu-item {
+    flex-shrink: 0;
+    position: relative;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* 메뉴 링크 - 아이콘 only */
+  .menu-link {
+    padding: 8px 12px !important;
+    white-space: nowrap;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .menu-link > span:not(.menu-icon-wrapper):not(.submenu-arrow) {
+    display: none;
+  }
+  .menu-link i:not(.submenu-arrow) {
+    font-size: 16px;
+  }
+
+  /* 서브메뉴 — 기본 완전 숨김 (흰선 방지) */
+  .app-sidebar .submenu {
+    display: none !important;
+    position: fixed !important;
+    top: 52px !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    background: var(--theme-bg-card);
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    z-index: var(--z-popover);
+    list-style: none !important;
+  }
+  /* 확장 시에만 표시 (세로 리스트) */
+  .app-sidebar .submenu.expanded {
+    display: flex !important;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 8px !important;
+    border-bottom: 1px solid var(--theme-border-default) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  }
+  /* 서브메뉴 아이템 - 모바일앱 리스트 스타일 */
+  .app-sidebar .submenu .submenu-link {
+    padding: 12px 14px !important;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+  .app-sidebar .submenu .submenu-link i {
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  /* 상단바 - 화살표 제거 */
+  .app-sidebar .menu-link .submenu-arrow {
+    display: none !important;
+  }
+  /* 메뉴 라벨 숨김 (아이콘 only) */
+  .app-sidebar .menu-link > span {
+    display: none !important;
+  }
+  .submenu-link {
+    padding: 8px 12px !important;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+
+  /* 드롭다운이 화면 오른쪽 넘어가는 경우 */
+  .menu-item:nth-last-child(-n+3) .submenu {
+    left: auto !important;
+    right: 0 !important;
+  }
+
+  /* 서브메뉴 화살표 회전 제거 (가로 바에선 불필요) */
+  .submenu-arrow {
+    display: none !important;
+  }
+
+  /* 활성 메뉴 표시 */
+  .menu-link.active,
+  .menu-item.child-active > .menu-link {
+    background: var(--theme-nav-item-active);
+    color: var(--theme-accent-primary);
+  }
+
+  /* 프로필 영역 우측 — 아바타만 (이름/이메일 숨김) */
+  .sidebar-profile {
+    flex-shrink: 0;
+    margin-left: auto !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+  .sidebar-profile .profile-info,
+  .sidebar-profile .profile-arrow {
+    display: none !important;
+  }
+
+  /* 프로필 드롭다운 - 상단에서 아래로 열리게 */
+  .profile-dropdown {
+    bottom: auto !important;
+    top: calc(100% + 8px) !important;
+    left: auto !important;
+    right: 0 !important;
+    min-width: 240px;
+  }
+  .app-sidebar.collapsed .profile-dropdown {
+    position: absolute !important;
+    top: calc(100% + 8px) !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: 0 !important;
+  }
+
+
+  /* 메인 콘텐츠 - 전체 너비 (base CSS margin-left:260px 오버라이드) */
+  .app-main,
+  .app-main.sidebar-collapsed {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 1 auto !important;
+  }
+  body,
+  html,
+  #root {
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: hidden;
+  }
+  .app-layout {
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow: visible !important;              /* submenu 드롭다운 잘림 방지 */
+  }
+
+  /* 헤더 - border 제거 (상단바 border와 중복) */
+  .dashboard-header {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px;
+    padding: 14px 20px !important;
+    border-bottom: none !important;
+    margin-bottom: 0 !important;
+  }
+  .dashboard-title {
+    justify-content: space-between;
+  }
+  .dashboard-actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  /* 위젯 그리드 해체 → 세로 스택 (react-grid-layout inline style 오버라이드) */
+  .dashboard-page,
+  .widget-grid-container,
+  .layout {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .widget-grid-container {
+    padding: 8px 12px !important;
+    overflow-x: hidden;
+  }
+  .layout {
+    position: static !important;
+    height: auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .layout > .react-grid-item,
+  .widget-card {
+    position: static !important;
+    width: 100% !important;
+    left: 0 !important;
+    top: 0 !important;
+    height: auto !important;
+    min-height: 340px;        /* 차트가 들어갈 최소 높이 보장 */
+    transform: none !important;
+  }
+  /* 요약/상태 카드 위젯은 차트 없으니 높이 줄임 */
+  .widget-card:has(.alert-summary-grid),
+  .widget-card:has(.device-summary-grid) {
+    min-height: auto;
+  }
+  .react-resizable-handle {
+    display: none !important;
+  }
+
+  /* 위젯 내부 — 차트 컨테이너 full size */
+  .widget-content,
+  .widget-content-inner {
+    height: 100% !important;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+  }
+  .echarts-container,
+  .echarts-for-react,
+  .custom-widget-content {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 240px;
+    flex: 1;
+  }
+  .echarts-for-react > div {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* 토폴로지 위젯 - 충분한 높이 */
+  .widget-card:has(.topology-graph-container) {
+    min-height: 400px;
+  }
+  .topology-graph-container {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 320px;
+  }
+
+  /* Summary 그리드 2열 유지 (1열보단 2열이 가독성 좋음) */
+  .alert-summary-grid,
+  .device-summary-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px;
+  }
+}
+
+/* 소형 모바일 (≤ 420px) */
+@media (max-width: 420px) {
+  /* Summary 1열 */
+  .alert-summary-grid,
+  .device-summary-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .dashboard-actions {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .btn-add-widget,
+  .btn-edit-mode,
+  .btn-reset,
+  .btn-create-dashboard {
+    width: 100%;
+    justify-content: center;
+  }
+}

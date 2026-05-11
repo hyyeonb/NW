@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
-import { useAuthStore } from '../stores';
+import { useAuthStore } from '../stores/authStore';
 
 export default function Header() {
   const location = useLocation();

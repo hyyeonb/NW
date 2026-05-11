@@ -1,25 +1,22 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { faultApi, devicesApi } from '../api';
+import { faultApi } from '../api/fault';
+import { devicesApi } from '../api/devices';
 import { useAlertStore } from '../stores/alertStore';
-import { DataTable } from '../components';
+import DataTable from '../components/DataTable';
 import SshTerminalModal from '../components/SshTerminalModal';
 import WatchSidebar from '../components/WatchSidebar';
 import { useWatchGroupDetail } from '../hooks/useWatch';
 import ConnectivityCheckModal from '../components/ConnectivityCheckModal';
+import DeviceDetailModal from '../components/DeviceDetailModal';
 import '../styles/fault-monitoring.css';
 import { historyApi } from '../api/history';
 import '../styles/fault-stats.css';
 import DevCodeDropdown from '../components/DevCodeDropdown';
 
 // 장애 등급 설정
-const ERROR_LEVELS = [
-  { id: 'C', label: 'Cr', color: '#ef4444' },
-  { id: 'M', label: 'Mj', color: '#f97316' },
-  { id: 'N', label: 'Mn', color: '#eab308' },
-  { id: 'W', label: 'Wr', color: '#3b82f6' },
-];
+import { ERROR_LEVELS } from '../shared/config/errorLevels';
 
 export default function RealtimeFault() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -41,6 +38,7 @@ export default function RealtimeFault() {
   const [showAckModal, setShowAckModal] = useState(false);
   const [ackMessage, setAckMessage] = useState('');
   const [checkDevice, setCheckDevice] = useState(null); // 장비 점검 대상 장비
+  const [detailDeviceId, setDetailDeviceId] = useState(null); // 장비 상세 모달
   const fetchIdRef = useRef(0); // race condition 방지용
 
   // 관제 그룹 기반 필터링
@@ -412,39 +410,45 @@ export default function RealtimeFault() {
       hideable: true,
       render: (_, row) => (
         <button
-          className="action-btn"
+          className="action-btn ssh-btn"
           title="SSH 접속"
           onClick={(e) => handleOpenSsh(row, e)}
-          style={{ color: '#38bdf8', fontSize: '16px', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
         >
           <i className="bi bi-terminal"></i>
         </button>
       ),
     },
     {
-      key: 'actions',
-      label: '작업',
-      width: '70px',
+      key: 'ack',
+      label: '인지',
+      width: '60px',
       align: 'center',
       className: 'cell-actions',
       render: (_, row) => (
-        <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-          <button
-            className="action-btn"
-            title="인지처리"
-            onClick={(e) => handleAckClick(row, e)}
-            disabled={row.ERROR_FLAG === 1}
-          >
-            <i className="bi bi-check-lg"></i>
-          </button>
-          <button
-            className="action-btn"
-            title="장비 점검"
-            onClick={(e) => handleCheckClick(row, e)}
-          >
-            <i className="bi bi-activity"></i>
-          </button>
-        </div>
+        <button
+          className="action-btn ack-btn"
+          title="인지처리"
+          onClick={(e) => handleAckClick(row, e)}
+          disabled={row.ERROR_FLAG === 1}
+        >
+          <i className="bi bi-check-lg"></i>
+        </button>
+      ),
+    },
+    {
+      key: 'check',
+      label: '점검',
+      width: '60px',
+      align: 'center',
+      className: 'cell-actions',
+      render: (_, row) => (
+        <button
+          className="action-btn check-btn"
+          title="장비 점검"
+          onClick={(e) => handleCheckClick(row, e)}
+        >
+          <i className="bi bi-activity"></i>
+        </button>
       ),
     },
   ], []);
@@ -455,7 +459,7 @@ export default function RealtimeFault() {
       <div className="page-header">
         <div className="page-header-left">
           <h1 className="page-title">
-            <i className="bi bi-exclamation-triangle"></i>
+            <i className="bi bi-broadcast"></i>
             실시간 장애감시
           </h1>
           <span className="page-subtitle">현재 발생 중인 장애를 모니터링합니다</span>
@@ -567,7 +571,7 @@ export default function RealtimeFault() {
               targetName: `${row.DEVICE_NAME || ''}(${row.DEVICE_IP || ''})`,
               detail: `장애 상세 조회 - ${row.DEVICE_NAME || ''}(${row.DEVICE_IP || ''}) ${row.ERROR_MESSAGE || ''}`,
             });
-            navigate(`/mgmt/assets?deviceId=${row.DEVICE_ID}&tab=fault-info&errorId=active_${row.ERROR_ID}`);
+            setDetailDeviceId({ id: row.DEVICE_ID, errorId: `active_${row.ERROR_ID}` });
           }}
           rowClassName={(row) => {
             const classes = [];
@@ -575,7 +579,7 @@ export default function RealtimeFault() {
             if (selectedError?.ERROR_ID === row.ERROR_ID) classes.push('selected');
             return classes.join(' ');
           }}
-          maxHeight="calc(100vh - 310px)"
+          maxHeight="100%"
           pagination={{
             currentPage: currentPage,
             pageSize: pageSize,
@@ -593,6 +597,16 @@ export default function RealtimeFault() {
         </div>
       </div>
       </div>
+
+      {/* 장비 상세 모달 */}
+      {detailDeviceId && (
+        <DeviceDetailModal
+          deviceId={detailDeviceId.id}
+          initialTab="fault-info"
+          initialErrorId={detailDeviceId.errorId}
+          onClose={() => setDetailDeviceId(null)}
+        />
+      )}
 
       {/* 장비 점검 모달 */}
       {checkDevice && (

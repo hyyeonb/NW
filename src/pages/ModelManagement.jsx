@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useVendors, useModels, useCreateModel, useUpdateModel, useDeleteModel, useSnmpMetrics, useModelOids, useSaveModelOids, useDevCodeTree } from '../hooks';
+import { useVendors, useModels, useCreateModel, useUpdateModel, useDeleteModel, useDevCodeTree } from '../hooks/useDevices';
+import { useSnmpMetrics, useModelOids, useSaveModelOids } from '../hooks/useSnmp';
 import { devicesApi } from '../api/devices';
 import { historyApi } from '../api/history';
 import '../styles/model-management.css';
+import DevCodeTreeNode from '../features/model-management/components/DevCodeTreeNode';
 
 export default function ModelManagement() {
   const [selectedVendor, setSelectedVendor] = useState(null);
@@ -745,49 +747,6 @@ export default function ModelManagement() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// 장비군 트리 노드 컴포넌트
-function DevCodeTreeNode({ nodes, onSelect, selectedId, depth = 0 }) {
-  const [expanded, setExpanded] = useState({});
-
-  const toggleExpand = (id, e) => {
-    e.stopPropagation();
-    setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  if (!nodes || nodes.length === 0) return null;
-
-  return (
-    <div className="dev-code-tree" style={{ paddingLeft: depth > 0 ? '16px' : '0' }}>
-      {nodes.map(node => (
-        <div key={node.DEV_CODE_ID}>
-          <div
-            className={`dev-code-option ${selectedId === node.DEV_CODE_ID ? 'selected' : ''}`}
-            onClick={() => onSelect(node)}
-          >
-            {node.children?.length > 0 && (
-              <i
-                className={`bi ${expanded[node.DEV_CODE_ID] ? 'bi-chevron-down' : 'bi-chevron-right'} expand-icon`}
-                onClick={(e) => toggleExpand(node.DEV_CODE_ID, e)}
-              ></i>
-            )}
-            {!node.children?.length && <span className="expand-spacer"></span>}
-            <i className="bi bi-folder2"></i>
-            <span>{node.CODE_NM}</span>
-          </div>
-          {node.children?.length > 0 && expanded[node.DEV_CODE_ID] && (
-            <DevCodeTreeNode
-              nodes={node.children}
-              onSelect={onSelect}
-              selectedId={selectedId}
-              depth={depth + 1}
-            />
-          )}
-        </div>
-      ))}
     </div>
   );
 }

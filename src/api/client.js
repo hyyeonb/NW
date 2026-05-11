@@ -26,6 +26,12 @@ const apiClient = axios.create({
 // 401 처리 중복 방지 플래그
 let isRedirecting = false;
 
+// 401 발생 시 호출될 콜백 (app/bootstrap/auth.js에서 등록 — 순환 의존 방지)
+let on401Callback = null;
+export const registerOn401 = (fn) => {
+  on401Callback = fn;
+};
+
 // 요청 인터셉터
 apiClient.interceptors.request.use(
   (config) => {
@@ -61,12 +67,17 @@ apiClient.interceptors.response.use(
       if (!isRedirecting) {
         isRedirecting = true;
 
-        // Zustand authStore 직접 상태 초기화 (React 외부에서도 동작)
-        try {
-          const { useAuthStore } = await import('../stores/authStore');
-          useAuthStore.getState().setUser(null);
-        } catch {
-          // fallback: 수동 localStorage 초기화
+        // 등록된 콜백으로 authStore 초기화 (콜백 미등록 시 localStorage fallback)
+        let cleared = false;
+        if (on401Callback) {
+          try {
+            on401Callback();
+            cleared = true;
+          } catch {
+            // 콜백 실패 → fallback 경로로 진입
+          }
+        }
+        if (!cleared) {
           try {
             const authStorage = localStorage.getItem('auth-storage');
             if (authStorage) {

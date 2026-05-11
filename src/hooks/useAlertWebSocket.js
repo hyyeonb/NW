@@ -4,7 +4,11 @@ import { accountApi } from '../api/account';
 import { notificationsApi } from '../api/notifications';
 
 // WebSocket 설정
-const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws/alerts';
+// VITE_ALERT_WS_URL 없으면 현재 origin 기반으로 자동 결정 (개발: localhost:8080, 운영: 현재 도메인)
+const WS_URL = import.meta.env.VITE_ALERT_WS_URL
+  || (import.meta.env.DEV
+      ? 'http://localhost:8080/ws/alerts'
+      : `${window.location.protocol}//${window.location.host}/ws/alerts`);
 const RECONNECT_INTERVAL = 10000; // 10초 후 재연결
 const HEARTBEAT_INTERVAL = 30000; // 30초마다 heartbeat
 const MAX_RECONNECT_ATTEMPTS = 3; // 최대 재연결 시도 횟수
@@ -156,7 +160,6 @@ export function useAlertWebSocket(options = {}) {
     }
 
     isConnectingRef.current = true;
-    console.log('[WebSocket] Connecting to:', WS_URL);
 
     // 연결 전 권한 정보 로드
     await loadPermissions();
@@ -172,7 +175,6 @@ export function useAlertWebSocket(options = {}) {
         heartbeatOutgoing: HEARTBEAT_INTERVAL,
         debug: () => {},
         onConnect: () => {
-          console.log('[WebSocket] Connected successfully');
           isConnectingRef.current = false;
           reconnectAttemptsRef.current = 0;
           setConnected(true);
@@ -180,7 +182,6 @@ export function useAlertWebSocket(options = {}) {
           // 토픽 구독
           topics.forEach((topic) => {
             client.subscribe(topic, handleMessage);
-            console.log('[WebSocket] Subscribed to:', topic);
           });
 
           // 요약 정보 토픽 구독
@@ -197,7 +198,6 @@ export function useAlertWebSocket(options = {}) {
           client.subscribe('/topic/notice/urgent', (message) => {
             try {
               const notice = JSON.parse(message.body);
-              console.log('[WebSocket] Urgent notice received:', notice);
               setUrgentNotice(notice);
             } catch (error) {
               console.error('[WebSocket] Failed to parse urgent notice:', error);
@@ -205,7 +205,6 @@ export function useAlertWebSocket(options = {}) {
           });
         },
         onDisconnect: () => {
-          console.log('[WebSocket] Disconnected');
           isConnectingRef.current = false;
           setConnected(false);
         },
@@ -226,7 +225,6 @@ export function useAlertWebSocket(options = {}) {
       if (isMountedRef.current && reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
         reconnectAttemptsRef.current += 1;
         const delay = RECONNECT_INTERVAL * reconnectAttemptsRef.current;
-        console.log(`[WebSocket] Will retry in ${delay / 1000}s (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})`);
 
         reconnectTimeoutRef.current = setTimeout(() => {
           if (isMountedRef.current) {

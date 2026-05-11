@@ -1,9 +1,12 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { GroupTree, DataTable, PortTrafficChart } from '../components';
+import GroupTree from '../components/GroupTree';
+import DataTable from '../components/DataTable';
+import PortTrafficChart from '../components/PortTrafficChart';
 import SshTerminalModal from '../components/SshTerminalModal';
-import { useGroupStore } from '../stores';
-import ReactECharts from 'echarts-for-react';
+import DevCodeDropdown from '../components/DevCodeDropdown';
+import DeviceDetailModal from '../components/DeviceDetailModal';
+import { useGroupStore } from '../stores/groupStore';
 import {
   useDevicesByGroupPaged,
   useDeleteDevices,
@@ -13,8 +16,8 @@ import {
   useDeviceScope,
   useUpdateDeviceScope,
   useDeviceTrafficRaw,
-  useDeviceErrorLevels,
-} from '../hooks';
+} from '../hooks/useDevices';
+import { useDeviceErrorLevels } from '../hooks/useFaults';
 import { devicesApi } from '../api/devices';
 import { faultApi } from '../api/fault';
 import { historyApi } from '../api/history';
@@ -123,7 +126,18 @@ export default function AssetManagement() {
   // 검색 상태
   const [searchDeviceName, setSearchDeviceName] = useState('');
   const [searchDeviceIp, setSearchDeviceIp] = useState('');
-  const [searchDevCode, setSearchDevCode] = useState('');
+  // searchDevCode는 URL ?devCodeId로 persist — 새로고침/공유링크에서도 복원
+  const [searchDevCode, setSearchDevCodeRaw] = useState(() => urlParams.get('devCodeId') || '');
+  // dropdown 변경 → state + URL 동기
+  const setSearchDevCode = useCallback((val) => {
+    setSearchDevCodeRaw(val);
+    setUrlParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (val) next.set('devCodeId', val);
+      else next.delete('devCodeId');
+      return next;
+    }, { replace: true });
+  }, [setUrlParams]);
 
   // 장비 코드 목록
   const [devCodes, setDevCodes] = useState([]);
@@ -176,31 +190,27 @@ export default function AssetManagement() {
     return () => document.removeEventListener('keydown', handleEsc);
   }, [showFaultAckModal, sshAlertDevice, showSnmpModal, showMoveGroupModal, showSettingsSidebar, detailDevice]);
 
-  // 장비 코드 목록 로드 + URL category 파라미터 처리
+  // 장비 코드 목록 로드 (마운트 1회)
   useEffect(() => {
-    const loadDevCodes = async () => {
-      try {
-        const response = await devicesApi.getDevCodeTree();
-        const codes = response.data?.data || [];
-        setDevCodes(codes);
-
-        // URL에 category 파라미터가 있으면 해당 장비코드로 필터 설정
-        const categoryParam = urlParams.get('category');
-        if (categoryParam && codes.length > 0) {
-          const matched = codes.find(c => c.CODE_NM === categoryParam);
-          if (matched) {
-            setSearchDevCode(String(matched.DEV_CODE_ID));
-          }
-          // 파라미터 소비 후 URL에서 제거
-          urlParams.delete('category');
-          setUrlParams(urlParams, { replace: true });
-        }
-      } catch (error) {
-        console.error('장비 코드 조회 실패:', error);
-      }
-    };
-    loadDevCodes();
+    devicesApi.getDevCodeTree()
+      .then(r => setDevCodes(r.data?.data || []))
+      .catch(err => console.error('장비 코드 조회 실패:', err));
   }, []);
+
+  // ?category=한글 → ?devCodeId=ID 변환 + state set. devCodes 로드 후 1회 동작.
+  const categoryParam = urlParams.get('category') || '';
+  useEffect(() => {
+    if (!categoryParam || devCodes.length === 0) return;
+    const matched = devCodes.find(c => c.CODE_NM === categoryParam);
+    setUrlParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.delete('category');
+      if (matched) next.set('devCodeId', String(matched.DEV_CODE_ID));
+      return next;
+    }, { replace: true });
+    if (matched) setSearchDevCodeRaw(String(matched.DEV_CODE_ID));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devCodes, categoryParam]);
 
   // URL 파라미터로 장비/탭/에러 자동 선택 (장애 페이지에서 이동 시)
   useEffect(() => {
@@ -243,13 +253,12 @@ export default function AssetManagement() {
     }
   }, []);
 
-  // 그룹 변경 시 페이지 및 검색 초기화
+  // 그룹 변경 시 페이지/선택/이름/IP 초기화. 단 searchDevCode(카테고리)는 그룹 무관하게 유지.
   useEffect(() => {
     setPage(1);
     setSelectedDevices([]);
     setSearchDeviceName('');
     setSearchDeviceIp('');
-    setSearchDevCode('');
   }, [selectedGroup?.GROUP_ID]);
 
   // 검색 파라미터 (useMemo로 불필요한 객체 생성 방지)
@@ -1553,6 +1562,17 @@ export default function AssetManagement() {
       hideable: true,
     },
     {
+      key: 'DEV_CODE_NM',
+      label: '장비코드',
+      width: '110px',
+      sortable: true,
+      className: 'cell-truncate',
+      hideable: true,
+      render: (value) => value
+        ? <span className="cell-badge info">{value}</span>
+        : <span style={{ color: 'var(--theme-text-muted)', fontSize: 12 }}>-</span>,
+    },
+    {
       key: 'MODEL_NAME',
       label: '모델',
       width: '120px',
@@ -1595,10 +1615,9 @@ export default function AssetManagement() {
       hideable: true,
       render: (_, row) => (
         <button
-          className="action-btn"
+          className="action-btn ssh-btn"
           title="SSH 접속"
           onClick={(e) => handleOpenSshTerminal(row, e)}
-          style={{ color: '#38bdf8', fontSize: '16px', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
         >
           <i className="bi bi-terminal" />
         </button>
@@ -1634,7 +1653,7 @@ export default function AssetManagement() {
       <div className="page-header">
         <div className="page-header-left">
           <h1 className="page-title">
-            <i className="bi bi-hdd-rack"></i>
+            <i className="bi bi-hdd-network"></i>
             자산 관리
           </h1>
           <span className="page-subtitle">등록된 장비를 조회하고 관리합니다</span>
@@ -1682,18 +1701,11 @@ export default function AssetManagement() {
               <div className="filter-bar">
                 <div className="filter-group">
                   <label>장비코드</label>
-                  <select
-                    className="filter-select"
+                  <DevCodeDropdown
+                    devCodes={devCodes}
                     value={searchDevCode}
-                    onChange={(e) => setSearchDevCode(e.target.value)}
-                  >
-                    <option value="">전체</option>
-                    {devCodes.map((code) => (
-                      <option key={code.DEV_CODE_ID} value={code.DEV_CODE_ID}>
-                        {code.CODE_NM}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSearchDevCode}
+                  />
                 </div>
                 <div className="filter-group">
                   <label>장비명</label>
@@ -1748,7 +1760,7 @@ export default function AssetManagement() {
                   setPage(1);
                 },
               }}
-              maxHeight="calc(100vh - 370px)"
+              maxHeight="100%"
               exportConfig={{
                 fileName: '장비목록',
                 excludeColumns: ['STATUS'],
@@ -1767,790 +1779,36 @@ export default function AssetManagement() {
         </main>
       </div>
 
-      {/* 장비 상세 보기 모달 */}
+      {/* 장비 상세 보기 모달 (공통 컴포넌트 재사용) */}
       {detailDevice && (
-        <div id="device-detail-modal" className="modal" style={{ display: 'flex' }} onClick={() => setDetailDevice(null)}>
-          <div className="modal-content device-detail-modal" style={{ position: 'relative', overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
-            <span className="close-btn" onClick={() => setDetailDevice(null)}>&times;</span>
-
-            {/* 장비 설정 사이드바 (모달 내부 오버레이) */}
-              <div className={`settings-sidebar-overlay${showSettingsSidebar ? ' open' : ''}`} onClick={() => setShowSettingsSidebar(false)}>
-                <div className="settings-sidebar" onClick={(e) => e.stopPropagation()}>
-                  <div className="settings-sidebar-header">
-                    <div className="settings-sidebar-title">
-                      <i className="bi bi-gear"></i> 장비 설정
-                    </div>
-                    <span className="settings-sidebar-close" onClick={() => setShowSettingsSidebar(false)}>&times;</span>
-                  </div>
-
-                  <div className="settings-sidebar-body">
-                    {/* 수집 서버 설정 */}
-                    <div className="settings-section">
-                      <div className="settings-section-title">
-                        <i className="bi bi-server"></i> 수집 서버
-                      </div>
-                      <div className="settings-form">
-                        <div className="settings-form-group">
-                          <select
-                            value={selectedMiddlewareId || ''}
-                            onChange={(e) => setSelectedMiddlewareId(e.target.value ? parseInt(e.target.value) : null)}
-                          >
-                            <option value="">미지정 (수집 안 함)</option>
-                            {middlewares.filter(m => m.STATUS === 'ACTIVE').map(m => (
-                              <option key={m.MIDDLEWARE_ID} value={m.MIDDLEWARE_ID}>
-                                {m.MIDDLEWARE_NAME} ({m.MIDDLEWARE_URL})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 관제 범위 설정 */}
-                    <div className="settings-section">
-                      <div className="settings-section-title">
-                        <i className="bi bi-broadcast"></i> 관제 범위 설정
-                      </div>
-                      {scopeLoading ? (
-                        <div className="scope-loading">
-                          <i className="bi bi-arrow-repeat spinning"></i> 로딩 중...
-                        </div>
-                      ) : (
-                        <div className="settings-scope-list">
-                          <div className="settings-scope-item">
-                            <div className="scope-item-info">
-                              <i className="bi bi-wifi scope-icon ping"></i>
-                              <div>
-                                <span className="scope-item-title">PING</span>
-                                <span className="scope-item-desc">ICMP 상태 모니터링</span>
-                              </div>
-                            </div>
-                            <label className="toggle-switch">
-                              <input type="checkbox" checked={deviceScope?.COLLECT_PING || false} onChange={() => handleToggleScope('COLLECT_PING')} disabled={updateDeviceScopeMutation.isPending} />
-                              <span className="toggle-slider"></span>
-                            </label>
-                          </div>
-                          <div className="settings-scope-item">
-                            <div className="scope-item-info">
-                              <i className="bi bi-diagram-3 scope-icon snmp"></i>
-                              <div>
-                                <span className="scope-item-title">SNMP</span>
-                                <span className="scope-item-desc">SNMP 상세 정보 수집</span>
-                              </div>
-                            </div>
-                            <label className="toggle-switch">
-                              <input type="checkbox" checked={deviceScope?.COLLECT_SNMP || false} onChange={() => handleToggleScope('COLLECT_SNMP')} disabled={updateDeviceScopeMutation.isPending} />
-                              <span className="toggle-slider"></span>
-                            </label>
-                          </div>
-                          <div className="settings-scope-item">
-                            <div className="scope-item-info">
-                              <i className="bi bi-cpu scope-icon agent"></i>
-                              <div>
-                                <span className="scope-item-title">AGENT</span>
-                                <span className="scope-item-desc">에이전트 시스템 수집</span>
-                              </div>
-                            </div>
-                            <label className="toggle-switch">
-                              <input type="checkbox" checked={deviceScope?.COLLECT_AGENT || false} onChange={() => handleToggleScope('COLLECT_AGENT')} disabled={updateDeviceScopeMutation.isPending} />
-                              <span className="toggle-slider"></span>
-                            </label>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* SNMP 설정 */}
-                    <div className="settings-section">
-                      <div className="settings-section-title">
-                        <i className="bi bi-diagram-3"></i> SNMP 설정
-                      </div>
-                      <div className="settings-form">
-                        <div className="settings-form-row dual">
-                          <div className="settings-form-group">
-                            <label>버전</label>
-                            <select value={snmpConfig.SNMP_VERSION} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_VERSION: parseInt(e.target.value)})}>
-                              <option value={1}>v1</option>
-                              <option value={2}>v2c</option>
-                              <option value={3}>v3</option>
-                            </select>
-                          </div>
-                          <div className="settings-form-group">
-                            <label>포트</label>
-                            <input type="number" value={snmpConfig.SNMP_PORT} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_PORT: parseInt(e.target.value)})} />
-                          </div>
-                        </div>
-                        {String(snmpConfig.SNMP_VERSION) !== '3' ? (
-                          <div className="settings-form-group">
-                            <label>커뮤니티</label>
-                            <input type="text" value={snmpConfig.SNMP_COMMUNITY} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_COMMUNITY: e.target.value})} placeholder="public" />
-                          </div>
-                        ) : (
-                          <>
-                            <div className="settings-form-group">
-                              <label>사용자</label>
-                              <input type="text" value={snmpConfig.SNMP_USER} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_USER: e.target.value})} />
-                            </div>
-                            <div className="settings-form-row dual">
-                              <div className="settings-form-group">
-                                <label>인증</label>
-                                <select value={snmpConfig.SNMP_AUTH_PROTOCOL} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_AUTH_PROTOCOL: e.target.value})}>
-                                  <option value="MD5">MD5</option>
-                                  <option value="SHA">SHA</option>
-                                  <option value="SHA256">SHA256</option>
-                                </select>
-                              </div>
-                              <div className="settings-form-group">
-                                <label>인증 PW</label>
-                                <input type="text" value={snmpConfig.SNMP_AUTH_PASSWORD} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_AUTH_PASSWORD: e.target.value})} />
-                              </div>
-                            </div>
-                            <div className="settings-form-row dual">
-                              <div className="settings-form-group">
-                                <label>암호화</label>
-                                <select value={snmpConfig.SNMP_PRIV_PROTOCOL} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_PRIV_PROTOCOL: e.target.value})}>
-                                  <option value="DES">DES</option>
-                                  <option value="AES">AES128</option>
-                                  <option value="AES256">AES256</option>
-                                </select>
-                              </div>
-                              <div className="settings-form-group">
-                                <label>암호화 PW</label>
-                                <input type="text" value={snmpConfig.SNMP_PRIV_PASSWORD} onChange={(e) => setSnmpConfig({...snmpConfig, SNMP_PRIV_PASSWORD: e.target.value})} />
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* SSH/TELNET 접속 정보 */}
-                    <div className="settings-section">
-                      <div className="settings-section-title">
-                        <i className="bi bi-terminal"></i> 접속 정보
-                      </div>
-                      <div className="settings-form">
-                        <div className="settings-form-row dual">
-                          <div className="settings-form-group">
-                            <label>접속 방식</label>
-                            <select value={sshConfig.CONNECT_AS} onChange={(e) => setSshConfig({...sshConfig, CONNECT_AS: e.target.value})}>
-                              <option value="SSH">SSH</option>
-                              <option value="TELNET">TELNET</option>
-                            </select>
-                          </div>
-                          <div className="settings-form-group">
-                            <label>포트</label>
-                            <input type="number" value={sshConfig.SSH_PORT} onChange={(e) => setSshConfig({...sshConfig, SSH_PORT: parseInt(e.target.value)})} />
-                          </div>
-                        </div>
-                        <div className="settings-form-group">
-                          <label>사용자</label>
-                          <input type="text" value={sshConfig.SSH_USER} onChange={(e) => setSshConfig({...sshConfig, SSH_USER: e.target.value})} placeholder="root" />
-                        </div>
-                        <div className="settings-form-group">
-                          <label>비밀번호</label>
-                          <input type="text" value={sshConfig.SSH_PASS} onChange={(e) => setSshConfig({...sshConfig, SSH_PASS: e.target.value})} />
-                        </div>
-                      </div>
-                    </div>
-                    {/* 임계치 설정 */}
-                    <div className="settings-section">
-                      <div className="settings-section-title">
-                        <i className="bi bi-speedometer2"></i> 임계치 설정
-                      </div>
-                      {thresholdLoading ? (
-                        <div className="scope-loading"><i className="bi bi-arrow-repeat spinning"></i> 로딩 중...</div>
-                      ) : (
-                        <div className="sthr-list">
-                          {deviceThresholds.map((t, idx) => (
-                            <div key={t.TYPE} className="sthr-row">
-                              <span className="sthr-type">{t.TYPE}</span>
-                              <div className="sthr-inputs">
-                                {[['CRITICAL', 'critical', 'C'], ['MAJOR', 'major', 'M'], ['MINOR', 'minor', 'N'], ['WARNING', 'warning', 'W']].map(([sev, cls, label]) => (
-                                  <div key={sev} className="sthr-cell">
-                                    <span className={`sthr-badge ${cls}`}>{label}</span>
-                                    <input
-                                      type="number" min={0} max={t.MAX_VALUE || 100}
-                                      value={t[sev] ?? ''}
-                                      onChange={e => {
-                                        setDeviceThresholds(prev => {
-                                          const next = [...prev];
-                                          next[idx] = { ...next[idx], [sev]: parseInt(e.target.value) || 0 };
-                                          return next;
-                                        });
-                                      }}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="settings-sidebar-footer">
-                    <button className="btn btn-secondary" onClick={() => setShowSettingsSidebar(false)} disabled={sidebarSaving}>취소</button>
-                    <button className={`btn btn-primary ${(JSON.stringify(snmpConfig) !== originalSnmpConfig || JSON.stringify(sshConfig) !== originalSshConfig || JSON.stringify(deviceThresholds) !== originalThresholds || selectedMiddlewareId !== originalMiddlewareId) ? 'dirty' : ''}`} onClick={handleSaveSettings} disabled={sidebarSaving || (JSON.stringify(snmpConfig) === originalSnmpConfig && JSON.stringify(sshConfig) === originalSshConfig && JSON.stringify(deviceThresholds) === originalThresholds && selectedMiddlewareId === originalMiddlewareId)}>
-                      {sidebarSaving ? <><i className="bi bi-arrow-repeat spinning"></i> 저장 중...</> : <><i className="bi bi-check-lg"></i> 저장</>}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-            {/* 탭 헤더 (메트릭 기반 동적) */}
-            <div className="detail-tabs-row">
-              <div className="detail-tabs">
-                <button className={`detail-tab ${activeTab === 'device-info' ? 'active' : ''}`} onClick={() => setActiveTab('device-info')}>
-                  <i className="bi bi-info-circle"></i> 장비 정보
-                </button>
-                {(deviceMetrics.length === 0 || deviceMetrics.includes('INTERFACE')) && (
-                  <button className={`detail-tab ${activeTab === 'port-info' ? 'active' : ''}`} onClick={() => setActiveTab('port-info')}>
-                    <i className="bi bi-ethernet"></i> 포트 정보
-                    {portsDataRaw?.length > 0 && <span className="tab-badge">{portsDataRaw.length}</span>}
-                  </button>
-                )}
-                <button className={`detail-tab ${activeTab === 'fault-info' ? 'active' : ''}`} onClick={() => setActiveTab('fault-info')}>
-                  <i className="bi bi-exclamation-triangle"></i> 장애
-                  {faultTotal > 0 && <span className="tab-badge danger">{faultTotal}</span>}
-                </button>
-                <button className={`detail-tab ${activeTab === 'change-history' ? 'active' : ''}`} onClick={() => setActiveTab('change-history')}>
-                  <i className="bi bi-clock-history"></i> 변경이력
-                </button>
-                <button className={`detail-tab ${activeTab === 'ssh-history' ? 'active' : ''}`} onClick={() => setActiveTab('ssh-history')}>
-                  <i className="bi bi-terminal"></i> SSH이력
-                </button>
-              </div>
-            </div>
-
-            {/* 장비 정보 탭 - 2열 레이아웃 (인라인 편집) */}
-            {activeTab === 'device-info' && (
-              <div id="device-info-tab" className="detail-tab-content active">
-                <div className="two-column-layout">
-                  {/* 좌측: 장비정보, CPU/MEM */}
-                  <div className="left-column">
-                    {/* 장비 정보 */}
-                    <div className="info-box">
-                      <div className="info-box-header">
-                        <span><i className="bi bi-hdd-network"></i> 장비 정보</span>
-                        {hasEditChanges ? (
-                          <button className="settings-gear-btn save-active" onClick={handleSaveDevice} disabled={editSaving} title="변경사항 저장">
-                            {editSaving ? <i className="bi bi-arrow-repeat spinning"></i> : <i className="bi bi-check-lg"></i>}
-                          </button>
-                        ) : (
-                          <button className="settings-gear-btn" onClick={handleOpenSettingsSidebar} title="장비 설정">
-                            <i className="bi bi-gear"></i>
-                          </button>
-                        )}
-                      </div>
-                      <div className="info-box-body">
-                        <div className="info-row">
-                          <span className="label">장비명</span>
-                          <input type="text" className="edit-input" value={editFormData.DEVICE_NAME || ''} onChange={(e) => setEditFormData({...editFormData, DEVICE_NAME: e.target.value})} />
-                        </div>
-                        <div className="info-row">
-                          <span className="label">IP</span>
-                          <input type="text" className="edit-input ip" value={editFormData.DEVICE_IP || ''} onChange={(e) => setEditFormData({...editFormData, DEVICE_IP: e.target.value})} />
-                        </div>
-                        <div className="info-row">
-                          <span className="label">시스템명</span>
-                          <span className="value">{detailDevice.DEVICE_SYSTEM_NAME || '-'}</span>
-                        </div>
-                        <div className="info-row">
-                          <span className="label">시스템 설명</span>
-                          <span className="value sys-descr-value">{detailDevice.DEVICE_DESC || detailDevice.sysDescr || '-'}</span>
-                        </div>
-                        <div className="info-row">
-                          <span className="label">벤더</span>
-                          <span className="value" style={{flex: '0 0 auto', marginRight: '16px'}}>{detailDevice.VENDOR_NAME || '-'}</span>
-                          <span className="label" style={{flex: '0 0 auto', marginRight: '8px'}}>모델</span>
-                          <span className="value">{detailDevice.MODEL_NAME || '-'}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* CPU / MEM (메트릭에 포함된 경우만) */}
-                    {(deviceMetrics.length === 0 || deviceMetrics.includes('CPU') || deviceMetrics.includes('MEM')) && (
-                    <div className="info-box cpu-mem-box">
-                      <div className="info-box-header"><i className="bi bi-cpu"></i> CPU / MEM</div>
-                      <div className="info-box-body pie-body">
-                        <div className="pie-wrapper">
-                          <ReactECharts
-                            option={{
-                              series: [{
-                                type: 'pie',
-                                radius: ['55%', '80%'],
-                                center: ['50%', '50%'],
-                                data: [
-                                  { value: cpuMemData?.CPU_USAGE || 0, itemStyle: { color: '#3b82f6' } },
-                                  { value: 100 - (cpuMemData?.CPU_USAGE || 0), itemStyle: { color: 'rgba(255,255,255,0.1)' } }
-                                ],
-                                label: {
-                                  show: true,
-                                  position: 'center',
-                                  formatter: cpuMemData?.CPU_USAGE != null ? `${Number(cpuMemData.CPU_USAGE).toFixed(1)}%` : '-',
-                                  fontSize: 18,
-                                  fontWeight: 'bold',
-                                  color: '#3b82f6'
-                                },
-                                labelLine: { show: false },
-                                silent: true
-                              }]
-                            }}
-                            style={{ height: '120px', width: '120px' }}
-                          />
-                          <span className="pie-name">CPU</span>
-                        </div>
-                        <div className="pie-wrapper">
-                          <ReactECharts
-                            option={{
-                              series: [{
-                                type: 'pie',
-                                radius: ['55%', '80%'],
-                                center: ['50%', '50%'],
-                                data: [
-                                  { value: cpuMemData?.MEM_USAGE || 0, itemStyle: { color: '#10b981' } },
-                                  { value: 100 - (cpuMemData?.MEM_USAGE || 0), itemStyle: { color: 'rgba(255,255,255,0.1)' } }
-                                ],
-                                label: {
-                                  show: true,
-                                  position: 'center',
-                                  formatter: cpuMemData?.MEM_USAGE != null ? `${Number(cpuMemData.MEM_USAGE).toFixed(1)}%` : '-',
-                                  fontSize: 18,
-                                  fontWeight: 'bold',
-                                  color: '#10b981'
-                                },
-                                labelLine: { show: false },
-                                silent: true
-                              }]
-                            }}
-                            style={{ height: '120px', width: '120px' }}
-                          />
-                          <span className="pie-name">MEM</span>
-                        </div>
-                      </div>
-                    </div>
-                    )}
-
-                    {/* 온습도 (메트릭에 포함된 경우) */}
-                    {(deviceMetrics.includes('TEMPERATURE') || deviceMetrics.includes('HUMIDITY')) && (
-                      <EnvironmentBox deviceId={detailDevice?.DEVICE_ID} metrics={deviceMetrics} />
-                    )}
-                  </div>
-
-                  {/* 우측: 포트현황, 트래픽차트 */}
-                  <div className="right-column">
-                    {/* 포트 현황 - 실제 스위치 모양 */}
-                    <div className="info-box">
-                      <div className="info-box-header">
-                        <i className="bi bi-ethernet"></i> 포트 현황
-                        <span className="port-badge">
-                          <span className="up">{portsData?.filter(p => p.IF_OPER_STATUS === 1).length || 0} UP</span>
-                          <span className="sep">/</span>
-                          <span className="down">{portsData?.filter(p => p.IF_OPER_STATUS !== 1).length || 0} DOWN</span>
-                        </span>
-                      </div>
-                      <div className="info-box-body">
-                        {switchLayout ? (
-                          <div className="switch-chassis">
-                            {/* 메인 포트 영역 */}
-                            <div className="switch-main-ports">
-                              {switchLayout.mainGroups.map((group, gIdx) => (
-                                <div key={`main-${gIdx}`} className="port-group">
-                                  <div className="port-group-label">
-                                    {group.interfaceType === 'fastethernet' ? 'FastEthernet ' :
-                                     group.interfaceType === 'gigabit' ? 'GigabitEthernet ' :
-                                     group.interfaceType === 'linux-nic' ? 'Network Interface ' : 'Ethernet '}{group.slot !== 'eth' ? group.slot : ''}
-                                  </div>
-                                  <div className="port-panel">
-                                    {/* 홀수 포트 (위) */}
-                                    <div className="port-row">
-                                      {group.ports.filter(p => p.parsed.portNum % 2 === 1).map(port => (
-                                        <div
-                                          key={port.IF_INDEX}
-                                          className={`port-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartPortsSet.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
-                                          title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
-                                          onClick={() => handleToggleChartPort(port)}
-                                          onContextMenu={(e) => handlePortContextMenu(e, port)}
-                                        >
-                                          <span className="port-num">{port.parsed.portNum}</span>
-                                          <div className="port-connector">
-                                            <div className="port-led"></div>
-                                          </div>
-                                          {chartPortsSet.has(port.IF_INDEX) && <span className="chart-icon"></span>}
-                                        </div>
-                                      ))}
-                                    </div>
-                                    {/* 짝수 포트 (아래) */}
-                                    <div className="port-row">
-                                      {group.ports.filter(p => p.parsed.portNum % 2 === 0).map(port => (
-                                        <div
-                                          key={port.IF_INDEX}
-                                          className={`port-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartPortsSet.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
-                                          title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
-                                          onClick={() => handleToggleChartPort(port)}
-                                          onContextMenu={(e) => handlePortContextMenu(e, port)}
-                                        >
-                                          <span className="port-num">{port.parsed.portNum}</span>
-                                          <div className="port-connector">
-                                            <div className="port-led"></div>
-                                          </div>
-                                          {chartPortsSet.has(port.IF_INDEX) && <span className="chart-icon"></span>}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-
-                            {/* 업링크 포트 영역 */}
-                            {switchLayout.uplinkGroups.length > 0 && (
-                              <div className="switch-uplink-ports">
-                                <div className="uplink-divider"></div>
-                                {switchLayout.uplinkGroups.map((group, gIdx) => (
-                                  <div key={`uplink-${gIdx}`} className="port-group uplink">
-                                    <div className="port-group-label">
-                                      {group.interfaceType === 'gigabit' ? 'GigabitEthernet ' :
-                                       group.interfaceType === 'tengigabit' ? 'TenGigabitEthernet ' :
-                                       group.interfaceType === 'management' ? 'Management' : 'Uplink '}{group.slot !== 'mgmt' ? group.slot : ''}
-                                    </div>
-                                    <div className="port-panel uplink-panel">
-                                      {group.ports.map(port => (
-                                        <div
-                                          key={port.IF_INDEX}
-                                          className={`port-jack uplink-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartPortsSet.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
-                                          title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
-                                          onClick={() => handleToggleChartPort(port)}
-                                          onContextMenu={(e) => handlePortContextMenu(e, port)}
-                                        >
-                                          <span className="port-num">{port.parsed.portNum}</span>
-                                          <div className="port-connector sfp">
-                                            <div className="port-led"></div>
-                                          </div>
-                                          {chartPortsSet.has(port.IF_INDEX) && <span className="chart-icon"></span>}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="no-port">포트 정보 없음</div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* 트래픽 차트 */}
-                    <div className="info-box traffic-box">
-                      <div className="info-box-header">
-                        <i className="bi bi-graph-up-arrow"></i> 포트별 트래픽
-                        <span className="time-label">
-                          {chartPortsSet.size > 0
-                            ? `선택: ${chartPortsSet.size}개 포트`
-                            : 'OPER UP 포트 (포트 클릭으로 선택)'}
-                        </span>
-                        {trafficLoading && <i className="bi bi-arrow-repeat spinning" style={{marginLeft:'8px',fontSize:'11px',color:'#64748b'}}></i>}
-                        <div className="global-settings-wrapper" ref={trafficSettingsRef}>
-                          <button
-                            className="btn btn-icon"
-                            onClick={() => setShowTrafficSettings(prev => !prev)}
-                            title="차트 설정"
-                          >
-                            <i className="bi bi-sliders"></i>
-                          </button>
-                          {showTrafficSettings && (
-                            <div className="global-settings-dropdown">
-                              <div className="option-group-label">트래픽 카운터</div>
-                              <label className="option-item">
-                                <input type="radio" name="ptcCounter" checked={trafficChartSettings.counterType === '32bit'} onChange={() => setTrafficChartSettings(s => ({...s, counterType: '32bit'}))} />
-                                <span>32-bit</span>
-                              </label>
-                              <label className="option-item">
-                                <input type="radio" name="ptcCounter" checked={trafficChartSettings.counterType === '64bit'} onChange={() => setTrafficChartSettings(s => ({...s, counterType: '64bit'}))} />
-                                <span>64-bit</span>
-                              </label>
-
-                              <div className="option-group-label">표시 단위</div>
-                              <label className="option-item">
-                                <input type="radio" name="ptcUnit" checked={trafficChartSettings.trafficUnit === 'bit'} onChange={() => setTrafficChartSettings(s => ({...s, trafficUnit: 'bit'}))} />
-                                <span>bit (bps)</span>
-                              </label>
-                              <label className="option-item">
-                                <input type="radio" name="ptcUnit" checked={trafficChartSettings.trafficUnit === 'byte'} onChange={() => setTrafficChartSettings(s => ({...s, trafficUnit: 'byte'}))} />
-                                <span>byte (B/s)</span>
-                              </label>
-                              <label className="option-item">
-                                <input type="radio" name="ptcUnit" checked={trafficChartSettings.trafficUnit === 'bps'} onChange={() => setTrafficChartSettings(s => ({...s, trafficUnit: 'bps'}))} />
-                                <span>사용률 (%)</span>
-                              </label>
-
-                              <div className="option-group-label">품질 지표</div>
-                              <label className="option-item">
-                                <input type="checkbox" checked={trafficChartSettings.showError} onChange={(e) => setTrafficChartSettings(s => ({...s, showError: e.target.checked}))} />
-                                <span style={{color:'#ef4444'}}>Error</span>
-                              </label>
-                              <label className="option-item">
-                                <input type="checkbox" checked={trafficChartSettings.showDiscard} onChange={(e) => setTrafficChartSettings(s => ({...s, showDiscard: e.target.checked}))} />
-                                <span style={{color:'#f97316'}}>Discard</span>
-                              </label>
-
-                              <div className="option-group-label">포트 선택</div>
-                              <label className="option-item" style={{cursor:'pointer'}} onClick={handleResetChartFlags}>
-                                <i className="bi bi-arrow-counterclockwise" style={{fontSize:12,color:'#94a3b8'}}></i>
-                                <span>선택 초기화</span>
-                              </label>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="info-box-body">
-                        <PortTrafficChart
-                          rawData={trafficRawData}
-                          chartPortsSet={chartPortsSet}
-                          portsData={portsData}
-                          settings={trafficChartSettings}
-                          loading={trafficLoading}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 포트 정보 탭 */}
-            {activeTab === 'port-info' && (
-              <div id="port-info-tab" className="detail-tab-content active">
-                <DataTable
-                  tableId="asset-ports"
-                  columns={portColumns}
-                  data={sortedPorts}
-                  rowKey="IF_INDEX"
-                  loading={portsLoading || allPortsLoading}
-                  loadingText="포트 정보를 불러오는 중..."
-                  emptyText="등록된 포트가 없습니다"
-                  emptyIcon="bi-ethernet"
-                  sort={{ field: portSortField, order: portSortOrder }}
-                  onSort={handlePortSort}
-                  maxHeight="calc(100vh - 380px)"
-                  className="port-data-table"
-                  exportConfig={{ fileName: '포트정보' }}
-                />
-              </div>
-            )}
-
-            {/* 장애 탭 */}
-            {activeTab === 'fault-info' && (
-              <div id="fault-info-tab" className="detail-tab-content active">
-                <DataTable
-                  tableId="asset-faults"
-                  columns={faultColumns}
-                  data={faultData}
-                  rowKey="_faultRowId"
-                  rowAttrs={(row) => ({ 'data-fault-row': row._faultRowId || '' })}
-                  loading={faultLoading}
-                  loadingText="장애 이력을 불러오는 중..."
-                  emptyText="장애 이력이 없습니다"
-                  emptyIcon="bi-check-circle"
-                  sort={{ field: faultSortField, order: faultSortOrder }}
-                  onSort={handleFaultSort}
-                  maxHeight="calc(100vh - 380px)"
-                  rowClassName={(row) => row._isActive ? 'fault-active-row' : ''}
-                  pagination={{
-                    currentPage: faultPage,
-                    pageSize: faultPageSize,
-                    totalItems: faultTotal,
-                    onPageChange: setFaultPage,
-                    onPageSizeChange: (size) => {
-                      setFaultPageSize(size);
-                      setFaultPage(1);
-                    },
-                    pageSizeOptions: [10, 20, 50],
-                  }}
-                  exportConfig={{
-                    fileName: `장애조회_${detailDevice?.DEVICE_NAME || ''}`,
-                    excludeColumns: ['_isActive', 'actions'],
-                    fetchAllData: async () => {
-                      const [errRes, histRes] = await Promise.all([
-                        faultApi.getErrors({ deviceId: detailDevice.DEVICE_ID }),
-                        faultApi.getHistory({ page: 1, size: 999999, deviceId: detailDevice.DEVICE_ID, sortKey: faultSortField, sortDirection: faultSortOrder }),
-                      ]);
-                      const activeList = errRes.data?.data?.list || [];
-                      const deviceActive = Array.isArray(activeList) ? activeList.filter(e => e.DEVICE_ID === detailDevice.DEVICE_ID) : [];
-                      const histList = histRes.data?.data?.content || [];
-                      return [...deviceActive.map(e => ({ ...e, _isActive: true })), ...histList];
-                    },
-                  }}
-                />
-
-                {/* 장애 인지 처리 모달 */}
-                {showFaultAckModal && (
-                  <div className="modal-overlay" onClick={() => setShowFaultAckModal(false)}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                      <div className="modal-header">
-                        <h3>장애 인지 처리</h3>
-                        <button className="modal-close" onClick={() => setShowFaultAckModal(false)}>
-                          <i className="bi bi-x-lg"></i>
-                        </button>
-                      </div>
-                      <div className="modal-body">
-                        <div className="ack-info">
-                          <p><strong>장비:</strong> {detailDevice?.DEVICE_NAME} ({detailDevice?.DEVICE_IP})</p>
-                          <p><strong>장애:</strong> {selectedFaultError?.ERROR_MESSAGE}</p>
-                        </div>
-                        <div className="form-group">
-                          <label>인지 메시지</label>
-                          <textarea
-                            value={faultAckMessage}
-                            onChange={(e) => setFaultAckMessage(e.target.value)}
-                            placeholder="인지 처리 메시지를 입력하세요..."
-                            rows={3}
-                          />
-                        </div>
-                      </div>
-                      <div className="modal-footer">
-                        <button className="btn btn-secondary" onClick={() => setShowFaultAckModal(false)}>
-                          취소
-                        </button>
-                        <button className="btn btn-primary" onClick={handleFaultAcknowledge}>
-                          인지 처리
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 변경이력 탭 */}
-            {activeTab === 'change-history' && (
-              <div id="change-history-tab" className="detail-tab-content active">
-                {changeHistoryLoading ? (
-                  <div className="tab-loading"><i className="bi bi-arrow-repeat spinning"></i> 변경이력을 불러오는 중...</div>
-                ) : changeHistory.length === 0 ? (
-                  <div className="tab-empty"><i className="bi bi-clock-history"></i><span>변경이력이 없습니다</span></div>
-                ) : (
-                  <>
-                    <div className="history-timeline">
-                      {changeHistory.map((log, idx) => (
-                        <div key={log.LOG_ID || idx} className="history-item">
-                          <div className="history-item-icon">
-                            {log.ACTION_TYPE === 'CREATE' && <i className="bi bi-plus-circle text-success"></i>}
-                            {log.ACTION_TYPE === 'UPDATE' && <i className="bi bi-pencil-square text-info"></i>}
-                            {log.ACTION_TYPE === 'DELETE' && <i className="bi bi-trash text-danger"></i>}
-                          </div>
-                          <div className="history-item-content">
-                            <div className="history-item-header">
-                              <span className={`history-action-badge ${log.ACTION_TYPE?.toLowerCase()}`}>
-                                {log.ACTION_TYPE === 'CREATE' ? '등록' : log.ACTION_TYPE === 'UPDATE' ? '수정' : log.ACTION_TYPE === 'DELETE' ? '삭제' : log.ACTION_TYPE}
-                              </span>
-                              <span className="history-target-type">{log.TARGET_TYPE}</span>
-                              <span className="history-user">{log.USER_NAME || '시스템'}</span>
-                              <span className="history-time">{log.CREATED_AT ? new Date(log.CREATED_AT).toLocaleString('ko-KR') : ''}</span>
-                            </div>
-                            {log.DETAIL && (
-                              <div className="history-item-detail">{log.DETAIL}</div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {changeHistoryTotal > 20 && (
-                      <div className="history-pagination">
-                        <button disabled={changeHistoryPage <= 1} onClick={() => setChangeHistoryPage(p => p - 1)}>
-                          <i className="bi bi-chevron-left"></i>
-                        </button>
-                        <span>{changeHistoryPage} / {Math.ceil(changeHistoryTotal / 20)}</span>
-                        <button disabled={changeHistoryPage >= Math.ceil(changeHistoryTotal / 20)} onClick={() => setChangeHistoryPage(p => p + 1)}>
-                          <i className="bi bi-chevron-right"></i>
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* SSH이력 탭 */}
-            {activeTab === 'ssh-history' && (
-              <div id="ssh-history-tab" className="detail-tab-content active">
-                {sshHistoryLoading ? (
-                  <div className="tab-loading"><i className="bi bi-arrow-repeat spinning"></i> SSH이력을 불러오는 중...</div>
-                ) : sshHistory.length === 0 ? (
-                  <div className="tab-empty"><i className="bi bi-terminal"></i><span>SSH 접속 이력이 없습니다</span></div>
-                ) : (
-                  <>
-                    <div className="ssh-history-list">
-                      {sshHistory.map((session, idx) => (
-                        <div key={session.sessionId || idx} className="ssh-history-item">
-                          <div className="ssh-history-icon">
-                            <i className={`bi ${session.disconnectedAt ? 'bi-plug' : 'bi-plug-fill text-success'}`}></i>
-                          </div>
-                          <div className="ssh-history-content">
-                            <div className="ssh-history-header">
-                              <span className="ssh-user-badge">{session.sshUser}@{session.host}</span>
-                              <span className="ssh-history-user">{session.userName || '알 수 없음'}</span>
-                              <span className={`ssh-status-badge ${session.disconnectedAt ? 'closed' : 'active'}`}>
-                                {session.disconnectedAt ? '종료' : '접속중'}
-                              </span>
-                            </div>
-                            <div className="ssh-history-times">
-                              <span><i className="bi bi-box-arrow-in-right"></i> {session.connectedAt ? new Date(session.connectedAt).toLocaleString('ko-KR') : ''}</span>
-                              {session.disconnectedAt && (
-                                <span><i className="bi bi-box-arrow-right"></i> {new Date(session.disconnectedAt).toLocaleString('ko-KR')}</span>
-                              )}
-                              <span className="ssh-remote-addr">접속IP: {session.remoteAddr}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {sshHistoryTotal > 20 && (
-                      <div className="history-pagination">
-                        <button disabled={sshHistoryPage <= 1} onClick={() => setSshHistoryPage(p => p - 1)}>
-                          <i className="bi bi-chevron-left"></i>
-                        </button>
-                        <span>{sshHistoryPage} / {Math.ceil(sshHistoryTotal / 20)}</span>
-                        <button disabled={sshHistoryPage >= Math.ceil(sshHistoryTotal / 20)} onClick={() => setSshHistoryPage(p => p + 1)}>
-                          <i className="bi bi-chevron-right"></i>
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-
-          </div>
-        </div>
+        <DeviceDetailModal
+          deviceId={detailDevice.DEVICE_ID}
+          onClose={() => setDetailDevice(null)}
+        />
       )}
 
       {/* 그룹 이동 모달 */}
       {showMoveGroupModal && (
-        <div className="modal" style={{
+        <div className="modal move-group-modal" style={{
           display: 'flex',
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.7)',
+          background: 'var(--theme-modal-backdrop, rgba(0, 0, 0, 0.7))',
           zIndex: 9999,
           alignItems: 'center',
           justifyContent: 'center'
         }} onClick={() => { setShowMoveGroupModal(false); setTargetGroup(null); }}>
-          <div className="modal-content" style={{
+          <div className="modal-content move-group-modal-content" style={{
             maxWidth: '450px',
             width: '90%',
-            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%)',
+            background: 'var(--theme-bg-elevated, linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%))',
             borderRadius: '16px',
             padding: '24px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            border: '1px solid var(--theme-border-default, rgba(255, 255, 255, 0.1))',
+            boxShadow: 'var(--theme-shadow-lg, 0 25px 50px -12px rgba(0, 0, 0, 0.5))',
             position: 'relative'
           }} onClick={(e) => e.stopPropagation()}>
             <span

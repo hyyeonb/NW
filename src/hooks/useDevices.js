@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { devicesApi } from '../api';
+import { devicesApi } from '../api/devices';
 
 export const useDevicesByGroup = (groupId) => {
   return useQuery({

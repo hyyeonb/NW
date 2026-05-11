@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { authApi } from '../api';
+import { authApi } from '../api/auth';
+import { useThemeStore } from '../stores/themeStore';
+import ThemeToggle from '../components/ThemeToggle';
 import '../styles/login.css';
 
 export default function FindAccount() {
+  const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
+  const logoTextSrc = resolvedTheme === 'light' ? '/logo-text-light.svg' : '/logo-text-dark.svg';
   const [mode, setMode] = useState('id'); // 'id' | 'password'
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -110,14 +114,18 @@ export default function FindAccount() {
         <div className="floating-shape shape-3"></div>
       </div>
 
+      {/* 테마 토글 */}
+      <ThemeToggle className="fixed-top-right" />
+
       {/* Container */}
       <div className="login-wrapper">
         <div className="login-container">
           {/* Logo Section */}
           <div className="logo-section">
             <div className="login-logo-wrapper">
+              <div className="logo-gradient-aura" aria-hidden="true" />
               <img src="/logo-single.svg" alt="Logo" className="login-logo-icon" />
-              <img src="/logo-text-dark.svg" alt="Infomap" className="login-logo-text" />
+              <img src={logoTextSrc} alt="Infomap" className="login-logo-text" />
             </div>
             <p className="subtitle">아이디 / 비밀번호 찾기</p>
           </div>

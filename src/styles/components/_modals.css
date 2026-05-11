@@ -125,7 +125,7 @@
 
 /* Registration Modal */
 .registration-modal {
-    z-index: 99999;
+    z-index: var(--z-tooltip);
 }
 
 .registration-modal-content {

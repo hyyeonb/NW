@@ -62,11 +62,11 @@
 }
 
 /* Light theme */
-[data-theme="light"] .ip-input-segmented {
+[data-theme^="light"] .ip-input-segmented {
   background: rgba(0, 0, 0, 0.03);
   border-color: rgba(0, 0, 0, 0.1);
 }
 
-[data-theme="light"] .ip-segment:focus {
+[data-theme^="light"] .ip-segment:focus {
   background: rgba(99, 102, 241, 0.06);
 }

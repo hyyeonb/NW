@@ -1305,343 +1305,567 @@
    ================== */
 
 /* -- Header -- */
-[data-theme="light"] .traceroute-title {
+[data-theme^="light"] .traceroute-title {
     color: #1d1d1f;
 }
 
-[data-theme="light"] .traceroute-subtitle {
+[data-theme^="light"] .traceroute-subtitle {
     color: #aeaeb2;
 }
 
 /* -- Tree Panel Headers -- */
-[data-theme="light"] .traceroute-tree-header {
+[data-theme^="light"] .traceroute-tree-header {
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .traceroute-tree-header--source {
+[data-theme^="light"] .traceroute-tree-header--source {
     background: rgba(16, 185, 129, 0.03);
 }
 
-[data-theme="light"] .traceroute-tree-header--target {
+[data-theme^="light"] .traceroute-tree-header--target {
     background: rgba(139, 92, 246, 0.03);
 }
 
-[data-theme="light"] .traceroute-tree-header-top {
+[data-theme^="light"] .traceroute-tree-header-top {
     color: #8e8e93;
 }
 
-[data-theme="light"] .traceroute-tree-header-sub {
+[data-theme^="light"] .traceroute-tree-header-sub {
     color: #aeaeb2;
 }
 
 /* -- Mode Tabs -- */
-[data-theme="light"] .traceroute-mode-tabs {
+[data-theme^="light"] .traceroute-mode-tabs {
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .traceroute-mode-tab {
+[data-theme^="light"] .traceroute-mode-tab {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .traceroute-mode-tab:hover {
+[data-theme^="light"] .traceroute-mode-tab:hover {
     color: #8e8e93;
     background: rgba(0, 0, 0, 0.02);
 }
 
-[data-theme="light"] .traceroute-mode-tab.active {
+[data-theme^="light"] .traceroute-mode-tab.active {
     color: #1d1d1f;
     background: rgba(79, 70, 229, 0.04);
 }
 
 /* -- Search -- */
-[data-theme="light"] .traceroute-search-wrap {
+[data-theme^="light"] .traceroute-search-wrap {
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .traceroute-search-icon {
+[data-theme^="light"] .traceroute-search-icon {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .traceroute-search-input {
+[data-theme^="light"] .traceroute-search-input {
     background: rgba(0, 0, 0, 0.02);
     border: 1px solid rgba(0, 0, 0, 0.06);
     color: #3a3a3c;
 }
 
-[data-theme="light"] .traceroute-search-input:focus {
+[data-theme^="light"] .traceroute-search-input:focus {
     border-color: rgba(139, 92, 246, 0.3);
 }
 
-[data-theme="light"] .traceroute-search-input::placeholder {
+[data-theme^="light"] .traceroute-search-input::placeholder {
     color: #c7c7cc;
 }
 
-[data-theme="light"] .traceroute-search-clear {
+[data-theme^="light"] .traceroute-search-clear {
     color: #aeaeb2;
 }
 
 /* -- Tree Scroll -- */
-[data-theme="light"] .traceroute-tree-scroll {
+[data-theme^="light"] .traceroute-tree-scroll {
     scrollbar-color: rgba(139, 92, 246, 0.15) transparent;
 }
 
-[data-theme="light"] .traceroute-tree-scroll::-webkit-scrollbar-thumb {
+[data-theme^="light"] .traceroute-tree-scroll::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.12);
 }
 
-[data-theme="light"] .traceroute-tree-loading,
-[data-theme="light"] .traceroute-tree-err {
+[data-theme^="light"] .traceroute-tree-loading,
+[data-theme^="light"] .traceroute-tree-err {
     color: #aeaeb2;
 }
 
 /* -- Tree Device Rows -- */
-[data-theme="light"] .tree-device-row:hover {
+[data-theme^="light"] .tree-device-row:hover {
     background: rgba(0, 0, 0, 0.02);
 }
 
-[data-theme="light"] .tree-device-icon {
+[data-theme^="light"] .tree-device-icon {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .tree-device-name {
+[data-theme^="light"] .tree-device-name {
     color: #3a3a3c;
 }
 
-[data-theme="light"] .tree-device-ip {
+[data-theme^="light"] .tree-device-ip {
     color: #aeaeb2;
 }
 
 /* -- Device Cards -- */
-[data-theme="light"] .traceroute-device-card {
+[data-theme^="light"] .traceroute-device-card {
     border: 1px dashed rgba(0, 0, 0, 0.1);
     background: rgba(0, 0, 0, 0.01);
 }
 
-[data-theme="light"] .traceroute-device-card:hover {
+[data-theme^="light"] .traceroute-device-card:hover {
     background: rgba(0, 0, 0, 0.02);
     border-color: rgba(0, 0, 0, 0.15);
 }
 
-[data-theme="light"] .traceroute-device-card--active {
+[data-theme^="light"] .traceroute-device-card--active {
     border-color: rgba(139, 92, 246, 0.35);
     background: rgba(139, 92, 246, 0.04);
     box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.06);
 }
 
-[data-theme="light"] .traceroute-card-label {
+[data-theme^="light"] .traceroute-card-label {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .traceroute-card-device-name {
+[data-theme^="light"] .traceroute-card-device-name {
     color: #1d1d1f;
 }
 
-[data-theme="light"] .traceroute-card-device-ip {
+[data-theme^="light"] .traceroute-card-device-ip {
     color: #8e8e93;
 }
 
-[data-theme="light"] .traceroute-card-clear {
+[data-theme^="light"] .traceroute-card-clear {
     background: rgba(0, 0, 0, 0.03);
     border: 1px solid rgba(0, 0, 0, 0.06);
     color: #aeaeb2;
 }
 
-[data-theme="light"] .traceroute-card-clear:hover {
+[data-theme^="light"] .traceroute-card-clear:hover {
     background: rgba(239, 68, 68, 0.08);
     color: #ef4444;
 }
 
-[data-theme="light"] .traceroute-card-empty-icon {
+[data-theme^="light"] .traceroute-card-empty-icon {
     color: #c7c7cc;
 }
 
-[data-theme="light"] .traceroute-card-placeholder {
+[data-theme^="light"] .traceroute-card-placeholder {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .traceroute-card-hint {
+[data-theme^="light"] .traceroute-card-hint {
     color: #c7c7cc;
 }
 
 /* -- Target Mode Toggle -- */
-[data-theme="light"] .traceroute-target-mode-btn {
+[data-theme^="light"] .traceroute-target-mode-btn {
     border: 1px solid rgba(0, 0, 0, 0.06);
     background: rgba(0, 0, 0, 0.01);
     color: #aeaeb2;
 }
 
-[data-theme="light"] .traceroute-target-mode-btn:hover {
+[data-theme^="light"] .traceroute-target-mode-btn:hover {
     color: #8e8e93;
     background: rgba(0, 0, 0, 0.02);
 }
 
-[data-theme="light"] .traceroute-target-mode-btn.active {
+[data-theme^="light"] .traceroute-target-mode-btn.active {
     background: rgba(139, 92, 246, 0.06);
     border-color: rgba(139, 92, 246, 0.25);
     color: #7c3aed;
 }
 
 /* -- IP Input -- */
-[data-theme="light"] .traceroute-ip-input-card {
+[data-theme^="light"] .traceroute-ip-input-card {
     border: 1px solid rgba(139, 92, 246, 0.2);
     background: rgba(139, 92, 246, 0.02);
 }
 
-[data-theme="light"] .traceroute-ip-input {
+[data-theme^="light"] .traceroute-ip-input {
     background: rgba(0, 0, 0, 0.02);
     border: 1px solid rgba(0, 0, 0, 0.08);
     color: #1d1d1f;
 }
 
-[data-theme="light"] .traceroute-ip-input:focus {
+[data-theme^="light"] .traceroute-ip-input:focus {
     border-color: rgba(139, 92, 246, 0.4);
     box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.06);
 }
 
-[data-theme="light"] .traceroute-ip-input::placeholder {
+[data-theme^="light"] .traceroute-ip-input::placeholder {
     color: #c7c7cc;
 }
 
 /* -- Options -- */
-[data-theme="light"] .traceroute-opt-label {
+[data-theme^="light"] .traceroute-opt-label {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .traceroute-opt-input {
+[data-theme^="light"] .traceroute-opt-input {
     background: rgba(0, 0, 0, 0.02);
     border: 1px solid rgba(0, 0, 0, 0.06);
     color: #1d1d1f;
 }
 
-[data-theme="light"] .traceroute-opt-input:focus {
+[data-theme^="light"] .traceroute-opt-input:focus {
     border-color: rgba(139, 92, 246, 0.3);
 }
 
 /* -- Run Button -- */
-[data-theme="light"] .traceroute-run-btn {
+[data-theme^="light"] .traceroute-run-btn {
     background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
     box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2);
 }
 
-[data-theme="light"] .traceroute-run-btn:hover:not(:disabled) {
+[data-theme^="light"] .traceroute-run-btn:hover:not(:disabled) {
     box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
 }
 
 /* -- Flow Panel -- */
-[data-theme="light"] .traceroute-flow-header {
+[data-theme^="light"] .traceroute-flow-header {
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .traceroute-flow-title {
+[data-theme^="light"] .traceroute-flow-title {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .traceroute-flow-meta {
+[data-theme^="light"] .traceroute-flow-meta {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .traceroute-flow-scroll {
+[data-theme^="light"] .traceroute-flow-scroll {
     scrollbar-color: rgba(139, 92, 246, 0.15) transparent;
 }
 
-[data-theme="light"] .traceroute-flow-scroll::-webkit-scrollbar-thumb {
+[data-theme^="light"] .traceroute-flow-scroll::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.12);
 }
 
 /* -- Nodes -- */
-[data-theme="light"] .traceroute-node-hop-num {
+[data-theme^="light"] .traceroute-node-hop-num {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .traceroute-node-name {
+[data-theme^="light"] .traceroute-node-name {
     color: #3a3a3c;
 }
 
-[data-theme="light"] .traceroute-node-ip {
+[data-theme^="light"] .traceroute-node-ip {
     color: #8e8e93;
 }
 
-[data-theme="light"] .traceroute-node-rtt {
+[data-theme^="light"] .traceroute-node-rtt {
     color: #aeaeb2;
 }
 
-[data-theme="light"] .traceroute-node--unknown {
+[data-theme^="light"] .traceroute-node--unknown {
     background: rgba(100, 116, 139, 0.04);
     border-color: rgba(100, 116, 139, 0.15);
 }
 
 /* -- Summary Cards -- */
-[data-theme="light"] .traceroute-summary-card {
+[data-theme^="light"] .traceroute-summary-card {
     background: rgba(0, 0, 0, 0.01);
     border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .traceroute-summary-value {
+[data-theme^="light"] .traceroute-summary-value {
     color: #1d1d1f;
 }
 
-[data-theme="light"] .traceroute-summary-label {
+[data-theme^="light"] .traceroute-summary-label {
     color: #aeaeb2;
 }
 
 /* -- Table -- */
-[data-theme="light"] .traceroute-table-header {
+[data-theme^="light"] .traceroute-table-header {
     color: #aeaeb2;
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .traceroute-table th {
+[data-theme^="light"] .traceroute-table th {
     background: rgba(0, 0, 0, 0.01);
     color: #aeaeb2;
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .traceroute-table td {
+[data-theme^="light"] .traceroute-table td {
     color: #3a3a3c;
     border-bottom: 1px solid rgba(0, 0, 0, 0.03);
 }
 
-[data-theme="light"] .traceroute-table tr:hover td {
+[data-theme^="light"] .traceroute-table tr:hover td {
     background: rgba(0, 0, 0, 0.01);
 }
 
-[data-theme="light"] .traceroute-td-hop { color: #aeaeb2 !important; }
-[data-theme="light"] .traceroute-na { color: #c7c7cc; }
-[data-theme="light"] .traceroute-td-rtt { color: #aeaeb2 !important; }
+[data-theme^="light"] .traceroute-td-hop { color: #aeaeb2 !important; }
+[data-theme^="light"] .traceroute-na { color: #c7c7cc; }
+[data-theme^="light"] .traceroute-td-rtt { color: #aeaeb2 !important; }
 
 /* -- Empty State -- */
-[data-theme="light"] .traceroute-empty-icon {
+[data-theme^="light"] .traceroute-empty-icon {
     color: #c7c7cc;
 }
 
-[data-theme="light"] .traceroute-empty-title {
+[data-theme^="light"] .traceroute-empty-title {
     color: #8e8e93;
 }
 
-[data-theme="light"] .traceroute-empty-step {
+[data-theme^="light"] .traceroute-empty-step {
     color: #8e8e93;
 }
 
-[data-theme="light"] .traceroute-empty-step strong {
+[data-theme^="light"] .traceroute-empty-step strong {
     color: #3a3a3c;
 }
 
-[data-theme="light"] .traceroute-empty-hint {
+[data-theme^="light"] .traceroute-empty-hint {
     color: #aeaeb2;
 }
 
 /* -- Result Scroll -- */
-[data-theme="light"] .traceroute-result-scroll {
+[data-theme^="light"] .traceroute-result-scroll {
     scrollbar-color: rgba(139, 92, 246, 0.15) transparent;
 }
 
-[data-theme="light"] .traceroute-result-scroll::-webkit-scrollbar-thumb {
+[data-theme^="light"] .traceroute-result-scroll::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.12);
 }
 
 /* -- Glass Panel -- */
-[data-theme="light"] .traceroute-page .glass-panel {
+[data-theme^="light"] .traceroute-page .glass-panel {
     background: rgba(255, 255, 255, 0.95);
     border: 1px solid rgba(0, 0, 0, 0.06);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+/* ==================
+   Light Mode - tr-* 설정 카드 / Chip
+   ================== */
+[data-theme^="light"] .tr-config-card {
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+[data-theme^="light"] .tr-route-arrow {
+    color: #8e8e93;
+}
+
+[data-theme^="light"] .tr-chip {
+    background: rgba(15, 23, 42, 0.02);
+    border-color: rgba(15, 23, 42, 0.12);
+}
+
+[data-theme^="light"] .tr-chip:hover {
+    background: rgba(15, 23, 42, 0.05);
+}
+
+[data-theme^="light"] .tr-chip-active {
+    background: rgba(99, 102, 241, 0.08);
+    border-color: rgba(99, 102, 241, 0.45);
+}
+
+[data-theme^="light"] .tr-chip-name {
+    color: #1d1d1f;
+}
+
+[data-theme^="light"] .tr-chip-ip {
+    color: #4338ca;
+}
+
+[data-theme^="light"] .tr-chip-empty {
+    color: #8e8e93;
+}
+
+[data-theme^="light"] .tr-chip-x {
+    color: #8e8e93;
+}
+
+/* 목적지 모드 토글 */
+[data-theme^="light"] .tr-mode-toggle {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+[data-theme^="light"] .tr-mode-toggle button {
+    background: transparent;
+    color: #3a3a3c;
+}
+
+[data-theme^="light"] .tr-mode-toggle button:hover {
+    background: rgba(15, 23, 42, 0.04);
+}
+
+[data-theme^="light"] .tr-mode-toggle button.active {
+    background: #4f46e5;
+    color: #ffffff;
+}
+
+/* IP 입력 */
+[data-theme^="light"] .tr-ip-field {
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    color: #1d1d1f;
+}
+
+[data-theme^="light"] .tr-ip-field:focus {
+    border-color: rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.12);
+}
+
+[data-theme^="light"] .tr-ip-field::placeholder {
+    color: #c7c7cc;
+}
+
+/* Row 2 구분선 */
+[data-theme^="light"] .tr-action-row {
+    border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+[data-theme^="light"] .tr-setting label,
+[data-theme^="light"] .tr-setting small {
+    color: #8e8e93;
+}
+
+[data-theme^="light"] .tr-setting input {
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    color: #1d1d1f;
+}
+
+[data-theme^="light"] .tr-setting input:focus {
+    border-color: rgba(99, 102, 241, 0.5);
+}
+
+[data-theme^="light"] .tr-run-btn {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+}
+
+[data-theme^="light"] .tr-run-btn:hover:not(:disabled) {
+    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35);
+}
+
+[data-theme^="light"] .tr-run-btn:disabled {
+    background: rgba(15, 23, 42, 0.12);
+    color: #8e8e93;
+    box-shadow: none;
+}
+
+/* 탭 체크 아이콘 */
+[data-theme^="light"] .traceroute-tab-check {
+    color: #059669;
+}
+
+/* 에러 영역 */
+[data-theme^="light"] .traceroute-error {
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    color: #b91c1c;
+}
+
+/* 결과 영역 / Flow 패널 */
+[data-theme^="light"] .traceroute-flow-panel {
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+[data-theme^="light"] .traceroute-flow-meta {
+    color: #3a3a3c;
+}
+
+[data-theme^="light"] .traceroute-flow-meta strong {
+    color: #7c3aed;
+}
+
+/* 노드 (홉) */
+[data-theme^="light"] .traceroute-node--source {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
+[data-theme^="light"] .traceroute-node--target {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.45);
+    box-shadow: 0 0 14px rgba(16, 185, 129, 0.12);
+}
+
+[data-theme^="light"] .traceroute-node--registered {
+    background: rgba(99, 102, 241, 0.06);
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+[data-theme^="light"] .traceroute-node--registered .traceroute-node-icon {
+    color: #4338ca;
+}
+
+[data-theme^="light"] .traceroute-node--unknown {
+    background: rgba(15, 23, 42, 0.03);
+    border-color: rgba(15, 23, 42, 0.14);
+}
+
+[data-theme^="light"] .traceroute-node--unknown .traceroute-node-icon {
+    color: #64748b;
+}
+
+[data-theme^="light"] .traceroute-node--timeout {
+    background: rgba(239, 68, 68, 0.05);
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+[data-theme^="light"] .traceroute-node-name {
+    color: #1d1d1f;
+}
+
+[data-theme^="light"] .traceroute-node-ip {
+    color: #4338ca;
+}
+
+[data-theme^="light"] .traceroute-node-rtt {
+    color: #8e8e93;
+}
+
+[data-theme^="light"] .traceroute-node-hop-num {
+    color: #8e8e93;
+}
+
+/* 화살표 */
+[data-theme^="light"] .traceroute-arrow-line {
+    background: linear-gradient(90deg, rgba(99, 102, 241, 0.25), rgba(124, 58, 237, 0.55));
+}
+
+[data-theme^="light"] .traceroute-arrow-head {
+    color: rgba(124, 58, 237, 0.6);
+}
+
+/* 스피너 (컬러만 톤다운) */
+[data-theme^="light"] .traceroute-spinner {
+    border-color: rgba(99, 102, 241, 0.2);
+    border-top-color: #4f46e5;
+}
+
+/* 기타 텍스트 */
+[data-theme^="light"] .traceroute-unregistered {
+    color: #dc2626;
+}
+
+[data-theme^="light"] .traceroute-timeout-text {
+    color: #dc2626;
+}
+
+[data-theme^="light"] .traceroute-device-name {
+    color: #1d1d1f;
+}
+
+[data-theme^="light"] .traceroute-ip-text {
+    color: #4338ca;
 }

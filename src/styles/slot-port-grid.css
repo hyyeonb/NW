@@ -1,0 +1,937 @@
+/* ==================
+   Slot Port Grid — 전송 장비용 A/B/C 슬롯 그리드
+   ================== */
+
+.spg-root {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    min-height: 0;
+    flex: 1;
+    height: 100%;
+}
+
+/* 상태 범례 */
+.spg-legend {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--theme-text-muted);
+}
+
+.spg-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.spg-legend-item .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.spg-legend-item .dot.up { background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.4); }
+.spg-legend-item .dot.down { background: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
+.spg-legend-item .dot.admin-down { background: #94a3b8; box-shadow: 0 0 6px rgba(148, 163, 184, 0.4); }
+.spg-legend-item .dot.warn { background: #f97316; box-shadow: 0 0 6px rgba(249, 115, 22, 0.4); }
+
+/* Chassis 탭 */
+.spg-chassis-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 4px;
+    border-bottom: 1px solid var(--theme-border-default);
+}
+
+.spg-chassis-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--theme-text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: -1px;
+    transition: all 0.15s ease;
+}
+
+.spg-chassis-tab:hover {
+    color: var(--theme-accent-light);
+}
+
+.spg-chassis-tab.active {
+    color: var(--theme-accent-primary);
+    border-bottom-color: var(--theme-accent-primary);
+}
+
+.spg-chassis-tab-count {
+    background: var(--theme-accent-bg);
+    color: var(--theme-accent-light);
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* 슬롯 리스트 — 기본 2개 노출, 포트 선택 시 1.5개만 노출 */
+.spg-slots-scroll {
+    max-height: 220px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+}
+
+/* 포트 선택 시 슬롯 영역 축소 → 상세 패널 공간 확보 (transition 제거: ResizeObserver 무한 발화 방지) */
+.spg-root.has-focus .spg-slots-scroll {
+    max-height: 140px;
+}
+
+.spg-slots-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.spg-slots-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.spg-slots-scroll::-webkit-scrollbar-thumb {
+    background: var(--theme-scrollbar-thumb);
+    border-radius: 3px;
+}
+
+.spg-slots-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--theme-scrollbar-thumb-hover);
+}
+
+.spg-slots {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 슬롯 카드 */
+.spg-slot-card {
+    display: grid;
+    grid-template-columns: 86px minmax(0, 1fr);
+    gap: 10px;
+    padding: 6px 10px;
+    background: var(--theme-glass-bg);
+    border: 1px solid var(--theme-border-default);
+    border-radius: 8px;
+    transition: border-color 0.2s ease;
+    min-width: 0;
+}
+
+.spg-slot-card:hover {
+    border-color: var(--theme-border-hover);
+}
+
+/* 슬롯 헤더 (좌측) */
+.spg-slot-header {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    line-height: 1.25;
+}
+
+.spg-slot-title {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.spg-slot-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--theme-text-primary);
+}
+
+.spg-slot-range {
+    font-size: 10px;
+    color: var(--theme-text-muted);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.spg-slot-count {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--theme-accent-light);
+}
+
+/* 슬롯 내부 포트들 — 한 줄 + 가로 스크롤 (selected ring/hover 효과 공간 확보) */
+.spg-slot-ports {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 4px 6px;
+    min-width: 0;
+    scrollbar-width: thin;
+    align-items: center;
+}
+
+.spg-slot-ports::-webkit-scrollbar {
+    height: 6px;
+}
+
+.spg-slot-ports::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.spg-slot-ports::-webkit-scrollbar-thumb {
+    background: var(--theme-scrollbar-thumb);
+    border-radius: 3px;
+}
+
+.spg-slot-ports::-webkit-scrollbar-thumb:hover {
+    background: var(--theme-scrollbar-thumb-hover);
+}
+
+/* 개별 포트 카드 — 고정 너비 */
+.spg-port-card {
+    flex: 0 0 52px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 3px 3px 2px;
+    background: var(--theme-bg-panel);
+    border: 1px solid var(--theme-border-default);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.spg-port-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.spg-port-card.selected {
+    box-shadow: 0 0 0 2px var(--theme-accent-primary);
+}
+
+/* 상태별 포트 카드 테두리 */
+.spg-port-card.up { border-color: rgba(16, 185, 129, 0.55); }
+.spg-port-card.down { border-color: rgba(239, 68, 68, 0.65); background: rgba(239, 68, 68, 0.05); }
+.spg-port-card.admin-down { border-color: rgba(148, 163, 184, 0.45); background: rgba(148, 163, 184, 0.06); }
+.spg-port-card.warn { border-color: rgba(249, 115, 22, 0.65); background: rgba(249, 115, 22, 0.06); }
+
+.spg-port-name {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--theme-text-primary);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    line-height: 1.2;
+    text-align: center;
+}
+
+.spg-port-icon-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1px 0;
+}
+
+.spg-port-icon {
+    width: 100%;
+    max-width: 35px;
+    height: auto;
+    display: block;
+}
+
+.spg-port-usage {
+    font-size: 10px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    line-height: 1.1;
+}
+
+/* ==================
+   Port Detail Panel — 2컬럼 (좌: 포트 정보 / 우: 차트 + 통계)
+   ================== */
+.spg-detail {
+    margin-top: 12px;
+    margin-bottom: 4px;
+    padding: 14px 16px 18px;
+    background: var(--theme-glass-bg);
+    border: 1px solid var(--theme-border-default);
+    border-radius: 10px;
+    display: flex;
+    gap: 18px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.spg-detail-info {
+    width: 260px;
+    flex-shrink: 0;
+}
+
+/* 좌측: 포트 정보 카드 */
+.spg-detail-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-right: 16px;
+    border-right: 1px solid var(--theme-border-subtle);
+}
+
+.spg-detail-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    gap: 8px;
+}
+
+.spg-detail-title-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--theme-text-muted);
+    letter-spacing: 0.5px;
+}
+
+.spg-detail-head-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.spg-detail-icon-wrap {
+    width: 52px;
+    height: 36px;
+    flex-shrink: 0;
+}
+
+.spg-detail-icon-wrap .spg-port-icon {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+}
+
+.spg-detail-title {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.spg-detail-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--theme-text-primary);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    letter-spacing: 0.3px;
+}
+
+.spg-detail-status {
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.spg-detail-status.up { color: #10b981; }
+.spg-detail-status.down { color: #ef4444; }
+.spg-detail-status.admin-down { color: #94a3b8; }
+.spg-detail-status.warn { color: #f97316; }
+
+.spg-detail-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.spg-detail-row {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 10px;
+    padding: 4px 0;
+    font-size: 12px;
+    border-bottom: 1px solid transparent;
+}
+
+.spg-detail-row span {
+    color: var(--theme-text-muted);
+}
+
+.spg-detail-row strong {
+    color: var(--theme-text-primary);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* In/Out Utilization */
+.spg-util {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.spg-util-label {
+    font-size: 11px;
+    color: var(--theme-text-muted);
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.spg-util-row {
+    display: grid;
+    grid-template-columns: 30px 1fr 36px;
+    gap: 8px;
+    align-items: center;
+    font-size: 11px;
+}
+
+.spg-util-name {
+    font-weight: 700;
+    font-size: 10px;
+}
+
+.spg-util-name.in { color: #3b82f6; }
+.spg-util-name.out { color: #10b981; }
+
+.spg-util-track {
+    height: 6px;
+    background: var(--theme-scrollbar-track);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.spg-util-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+.spg-util-fill.in { background: linear-gradient(90deg, #60a5fa, #3b82f6); }
+.spg-util-fill.out { background: linear-gradient(90deg, #34d399, #10b981); }
+
+.spg-util-value {
+    text-align: right;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--theme-text-primary);
+}
+
+/* 우측: 차트 + 통계 */
+.spg-detail-chart-area {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    min-height: 0;
+    flex: 1;
+}
+
+.spg-detail-chart-header,
+.spg-detail-stats {
+    flex-shrink: 0;
+}
+
+.spg-detail-chart-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.spg-detail-chart-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--theme-text-primary);
+}
+
+.spg-time-range {
+    display: inline-flex;
+    gap: 2px;
+    background: var(--theme-bg-panel);
+    border: 1px solid var(--theme-border-default);
+    border-radius: 8px;
+    padding: 2px;
+}
+
+.spg-time-btn {
+    padding: 4px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--theme-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.spg-time-btn:hover {
+    color: var(--theme-text-primary);
+}
+
+.spg-time-btn.active {
+    background: var(--theme-accent-primary);
+    color: #ffffff;
+}
+
+.spg-time-btn.disabled,
+.spg-time-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.spg-time-btn.disabled:hover,
+.spg-time-btn:disabled:hover {
+    color: var(--theme-text-muted);
+}
+
+.spg-chart-legend {
+    display: inline-flex;
+    gap: 12px;
+    margin-left: auto;
+    font-size: 11px;
+}
+
+.spg-chart-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--theme-text-muted);
+}
+
+.spg-chart-legend .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.spg-chart-legend .dot.in { background: #3b82f6; }
+.spg-chart-legend .dot.out { background: #10b981; }
+
+.spg-detail-chart {
+    width: 100%;
+    flex: 1 1 0;
+    min-height: 100px;
+    overflow: hidden;
+    position: relative;
+}
+
+.spg-detail-chart .echarts-for-react {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.spg-chart-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(15, 23, 42, 0.55);
+    color: var(--theme-text-primary, #e2e8f0);
+    font-size: 12px;
+    backdrop-filter: blur(2px);
+    pointer-events: none;
+    z-index: 2;
+}
+
+[data-theme^="light"] .spg-chart-loading {
+    background: rgba(255, 255, 255, 0.7);
+    color: #0f172a;
+}
+
+.spg-chart-loading .spg-spin {
+    animation: spg-spin 0.9s linear infinite;
+}
+
+@keyframes spg-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ==================
+   IN/OUT 테이블 + 에러/드롭
+   ================== */
+.spg-detail-stats {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--theme-border-subtle);
+    min-width: 0;
+}
+
+.spg-io-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
+
+.spg-io-table th,
+.spg-io-table td {
+    padding: 5px 8px;
+    text-align: right;
+    font-size: 12px;
+    border-bottom: 1px solid var(--theme-border-subtle);
+    white-space: nowrap;
+}
+
+.spg-io-table th {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--theme-text-muted);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.spg-io-table th:first-child,
+.spg-io-table td:first-child {
+    text-align: left;
+}
+
+.spg-io-table td {
+    font-weight: 700;
+    color: var(--theme-text-primary);
+}
+
+.spg-io-table td.dir {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    width: 44px;
+}
+
+.spg-io-table td.dir.in { color: #3b82f6; }
+.spg-io-table td.dir.out { color: #10b981; }
+
+.spg-io-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* 에러/드롭 그룹 — 테이블과 동일한 톤 */
+.spg-err-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding-left: 14px;
+    border-left: 1px solid var(--theme-border-subtle);
+}
+
+.spg-err-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--theme-text-muted);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--theme-border-subtle);
+}
+
+.spg-err-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 6px 0 2px;
+}
+
+.spg-err-row > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    text-align: center;
+}
+
+.spg-err-row > div > .label {
+    font-size: 10px;
+    color: var(--theme-text-muted);
+    white-space: nowrap;
+    letter-spacing: 0.2px;
+}
+
+.spg-err-row > div > .value {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--theme-text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.spg-err-row > div > .value:not(:empty):not([data-zero="false"]) {
+    color: var(--theme-text-muted);
+}
+
+[data-theme^="light"] .spg-err-group {
+    border-left-color: #e2e8f0;
+}
+
+[data-theme^="light"] .spg-err-title {
+    border-bottom-color: #eef2f7;
+}
+
+/* ==================
+   닫기 버튼 (info 카드 우상단, inline)
+   ================== */
+.spg-detail-close {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--theme-border-default);
+    border-radius: 6px;
+    color: var(--theme-text-muted);
+    cursor: pointer;
+    font-size: 10px;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.spg-detail-close:hover {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #ef4444;
+}
+
+[data-theme^="light"] .spg-detail-close {
+    border-color: #e2e8f0;
+    color: #64748b;
+}
+
+[data-theme^="light"] .spg-detail-close:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #dc2626;
+}
+
+[data-theme^="light"] .spg-io-table td,
+[data-theme^="light"] .spg-err-row > div > .value {
+    color: #0f172a;
+}
+
+[data-theme^="light"] .spg-io-table th,
+[data-theme^="light"] .spg-err-title,
+[data-theme^="light"] .spg-err-row > div > .label {
+    color: #64748b;
+}
+
+[data-theme^="light"] .spg-io-table th,
+[data-theme^="light"] .spg-io-table td {
+    border-bottom-color: #eef2f7;
+}
+
+/* Light mode */
+[data-theme^="light"] .spg-detail {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme^="light"] .spg-detail-info {
+    border-right-color: #e2e8f0;
+}
+
+[data-theme^="light"] .spg-detail-name,
+[data-theme^="light"] .spg-detail-row strong,
+[data-theme^="light"] .spg-stats-row > div > .value,
+[data-theme^="light"] .spg-util-value,
+[data-theme^="light"] .spg-detail-chart-title {
+    color: #0f172a;
+}
+
+[data-theme^="light"] .spg-detail-row span,
+[data-theme^="light"] .spg-util-label,
+[data-theme^="light"] .spg-stats-row > div > .label,
+[data-theme^="light"] .spg-detail-title-label {
+    color: #64748b;
+}
+
+[data-theme^="light"] .spg-util-track {
+    background: #e2e8f0;
+}
+
+[data-theme^="light"] .spg-detail-stats {
+    border-top-color: #e2e8f0;
+}
+
+[data-theme^="light"] .spg-time-range {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+[data-theme^="light"] .spg-time-btn {
+    color: #64748b;
+}
+
+[data-theme^="light"] .spg-time-btn.active {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+/* ==================
+   Default Bottom — 포트 미선택 시 기본 트래픽 차트 영역 (남은 공간 채움)
+   ================== */
+.spg-default-traffic {
+    margin-top: 12px;
+    padding: 12px 16px 14px;
+    background: var(--theme-glass-bg);
+    border: 1px solid var(--theme-border-default);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.spg-default-traffic > :not(.spg-default-traffic-header) {
+    flex: 1;
+    min-height: 0;
+}
+
+.spg-default-traffic .echarts-for-react {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.spg-default-traffic-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--theme-text-primary);
+}
+
+.spg-default-traffic-header i {
+    color: var(--theme-accent-primary);
+    font-size: 15px;
+}
+
+.spg-default-traffic-sub {
+    font-weight: 400;
+    font-size: 11px;
+    color: var(--theme-text-muted);
+    margin-left: 4px;
+}
+
+[data-theme^="light"] .spg-default-traffic {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme^="light"] .spg-default-traffic-header {
+    color: #0f172a;
+}
+
+[data-theme^="light"] .spg-default-traffic-header i {
+    color: #4f46e5;
+}
+
+[data-theme^="light"] .spg-default-traffic-sub {
+    color: #64748b;
+}
+
+/* 빈 상태 */
+.spg-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    gap: 10px;
+    color: var(--theme-text-muted);
+}
+
+.spg-empty i {
+    font-size: 36px;
+    opacity: 0.5;
+}
+
+/* ==================
+   Light Mode
+   ================== */
+[data-theme^="light"] .spg-slot-card {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme^="light"] .spg-slot-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme^="light"] .spg-slot-name {
+    color: #0f172a;
+}
+
+[data-theme^="light"] .spg-slot-range {
+    color: #64748b;
+}
+
+[data-theme^="light"] .spg-slot-count {
+    color: #4f46e5;
+}
+
+[data-theme^="light"] .spg-port-card {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+[data-theme^="light"] .spg-port-card.up { border-color: rgba(16, 185, 129, 0.6); background: #f0fdf4; }
+[data-theme^="light"] .spg-port-card.down { border-color: rgba(239, 68, 68, 0.6); background: #fef2f2; }
+[data-theme^="light"] .spg-port-card.admin-down { border-color: rgba(148, 163, 184, 0.55); background: #f1f5f9; }
+[data-theme^="light"] .spg-port-card.warn { border-color: rgba(249, 115, 22, 0.65); background: #fff7ed; }
+
+[data-theme^="light"] .spg-port-name {
+    color: #0f172a;
+}
+
+[data-theme^="light"] .spg-chassis-tabs {
+    border-bottom-color: #e2e8f0;
+}
+
+[data-theme^="light"] .spg-chassis-tab {
+    color: #64748b;
+}
+
+[data-theme^="light"] .spg-chassis-tab:hover {
+    color: #4f46e5;
+    background: rgba(79, 70, 229, 0.05);
+}
+
+[data-theme^="light"] .spg-chassis-tab.active {
+    color: #4f46e5;
+    border-bottom-color: #4f46e5;
+}
+
+[data-theme^="light"] .spg-chassis-tab-count {
+    background: rgba(79, 70, 229, 0.12);
+    color: #4f46e5;
+}

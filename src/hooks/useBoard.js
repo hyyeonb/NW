@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { boardApi } from '../api';
+import { boardApi } from '../api/board';
 
 // 게시글 목록 조회
 export const useBoardPosts = (page = 1, size = 10, sort = 'POST_ID', order = 'desc', search, category, userId) => {

@@ -1,7 +1,9 @@
 import { useState, useMemo, useRef, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
-import ReactECharts from 'echarts-for-react';
+import SafeECharts from './SafeECharts';
 import { useWatchStore } from '../stores/watchStore';
+import { useThemeStore } from '../stores/themeStore';
+import { getChartTheme } from '../constants/chartTheme';
 
 // 값 포맷팅 함수 (단위별 분기)
 const formatTrafficValue = (value, unit) => {
@@ -18,31 +20,15 @@ const formatTrafficValue = (value, unit) => {
 // 기존 호환 (bit 기본)
 const formatBps = (value) => formatTrafficValue(value, 'bit');
 
-// 포트별 색상
-const PORT_COLORS = [
-  ['#3b82f6', '#60a5fa'],
-  ['#10b981', '#34d399'],
-  ['#f59e0b', '#fbbf24'],
-  ['#8b5cf6', '#a78bfa'],
-  ['#ef4444', '#f87171'],
-  ['#06b6d4', '#22d3ee'],
-];
-
-// 시간 포맷팅 함수 (HH:mm:ss)
-const formatTime = (timeValue) => {
-  if (!timeValue) return '';
-  const date = new Date(timeValue);
-  if (isNaN(date.getTime())) return timeValue;
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
-  const ss = String(date.getSeconds()).padStart(2, '0');
-  return `${hh}:${mm}:${ss}`;
-};
+import { PORT_COLORS } from '../features/device-metric-card/model/constants';
+import { formatTimeHHMMSS as formatTime } from '../shared/lib/format';
 
 function DeviceMetricCard({ device, history = [], onHide }) {
   const globalChartSettings = useWatchStore((s) => s.globalChartSettings);
   const globalSettingsVersion = useWatchStore((s) => s.globalSettingsVersion);
   const gridSize = useWatchStore((s) => s.gridSize);
+  const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
+  const chartTheme = getChartTheme(resolvedTheme);
 
   const [showCpu, setShowCpu] = useState(globalChartSettings.showCpu);
   const [showMem, setShowMem] = useState(globalChartSettings.showMem);
@@ -112,7 +98,9 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         data: cpuData,
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 1, color: '#3b82f6' },
+        color: '#3b82f6',
+        itemStyle: { color: '#3b82f6' },
+        lineStyle: { width: 2, color: '#3b82f6' },
         areaStyle: {
           color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
             colorStops: [{ offset: 0, color: 'rgba(59,130,246,0.3)' }, { offset: 1, color: 'rgba(59,130,246,0)' }]
@@ -127,7 +115,9 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         data: memData,
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 1, color: '#8b5cf6' },
+        color: '#8b5cf6',
+        itemStyle: { color: '#8b5cf6' },
+        lineStyle: { width: 2, color: '#8b5cf6' },
         areaStyle: {
           color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
             colorStops: [{ offset: 0, color: 'rgba(139,92,246,0.3)' }, { offset: 1, color: 'rgba(139,92,246,0)' }]
@@ -140,8 +130,9 @@ function DeviceMetricCard({ device, history = [], onHide }) {
       backgroundColor: 'transparent',
       grid: { top: 2, right: 4, bottom: 16, left: 24 },
       tooltip: {
-        trigger: 'axis', backgroundColor: 'rgba(30,41,59,0.95)', borderColor: '#334155',
-        textStyle: { color: '#f1f5f9', fontSize: 10 },
+        trigger: 'axis', backgroundColor: chartTheme.tooltipBg, borderColor: chartTheme.tooltipBorder,
+        textStyle: { color: chartTheme.textPrimary, fontSize: 10 },
+        confine: false, appendToBody: true,
         formatter: (params) => {
           if (!params?.length) return '';
           let r = `<div style="font-size:10px;color:#94a3b8;margin-bottom:2px">${params[0].axisValue}</div>`;
@@ -156,7 +147,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         axisLine: { show: false },
         axisLabel: {
           show: true,
-          color: '#e2e8f0',
+          color: chartTheme.axisLabel,
           fontSize: 7,
           interval: Math.floor(times.length / 3),
           formatter: (value) => value,
@@ -170,7 +161,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         interval: 50,
         axisLine: { show: false },
         splitLine: { show: false },
-        axisLabel: { color: '#e2e8f0', fontSize: 8, formatter: '{value}' },
+        axisLabel: { color: chartTheme.axisLabel, fontSize: 8, formatter: '{value}' },
       },
       series: series.length > 0 ? series : [{ name: 'No Data', type: 'line', data: [] }],
     };
@@ -211,7 +202,9 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         data: inData,
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 1, color: colorPair[0] },
+        color: colorPair[0],
+        itemStyle: { color: colorPair[0] },
+        lineStyle: { width: 2, color: colorPair[0] },
         areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
           colorStops: [{ offset: 0, color: `${colorPair[0]}4D` }, { offset: 1, color: `${colorPair[0]}00` }]
         }},
@@ -242,7 +235,9 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         data: outData,
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 1, color: colorPair[1] },
+        color: colorPair[1],
+        itemStyle: { color: colorPair[1] },
+        lineStyle: { width: 2, color: colorPair[1] },
         areaStyle: { color: { type: 'linear', x: 0, y: 1, x2: 0, y2: 0,
           colorStops: [{ offset: 0, color: `${colorPair[1]}4D` }, { offset: 1, color: `${colorPair[1]}00` }]
         }},
@@ -256,8 +251,9 @@ function DeviceMetricCard({ device, history = [], onHide }) {
       backgroundColor: 'transparent',
       grid: { top: 2, right: 4, bottom: 16, left: 30 },
       tooltip: {
-        trigger: 'axis', backgroundColor: 'rgba(30,41,59,0.95)', borderColor: '#334155',
-        textStyle: { color: '#f1f5f9', fontSize: 10 },
+        trigger: 'axis', backgroundColor: chartTheme.tooltipBg, borderColor: chartTheme.tooltipBorder,
+        textStyle: { color: chartTheme.textPrimary, fontSize: 10 },
+        confine: false, appendToBody: true,
         formatter: (params) => {
           if (!params?.length) return '';
           let r = `<div style="font-size:10px;color:#94a3b8;margin-bottom:2px">${params[0].axisValue}</div>`;
@@ -272,7 +268,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         axisLine: { show: false },
         axisLabel: {
           show: true,
-          color: '#e2e8f0',
+          color: chartTheme.axisLabel,
           fontSize: 7,
           interval: Math.floor(times.length / 3),
           formatter: (value) => value,
@@ -286,7 +282,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         splitNumber: 2,
         axisLine: { show: false },
         splitLine: { show: false },
-        axisLabel: { color: '#e2e8f0', fontSize: 8, formatter: (v) => formatTrafficValue(Math.abs(v), trafficUnit) },
+        axisLabel: { color: chartTheme.axisLabel, fontSize: 8, formatter: (v) => formatTrafficValue(Math.abs(v), trafficUnit) },
       },
       series: series.length > 0 ? series : [{ name: 'No Data', type: 'line', data: [] }],
     };
@@ -319,7 +315,9 @@ function DeviceMetricCard({ device, history = [], onHide }) {
           data: inErrData,
           smooth: true,
           showSymbol: false,
-          lineStyle: { width: 1, color: '#ef4444' },
+          color: '#ef4444',
+          itemStyle: { color: '#ef4444' },
+          lineStyle: { width: 2, color: '#ef4444' },
         });
         series.push({
           name: `${portName} OutErr`,
@@ -327,7 +325,9 @@ function DeviceMetricCard({ device, history = [], onHide }) {
           data: outErrData,
           smooth: true,
           showSymbol: false,
-          lineStyle: { width: 1, color: '#f87171', type: 'dashed' },
+          color: '#f87171',
+          itemStyle: { color: '#f87171' },
+          lineStyle: { width: 2, color: '#f87171', type: 'dashed' },
         });
       }
 
@@ -349,7 +349,9 @@ function DeviceMetricCard({ device, history = [], onHide }) {
           data: inDiscData,
           smooth: true,
           showSymbol: false,
-          lineStyle: { width: 1, color: '#f97316' },
+          color: '#f97316',
+          itemStyle: { color: '#f97316' },
+          lineStyle: { width: 2, color: '#f97316' },
         });
         series.push({
           name: `${portName} OutDisc`,
@@ -357,7 +359,9 @@ function DeviceMetricCard({ device, history = [], onHide }) {
           data: outDiscData,
           smooth: true,
           showSymbol: false,
-          lineStyle: { width: 1, color: '#fb923c', type: 'dashed' },
+          color: '#fb923c',
+          itemStyle: { color: '#fb923c' },
+          lineStyle: { width: 2, color: '#fb923c', type: 'dashed' },
         });
       }
     });
@@ -367,9 +371,10 @@ function DeviceMetricCard({ device, history = [], onHide }) {
       grid: { top: 2, right: 4, bottom: 16, left: 30 },
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(30,41,59,0.95)',
-        borderColor: '#334155',
-        textStyle: { color: '#f1f5f9', fontSize: 10 },
+        backgroundColor: chartTheme.tooltipBg,
+        borderColor: chartTheme.tooltipBorder,
+        textStyle: { color: chartTheme.textPrimary, fontSize: 10 },
+        confine: false, appendToBody: true,
         formatter: (params) => {
           if (!params || params.length === 0) return '';
           let r = `<div style="font-size:10px;color:#94a3b8;margin-bottom:2px">${params[0].axisValue}</div>`;
@@ -384,7 +389,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         axisLine: { show: false },
         axisLabel: {
           show: true,
-          color: '#e2e8f0',
+          color: chartTheme.axisLabel,
           fontSize: 7,
           interval: Math.floor(times.length / 3),
           formatter: (value) => value,
@@ -398,7 +403,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
         splitNumber: 2,
         axisLine: { show: false },
         splitLine: { show: false },
-        axisLabel: { color: '#e2e8f0', fontSize: 8 },
+        axisLabel: { color: chartTheme.axisLabel, fontSize: 8 },
       },
       series: series.length > 0 ? series : [{ name: 'No Data', type: 'line', data: [] }],
     };
@@ -573,7 +578,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
           {(showCpu || showMem) && (
             <div className="chart-mini chart-accent-cpu">
               {history.length > 0 ? (
-                <ReactECharts option={cpuMemChartOption} notMerge={false} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
+                <SafeECharts option={cpuMemChartOption} notMerge={false} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
               ) : (
                 <div className="chart-no-data">-</div>
               )}
@@ -583,7 +588,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
           {/* Traffic 차트 (IN/OUT 항상 표시) */}
           <div className="chart-mini chart-accent-traffic">
             {history.length > 0 ? (
-              <ReactECharts option={trafficChartOption} notMerge={false} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
+              <SafeECharts option={trafficChartOption} notMerge={false} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
             ) : (
               <div className="chart-no-data">-</div>
             )}
@@ -593,7 +598,7 @@ function DeviceMetricCard({ device, history = [], onHide }) {
           {(showError || showDiscard) && (
             <div className="chart-mini chart-accent-error">
               {history.length > 0 ? (
-                <ReactECharts option={errorDiscardChartOption} notMerge={false} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
+                <SafeECharts option={errorDiscardChartOption} notMerge={false} style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
               ) : (
                 <div className="chart-no-data">-</div>
               )}

@@ -175,44 +175,44 @@
 /* ==================
    Light Mode Button Overrides
    ================== */
-[data-theme="light"] .btn::before {
+[data-theme^="light"] .btn::before {
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.05) 0%, transparent 50%);
 }
 
-[data-theme="light"] .btn-secondary {
+[data-theme^="light"] .btn-secondary {
     background: #ffffff;
     border: 1px solid rgba(0, 0, 0, 0.10);
     box-shadow: var(--theme-shadow-sm);
 }
 
-[data-theme="light"] .btn-secondary:hover:not(:disabled) {
+[data-theme^="light"] .btn-secondary:hover:not(:disabled) {
     background: #f8fafc;
     border-color: rgba(0, 0, 0, 0.15);
     box-shadow: var(--theme-shadow-md);
 }
 
-[data-theme="light"] .btn-danger {
+[data-theme^="light"] .btn-danger {
     background: rgba(220, 38, 38, 0.08);
     color: #dc2626;
     border-color: rgba(220, 38, 38, 0.20);
 }
 
-[data-theme="light"] .btn-danger:hover:not(:disabled) {
+[data-theme^="light"] .btn-danger:hover:not(:disabled) {
     background: rgba(220, 38, 38, 0.14);
     border-color: rgba(220, 38, 38, 0.35);
 }
 
-[data-theme="light"] .btn-ghost:hover:not(:disabled) {
+[data-theme^="light"] .btn-ghost:hover:not(:disabled) {
     background: rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .delete-btn {
+[data-theme^="light"] .delete-btn {
     background: rgba(220, 38, 38, 0.06);
     color: #dc2626;
     border-color: rgba(220, 38, 38, 0.15);
 }
 
-[data-theme="light"] .delete-btn:hover {
+[data-theme^="light"] .delete-btn:hover {
     background: rgba(220, 38, 38, 0.12);
     border-color: rgba(220, 38, 38, 0.30);
 }

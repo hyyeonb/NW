@@ -153,6 +153,34 @@ export const devicesApi = {
       params: { minutes, ...(startDate && { startDate }), ...(endDate && { endDate }) }
     }),
 
+  // 장비 ICMP(Ping) 시계열 데이터 조회
+  getDeviceIcmpHistory: (deviceId, { minutes, startDate, endDate, granularity } = {}) =>
+    apiClient.get(`/mgmt/devices/${deviceId}/icmp/history`, {
+      params: {
+        ...(minutes != null && { minutes }),
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+        ...(granularity && { granularity }),
+      },
+    }),
+
+  // ==================== Batch (성능 감시 fan-out 통합) ====================
+  // 다중 장비 CPU/MEM 시계열 batch
+  getDeviceCpuMemHistoryBatch: (deviceIds, { minutes, startDate, endDate, granularity } = {}) =>
+    apiClient.post('/mgmt/devices/batch/cpu-mem/history', { deviceIds, minutes, startDate, endDate, granularity }),
+
+  // 다중 장비 트래픽 raw 시계열 batch
+  getDeviceTrafficRawBatch: (deviceIds, { minutes, startDate, endDate, granularity } = {}) =>
+    apiClient.post('/mgmt/devices/batch/traffic/raw', { deviceIds, minutes, startDate, endDate, granularity }),
+
+  // 다중 장비 ICMP 시계열 batch
+  getDeviceIcmpHistoryBatch: (deviceIds, { minutes, startDate, endDate, granularity } = {}) =>
+    apiClient.post('/mgmt/devices/batch/icmp/history', { deviceIds, minutes, startDate, endDate, granularity }),
+
+  // 다중 (장비,포트) 쌍의 트래픽 batch
+  getPortTrafficBatch: (ports, minutes = 60) =>
+    apiClient.post('/mgmt/ports/batch/traffic', { ports, minutes }),
+
   // ==================== Vendor 관련 ====================
 
   // 벤더 목록 조회

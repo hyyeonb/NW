@@ -3,20 +3,17 @@ import ForceGraph2D from 'react-force-graph-2d';
 
 import TopologySidebar from '../components/TopologySidebar';
 import DeviceDetailModal from '../components/DeviceDetailModal';
-import { useDeviceErrorLevels, useDevicePorts, useGroupTree, useDevicesByGroup } from '../hooks';
-import { useUserTopology, useUserTopologyGroup, useSaveUserTopology, useSaveUserTopologyGroup, useSaveUserBackgroundImage, useSaveUserNodeImage } from '../hooks';
-import { useGroupStore } from '../stores';
+import { useDeviceErrorLevels } from '../hooks/useFaults';
+import { useDevicePorts, useDevicesByGroup } from '../hooks/useDevices';
+import { useGroupTree } from '../hooks/useGroups';
+import { useUserTopology, useUserTopologyGroup, useSaveUserTopology, useSaveUserTopologyGroup, useSaveUserBackgroundImage, useSaveUserNodeImage } from '../hooks/useTopology';
+import { useGroupStore } from '../stores/groupStore';
 import { useAuthStore } from '../stores/authStore';
 import '../styles/topology-sidebar.css';
 import '../styles/user-topology.css';
-
-const ICONS = {
-  "CX8100-24": "/icon/CX8100-24.png",
-  "CX8100-48": "/icon/CX8100-48.png",
-  "HPE 7503X": "/icon/HPE 7503X.png",
-  "HPE 7506X": "/icon/HPE 7506X.png"
-};
-const NODE_SIZE = 40;
+import '../styles/topology-light.css';
+import { ICONS, NODE_SIZE } from '../features/user-topology/model/constants';
+import { propagateGroupErrors } from '../shared/lib/groupErrorPropagation';
 
 export default function UserTopology() {
   const { user } = useAuthStore();
@@ -207,30 +204,7 @@ export default function UserTopology() {
   // 장애 맵 (상위 그룹 전파 포함)
   useEffect(() => {
     deviceErrorMapRef.current = deviceErrorMap;
-    if (!groupTree || groupTree.length === 0) {
-      groupErrorMapRef.current = groupErrorMap;
-      return;
-    }
-    const levelPriority = { 'C': 4, 'M': 3, 'N': 2, 'W': 1 };
-    const enhanced = new Map(groupErrorMap);
-    const buildAncestors = (nodes, ancestors) => {
-      for (const node of nodes) {
-        const myLevel = groupErrorMap.get(node.GROUP_NAME);
-        if (myLevel) {
-          for (const anc of ancestors) {
-            const existing = enhanced.get(anc);
-            if ((levelPriority[myLevel] || 0) > (levelPriority[existing] || 0)) {
-              enhanced.set(anc, myLevel);
-            }
-          }
-        }
-        if (node.children?.length > 0) {
-          buildAncestors(node.children, [...ancestors, node.GROUP_NAME]);
-        }
-      }
-    };
-    buildAncestors(groupTree, []);
-    groupErrorMapRef.current = enhanced;
+    groupErrorMapRef.current = propagateGroupErrors(groupTree, groupErrorMap);
   }, [deviceErrorMap, groupErrorMap, groupTree]);
 
   // 장애 펄스 애니메이션 - 장애 노드가 있을 때만 주기적 re-render
@@ -1545,6 +1519,17 @@ export default function UserTopology() {
 
       {/* 메인 콘텐츠 */}
       <div className="topology-main-content">
+        {/* 페이지 헤더 */}
+        <div className="page-header">
+          <div className="page-header-left">
+            <h1 className="page-title">
+              <i className="bi bi-person-workspace"></i>
+              사용자 토폴로지
+            </h1>
+            <span className="page-subtitle">개인 대시보드 형태로 구성하는 관심 장비 맵</span>
+          </div>
+        </div>
+
         {/* 상단 툴바 */}
         <div className="topology-toolbar">
         {/* 사이드바 토글 */}

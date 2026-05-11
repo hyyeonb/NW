@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { noticeApi } from '../api';
+import { noticeApi } from '../api/notice';
 
 // 공지사항 목록 조회
 export const useNoticePosts = (page = 1, size = 10, search) => {

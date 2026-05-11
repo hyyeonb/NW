@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { GroupTree, DataTable } from '../components';
+import GroupTree from '../components/GroupTree';
+import DataTable from '../components/DataTable';
 import IconSelectorModal from '../components/IconSelectorModal';
-import { useGroupStore } from '../stores';
+import { useGroupStore } from '../stores/groupStore';
 import {
   useCreateGroup,
   useUpdateGroup,
@@ -9,8 +10,8 @@ import {
   useMoveGroup,
   useDescendantsCount,
   useGroupTree,
-} from '../hooks';
-import { groupsApi } from '../api';
+} from '../hooks/useGroups';
+import { groupsApi } from '../api/groups';
 import { historyApi } from '../api/history';
 
 export default function GroupManagement() {
@@ -451,7 +452,7 @@ export default function GroupManagement() {
       <div className="page-header">
         <div className="page-header-left">
           <h1 className="page-title">
-            <i className="bi bi-diagram-3"></i>
+            <i className="bi bi-folder"></i>
             그룹 관리
           </h1>
           <span className="page-subtitle">조직 및 장비 그룹을 관리합니다</span>
@@ -530,7 +531,7 @@ export default function GroupManagement() {
                   },
                   pageSizeOptions: [10, 20, 50],
                 }}
-                maxHeight="calc(100vh - 420px)"
+                maxHeight="100%"
                 exportConfig={{
                   fileName: '그룹목록',
                   fetchAllData: async () => sortedChildGroups,

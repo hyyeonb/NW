@@ -1,18 +1,147 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import ReactECharts from 'echarts-for-react';
-import { useDevice, useDevicePorts, useDeviceTrafficRaw, useDeviceScope, useUpdateDeviceScope, useUpdateDevice, useUpdatePort } from '../hooks';
+import SafeECharts from './SafeECharts';
+import { useDevice, useDevicePorts, useDeviceTrafficRaw, useDeviceScope, useUpdateDeviceScope, useUpdateDevice, useUpdatePort } from '../hooks/useDevices';
 import { devicesApi } from '../api/devices';
 import { faultApi } from '../api/fault';
-import { DataTable, PortTrafficChart } from '../components';
+import { sshSessionApi } from '../api/sshSession';
+import apiClient from '../api/client';
+import { diffLines } from 'diff';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import DataTable from '../components/DataTable';
+import PortTrafficChart from '../components/PortTrafficChart';
+import Pagination from '../components/Pagination';
+import IpInput from './IpInput';
+import SlotPortGrid, { SlotPortLegend } from './SlotPortGrid';
+import { isValidIPv4 } from '../utils/validation';
+import { useAlert } from './CustomAlert';
 import '../styles/asset-management.css';
+import EnvironmentBox from '../features/device-detail/components/EnvironmentBox';
+import PortInfoTab from '../features/device-detail/components/PortInfoTab';
+import FaultInfoTab from '../features/device-detail/components/FaultInfoTab';
+import ChangeHistoryTab from '../features/device-detail/components/ChangeHistoryTab';
+import SshHistoryTab from '../features/device-detail/components/SshHistoryTab';
+import ConfigTab from '../features/device-detail/components/ConfigTab';
+import DeviceInfoTab from '../features/device-detail/components/DeviceInfoTab';
 
-export default function DeviceDetailModal({ deviceId, onClose }) {
-  const [activeTab, setActiveTab] = useState('device-info');
+export default function DeviceDetailModal({ deviceId, onClose, initialTab, initialErrorId }) {
+  const { alert: showAlert, success: showSuccess, error: showError, warning: showWarning } = useAlert();
+
+  // F11 토글 후 ECharts 내부 치수 재계산 강제 (delayed resize 재발행)
+  useEffect(() => {
+    const trigger = () => {
+      setTimeout(() => window.dispatchEvent(new Event('resize')), 200);
+    };
+    document.addEventListener('fullscreenchange', trigger);
+    return () => {
+      document.removeEventListener('fullscreenchange', trigger);
+    };
+  }, []);
+
+  const [activeTab, setActiveTab] = useState(initialTab || 'device-info');
+  const focusErrorIdRef = useRef(initialErrorId || null);
   const [cpuMemData, setCpuMemData] = useState(null);
   const [chartPortsSet, setChartPortsSet] = useState(new Set());
   const [portSortField, setPortSortField] = useState('IF_INDEX');
   const [portSortOrder, setPortSortOrder] = useState('asc');
   const [deviceMetrics, setDeviceMetrics] = useState([]);
+
+  // 포트 우클릭 → 컨텍스트 메뉴 → 포트 체크 (DOM 직접 렌더링, 모달 stacking context 회피)
+  const handlePortContextMenu = useCallback((e, port) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const portalId = 'port-ctx-portal';
+    document.getElementById(portalId)?.remove();
+
+    const backdrop = document.createElement('div');
+    backdrop.id = portalId;
+    backdrop.style.cssText = 'position:fixed;inset:0;z-index:999999;';
+    backdrop.onclick = () => backdrop.remove();
+
+    // 컨텍스트 메뉴
+    const menu = document.createElement('div');
+    menu.style.cssText = `position:fixed;top:${e.clientY}px;left:${e.clientX}px;z-index:1000000;background:rgba(15,15,35,0.97);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:4px;min-width:140px;box-shadow:0 8px 24px rgba(0,0,0,0.5);`;
+    const btn = document.createElement('button');
+    btn.style.cssText = 'display:flex;align-items:center;gap:8px;width:100%;padding:8px 12px;border:none;border-radius:6px;background:transparent;color:#e2e8f0;font-size:13px;cursor:pointer;';
+    btn.innerHTML = '<i class="bi bi-activity"></i> 포트 체크';
+    btn.onmouseenter = () => { btn.style.background = 'rgba(99,102,241,0.2)'; };
+    btn.onmouseleave = () => { btn.style.background = 'transparent'; };
+    btn.onclick = () => {
+      backdrop.remove();
+      showPortCheckResult(port);
+    };
+    menu.appendChild(btn);
+    backdrop.appendChild(menu);
+    document.body.appendChild(backdrop);
+  }, [deviceId]);
+
+  // 포트 체크 결과 표시 (DOM 직접 렌더링)
+  const showPortCheckResult = useCallback((port) => {
+    const portalId = 'port-check-portal';
+    document.getElementById(portalId)?.remove();
+
+    const portName = port.IF_NAME || port.IF_DESCR || `ifIndex ${port.IF_INDEX}`;
+    const backdrop = document.createElement('div');
+    backdrop.id = portalId;
+    backdrop.style.cssText = 'position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);';
+    backdrop.onclick = () => backdrop.remove();
+
+    const card = document.createElement('div');
+    card.style.cssText = 'background:rgba(15,23,42,0.95);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:0;min-width:260px;box-shadow:0 12px 40px rgba(0,0,0,0.5);backdrop-filter:blur(12px);';
+    card.onclick = (e) => e.stopPropagation();
+
+    // 헤더
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(148,163,184,0.1);';
+    header.innerHTML = `<span style="color:#e2e8f0;font-size:14px;font-weight:600;"><i class="bi bi-ethernet" style="margin-right:6px;"></i>${portName}</span>`;
+    const closeBtn = document.createElement('button');
+    closeBtn.style.cssText = 'background:none;border:none;color:#64748b;font-size:18px;cursor:pointer;padding:0;line-height:1;';
+    closeBtn.innerHTML = '<i class="bi bi-x"></i>';
+    closeBtn.onclick = () => backdrop.remove();
+    header.appendChild(closeBtn);
+    card.appendChild(header);
+
+    // 로딩
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:16px;';
+    body.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:#94a3b8;font-size:13px;"><div style="width:16px;height:16px;border:2px solid #6366f1;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></div>SNMP 조회 중...</div>';
+    card.appendChild(body);
+    backdrop.appendChild(card);
+    document.body.appendChild(backdrop);
+
+    // spin 애니메이션 (없으면 추가)
+    if (!document.getElementById('port-check-spin-style')) {
+      const style = document.createElement('style');
+      style.id = 'port-check-spin-style';
+      style.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+      document.head.appendChild(style);
+    }
+
+    // SNMP 조회
+    devicesApi.checkPortStatus(deviceId, port.IF_INDEX)
+      .then(res => {
+        const d = res.data?.data;
+        if (d?.success) {
+          const badge = (status, text) => `<span style="padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600;background:${status === 1 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'};color:${status === 1 ? '#34d399' : '#f87171'};">${text}</span>`;
+          body.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:#94a3b8;font-size:13px;">Admin Status</span>
+                ${badge(d.adminStatus, d.adminStatusText)}
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:#94a3b8;font-size:13px;">Oper Status</span>
+                ${badge(d.operStatus, d.operStatusText)}
+              </div>
+            </div>`;
+        } else {
+          body.innerHTML = `<div style="color:#f87171;font-size:13px;"><i class="bi bi-exclamation-triangle"></i> ${d?.message || 'SNMP 조회 실패'}</div>`;
+        }
+      })
+      .catch(err => {
+        body.innerHTML = `<div style="color:#f87171;font-size:13px;"><i class="bi bi-exclamation-triangle"></i> ${err.message}</div>`;
+      });
+  }, [deviceId]);
 
   // 장비 설정 사이드바 상태
   const [showSettingsSidebar, setShowSettingsSidebar] = useState(false);
@@ -47,6 +176,7 @@ export default function DeviceDetailModal({ deviceId, onClose }) {
   // 장애 탭 상태
   const [faultData, setFaultData] = useState([]);
   const [faultLoading, setFaultLoading] = useState(false);
+  const [faultPageReady, setFaultPageReady] = useState(!initialErrorId?.startsWith('hist_'));
   const [faultPage, setFaultPage] = useState(1);
   const [faultPageSize, setFaultPageSize] = useState(20);
   const [faultTotal, setFaultTotal] = useState(0);
@@ -67,6 +197,27 @@ export default function DeviceDetailModal({ deviceId, onClose }) {
   const [sshHistoryLoading, setSshHistoryLoading] = useState(false);
   const [sshHistoryPage, setSshHistoryPage] = useState(1);
   const [sshHistoryTotal, setSshHistoryTotal] = useState(0);
+
+  // SSH 세션 확장 상태 (세션 클릭 시 명령어 표시)
+  const [expandedSessionId, setExpandedSessionId] = useState(null);
+  const [sessionCommands, setSessionCommands] = useState([]);
+  const [sessionCommandsLoading, setSessionCommandsLoading] = useState(false);
+
+  // Config 탭 상태 - 2개 날짜 diff 비교 (AssetConfigDetail과 동일한 구조)
+  const [configLeftDate, setConfigLeftDate] = useState('');
+  const [configRightDate, setConfigRightDate] = useState('');
+  const [configLeft, setConfigLeft] = useState('');
+  const [configRight, setConfigRight] = useState('');
+  const [configLoading, setConfigLoading] = useState(false);
+  const [configDates, setConfigDates] = useState([]); // 이력 있는 날짜 목록 (YYYY-MM-DD)
+  const [configShowOnlyChanges, setConfigShowOnlyChanges] = useState(false);
+  const [configSyncScroll, setConfigSyncScroll] = useState(true);
+  const configDatesInitialized = useRef(false);
+  const configLeftPanelRef = useRef(null);
+  const configRightPanelRef = useRef(null);
+  const configIsScrollingRef = useRef(false);
+  const configLeftDateRef = useRef(null);
+  const configRightDateRef = useRef(null);
 
   // 트래픽 차트 설정
   const [showTrafficSettings, setShowTrafficSettings] = useState(false);
@@ -169,9 +320,23 @@ export default function DeviceDetailModal({ deviceId, onClose }) {
     fetchFaultCount();
   }, [deviceId]);
 
+  // hist_* errorId인 경우 해당 페이지 계산 후 faultPage 설정
+  useEffect(() => {
+    if (!initialErrorId?.startsWith('hist_') || !deviceId) return;
+    const histId = initialErrorId.replace('hist_', '');
+    (async () => {
+      try {
+        const posRes = await faultApi.getHistoryPosition(histId, deviceId, faultPageSize);
+        const targetPage = posRes.data?.data?.page || 1;
+        setFaultPage(targetPage);
+      } catch { /* 실패 시 1페이지 유지 */ }
+      setFaultPageReady(true);
+    })();
+  }, []);
+
   // 장애 데이터 조회 (장애 탭 활성화 시)
   useEffect(() => {
-    if (!deviceId || activeTab !== 'fault-info') return;
+    if (!deviceId || activeTab !== 'fault-info' || !faultPageReady) return;
     const fetchFaults = async () => {
       setFaultLoading(true);
       try {
@@ -195,6 +360,20 @@ export default function DeviceDetailModal({ deviceId, onClose }) {
 
         setFaultData([...activeFormatted, ...histFormatted]);
         setFaultTotal(deviceActiveErrors.length + (histData.totalElements || 0));
+
+        // initialErrorId로 전달된 장애 행 포커스
+        if (focusErrorIdRef.current) {
+          const faultRowId = focusErrorIdRef.current;
+          focusErrorIdRef.current = null;
+          setTimeout(() => {
+            const targetRow = document.querySelector(`[data-fault-row="${faultRowId}"]`);
+            if (targetRow) {
+              targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              targetRow.classList.add('fault-focus-row');
+              setTimeout(() => targetRow.classList.remove('fault-focus-row'), 3000);
+            }
+          }, 200);
+        }
       } catch {
         setFaultData([]);
       } finally {
@@ -202,7 +381,7 @@ export default function DeviceDetailModal({ deviceId, onClose }) {
       }
     };
     fetchFaults();
-  }, [deviceId, activeTab, faultPage, faultPageSize, faultSortField, faultSortOrder]);
+  }, [deviceId, activeTab, faultPage, faultPageSize, faultSortField, faultSortOrder, faultPageReady]);
 
   // 변경이력 데이터 조회
   useEffect(() => {
@@ -241,6 +420,142 @@ export default function DeviceDetailModal({ deviceId, onClose }) {
     };
     fetchSshHistory();
   }, [deviceId, activeTab, sshHistoryPage]);
+
+  // deviceId 변경 시 Config 상태 리셋
+  useEffect(() => {
+    configDatesInitialized.current = false;
+    setConfigDates([]);
+    setConfigLeftDate('');
+    setConfigRightDate('');
+    setConfigLeft('');
+    setConfigRight('');
+  }, [deviceId]);
+
+  // Config 탭 진입 시 날짜 목록 로드 + 초기 날짜 설정 (AssetConfigDetail 로직 동일)
+  useEffect(() => {
+    if (!deviceId || activeTab !== 'config' || configDatesInitialized.current) return;
+
+    // 공통: 오늘/어제 계산
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = (() => {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      return d.toISOString().split('T')[0];
+    })();
+
+    // 먼저 기본값 설정 (API 실패 대비)
+    setConfigRightDate(today);
+    setConfigLeftDate(yesterday);
+    configDatesInitialized.current = true;
+
+    // 백엔드에서 수집 이력 날짜 조회 (있으면 초기값 조정)
+    (async () => {
+      try {
+        const res = await apiClient.get(`/device-config/${deviceId}/dates`);
+        const dates = res.data?.data || [];
+        setConfigDates(dates);
+
+        // rightDate = 오늘 (항상)
+        // leftDate = 가장 최근 수집일이 오늘이 아니면 그 날짜, 오늘이면 dates[1] or 어제
+        if (dates.length > 0 && dates[0] !== today) {
+          setConfigLeftDate(dates[0]);
+        } else if (dates.length > 1) {
+          setConfigLeftDate(dates[1]);
+        }
+        // 그 외는 기본값(어제) 유지
+      } catch {
+        setConfigDates([]);
+      }
+    })();
+  }, [deviceId, activeTab]);
+
+  // Config 데이터 조회 (2개 날짜 병렬)
+  useEffect(() => {
+    if (!deviceId || activeTab !== 'config' || !configLeftDate || !configRightDate) return;
+    const fetchConfig = async () => {
+      setConfigLoading(true);
+      try {
+        const [leftRes, rightRes] = await Promise.all([
+          apiClient.get(`/device-config/${deviceId}`, { params: { date: configLeftDate } }).catch(() => ({})),
+          apiClient.get(`/device-config/${deviceId}`, { params: { date: configRightDate } }).catch(() => ({})),
+        ]);
+        setConfigLeft(leftRes?.data?.data?.config || '');
+        setConfigRight(rightRes?.data?.data?.config || '');
+      } catch {
+        setConfigLeft('');
+        setConfigRight('');
+      } finally {
+        setConfigLoading(false);
+      }
+    };
+    fetchConfig();
+  }, [deviceId, activeTab, configLeftDate, configRightDate]);
+
+  // Config diff 계산
+  const configDiff = useMemo(() => {
+    if (!configLeft && !configRight) return [];
+    return diffLines(configLeft || '', configRight || '');
+  }, [configLeft, configRight]);
+
+  // Config 변경 통계
+  const configDiffStats = useMemo(() => {
+    let added = 0, removed = 0, unchanged = 0;
+    configDiff.forEach(part => {
+      const lines = part.value.split('\n').filter(l => l.length > 0).length;
+      if (part.added) added += lines;
+      else if (part.removed) removed += lines;
+      else unchanged += lines;
+    });
+    return { added, removed, unchanged, total: added + removed };
+  }, [configDiff]);
+
+  // 날짜 라벨 포맷 (오늘/어제/날짜)
+  const formatConfigDateLabel = (dateStr) => {
+    if (!dateStr) return '';
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = (() => {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      return d.toISOString().split('T')[0];
+    })();
+    if (dateStr === today) return '오늘';
+    if (dateStr === yesterday) return '어제';
+    const dt = new Date(dateStr);
+    return dt.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+  };
+
+  // Config 스크롤 동기화
+  const handleConfigScroll = (source) => {
+    if (!configSyncScroll || configIsScrollingRef.current) return;
+    configIsScrollingRef.current = true;
+    const src = source === 'left' ? configLeftPanelRef.current : configRightPanelRef.current;
+    const tgt = source === 'left' ? configRightPanelRef.current : configLeftPanelRef.current;
+    if (src && tgt) {
+      tgt.scrollTop = src.scrollTop;
+      tgt.scrollLeft = src.scrollLeft;
+    }
+    requestAnimationFrame(() => { configIsScrollingRef.current = false; });
+  };
+
+  // SSH 세션 명령어 조회 (확장 시)
+  const toggleSessionExpand = async (sessionId) => {
+    if (expandedSessionId === sessionId) {
+      setExpandedSessionId(null);
+      setSessionCommands([]);
+      return;
+    }
+    setExpandedSessionId(sessionId);
+    setSessionCommandsLoading(true);
+    try {
+      const res = await sshSessionApi.getCommands(sessionId, { page: 1, size: 100 });
+      const data = res.data?.data || {};
+      setSessionCommands(data.content || []);
+    } catch {
+      setSessionCommands([]);
+    } finally {
+      setSessionCommandsLoading(false);
+    }
+  };
 
   // 트래픽 설정 드롭다운 외부 클릭 닫기
   useEffect(() => {
@@ -411,7 +726,7 @@ export default function DeviceDetailModal({ deviceId, onClose }) {
       });
     } catch (error) {
       console.error('수집 설정 업데이트 오류:', error);
-      alert('수집 설정 업데이트에 실패했습니다.');
+      showError('수집 설정 업데이트에 실패했습니다.');
     }
   };
 
@@ -427,16 +742,25 @@ export default function DeviceDetailModal({ deviceId, onClose }) {
   // 장비 수정 저장
   const handleSaveDevice = async () => {
     if (!device || !hasEditChanges) return;
+    const ip = (editFormData.DEVICE_IP || '').trim();
+    if (!ip) {
+      showWarning('IP를 입력하세요.');
+      return;
+    }
+    if (!isValidIPv4(ip)) {
+      showWarning(`유효하지 않은 IP 주소입니다: ${ip}\n예: 192.168.1.10 (각 옥텟 0~255)`);
+      return;
+    }
     setEditSaving(true);
     try {
       await updateDeviceMutation.mutateAsync({
         deviceId: device.DEVICE_ID || deviceId,
         data: editFormData
       });
-      alert('장비 정보가 저장되었습니다.');
+      showSuccess('장비 정보가 저장되었습니다.');
     } catch (error) {
       console.error('장비 수정 오류:', error);
-      alert('장비 수정에 실패했습니다: ' + (error.response?.data?.message || error.message));
+      showError('장비 수정에 실패했습니다: ' + (error.response?.data?.message || error.message));
     } finally {
       setEditSaving(false);
     }
@@ -533,7 +857,7 @@ export default function DeviceDetailModal({ deviceId, onClose }) {
       setShowSettingsSidebar(false);
     } catch (error) {
       console.error('설정 저장 실패:', error);
-      alert('설정 저장에 실패했습니다: ' + (error.response?.data?.message || error.message));
+      showError('설정 저장에 실패했습니다: ' + (error.response?.data?.message || error.message));
     } finally {
       setSidebarSaving(false);
     }
@@ -552,7 +876,7 @@ export default function DeviceDetailModal({ deviceId, onClose }) {
       });
     } catch (error) {
       console.error('포트 업데이트 오류:', error);
-      alert('포트 정보 업데이트에 실패했습니다.');
+      showError('포트 정보 업데이트에 실패했습니다.');
     }
   };
 
@@ -647,7 +971,7 @@ export default function DeviceDetailModal({ deviceId, onClose }) {
       setFaultLoading(false);
     } catch (error) {
       console.error('인지 처리 실패:', error);
-      alert('인지 처리에 실패했습니다.');
+      showError('인지 처리에 실패했습니다.');
       setFaultLoading(false);
     }
   };
@@ -1027,526 +1351,128 @@ export default function DeviceDetailModal({ deviceId, onClose }) {
             <button className={`detail-tab ${activeTab === 'ssh-history' ? 'active' : ''}`} onClick={() => setActiveTab('ssh-history')}>
               <i className="bi bi-terminal"></i> SSH이력
             </button>
+            <button className={`detail-tab ${activeTab === 'config' ? 'active' : ''}`} onClick={() => setActiveTab('config')}>
+              <i className="bi bi-file-earmark-code"></i> Config
+            </button>
           </div>
         </div>
 
         {/* 장비 정보 탭 - 2열 레이아웃 (인라인 편집) */}
         {activeTab === 'device-info' && (
-          <div id="device-info-tab" className="detail-tab-content active">
-            {deviceLoading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px', color: '#94a3b8' }}>
-                <i className="bi bi-arrow-repeat spinning" style={{ fontSize: '24px', marginRight: '8px' }}></i> 로딩 중...
-              </div>
-            ) : device ? (
-              <div className="two-column-layout">
-                {/* 좌측: 장비정보, CPU/MEM */}
-                <div className="left-column">
-                  {/* 장비 정보 */}
-                  <div className="info-box">
-                    <div className="info-box-header">
-                      <span><i className="bi bi-hdd-network"></i> 장비 정보</span>
-                      {hasEditChanges ? (
-                        <button className="settings-gear-btn save-active" onClick={handleSaveDevice} disabled={editSaving} title="변경사항 저장">
-                          {editSaving ? <i className="bi bi-arrow-repeat spinning"></i> : <i className="bi bi-check-lg"></i>}
-                        </button>
-                      ) : (
-                        <button className="settings-gear-btn" onClick={handleOpenSettingsSidebar} title="장비 설정">
-                          <i className="bi bi-gear"></i>
-                        </button>
-                      )}
-                    </div>
-                    <div className="info-box-body">
-                      <div className="info-row">
-                        <span className="label">장비명</span>
-                        <input type="text" className="edit-input" value={editFormData.DEVICE_NAME || ''} onChange={(e) => setEditFormData({...editFormData, DEVICE_NAME: e.target.value})} />
-                      </div>
-                      <div className="info-row">
-                        <span className="label">IP</span>
-                        <input type="text" className="edit-input ip" value={editFormData.DEVICE_IP || ''} onChange={(e) => setEditFormData({...editFormData, DEVICE_IP: e.target.value})} />
-                      </div>
-                      <div className="info-row">
-                        <span className="label">시스템명</span>
-                        <span className="value">{device.DEVICE_SYSTEM_NAME || '-'}</span>
-                      </div>
-                      <div className="info-row">
-                        <span className="label">시스템 설명</span>
-                        <span className="value sys-descr-value">{device.DEVICE_DESC || device.sysDescr || '-'}</span>
-                      </div>
-                      <div className="info-row">
-                        <span className="label">벤더</span>
-                        <span className="value" style={{flex: '0 0 auto', marginRight: '16px'}}>{device.VENDOR_NAME || '-'}</span>
-                        <span className="label" style={{flex: '0 0 auto', marginRight: '8px'}}>모델</span>
-                        <span className="value">{device.MODEL_NAME || '-'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* CPU / MEM (메트릭에 포함된 경우만) */}
-                  {(deviceMetrics.length === 0 || deviceMetrics.includes('CPU') || deviceMetrics.includes('MEM')) && (
-                  <div className="info-box cpu-mem-box">
-                    <div className="info-box-header"><i className="bi bi-cpu"></i> CPU / MEM</div>
-                    <div className="info-box-body pie-body">
-                      <div className="pie-wrapper">
-                        <ReactECharts
-                          option={{
-                            series: [{
-                              type: 'pie', radius: ['55%', '80%'], center: ['50%', '50%'],
-                              data: [
-                                { value: cpuMemData?.CPU_USAGE || 0, itemStyle: { color: '#3b82f6' } },
-                                { value: 100 - (cpuMemData?.CPU_USAGE || 0), itemStyle: { color: 'rgba(255,255,255,0.1)' } }
-                              ],
-                              label: {
-                                show: true, position: 'center',
-                                formatter: cpuMemData?.CPU_USAGE != null ? `${Number(cpuMemData.CPU_USAGE).toFixed(1)}%` : '-',
-                                fontSize: 18, fontWeight: 'bold', color: '#3b82f6'
-                              },
-                              labelLine: { show: false }, silent: true
-                            }]
-                          }}
-                          style={{ height: '120px', width: '120px' }}
-                        />
-                        <span className="pie-name">CPU</span>
-                      </div>
-                      <div className="pie-wrapper">
-                        <ReactECharts
-                          option={{
-                            series: [{
-                              type: 'pie', radius: ['55%', '80%'], center: ['50%', '50%'],
-                              data: [
-                                { value: cpuMemData?.MEM_USAGE || 0, itemStyle: { color: '#10b981' } },
-                                { value: 100 - (cpuMemData?.MEM_USAGE || 0), itemStyle: { color: 'rgba(255,255,255,0.1)' } }
-                              ],
-                              label: {
-                                show: true, position: 'center',
-                                formatter: cpuMemData?.MEM_USAGE != null ? `${Number(cpuMemData.MEM_USAGE).toFixed(1)}%` : '-',
-                                fontSize: 18, fontWeight: 'bold', color: '#10b981'
-                              },
-                              labelLine: { show: false }, silent: true
-                            }]
-                          }}
-                          style={{ height: '120px', width: '120px' }}
-                        />
-                        <span className="pie-name">MEM</span>
-                      </div>
-                    </div>
-                  </div>
-                  )}
-
-                  {/* 온습도 (메트릭에 포함된 경우) */}
-                  {(deviceMetrics.includes('TEMPERATURE') || deviceMetrics.includes('HUMIDITY')) && (
-                    <EnvironmentBox deviceId={device?.DEVICE_ID || deviceId} metrics={deviceMetrics} />
-                  )}
-                </div>
-
-                {/* 우측: 포트현황, 트래픽차트 */}
-                <div className="right-column">
-                  {/* 포트 현황 - 실제 스위치 모양 */}
-                  <div className="info-box">
-                    <div className="info-box-header">
-                      <i className="bi bi-ethernet"></i> 포트 현황
-                      <span className="port-badge">
-                        <span className="up">{portsData?.filter(p => p.IF_OPER_STATUS === 1).length || 0} UP</span>
-                        <span className="sep">/</span>
-                        <span className="down">{portsData?.filter(p => p.IF_OPER_STATUS !== 1).length || 0} DOWN</span>
-                      </span>
-                    </div>
-                    <div className="info-box-body">
-                      {switchLayout ? (
-                        <div className="switch-chassis">
-                          <div className="switch-main-ports">
-                            {switchLayout.mainGroups.map((group, gIdx) => (
-                              <div key={`main-${gIdx}`} className="port-group">
-                                <div className="port-group-label">
-                                  {group.interfaceType === 'fastethernet' ? 'FastEthernet ' :
-                                   group.interfaceType === 'gigabit' ? 'GigabitEthernet ' :
-                                   group.interfaceType === 'linux-nic' ? 'Network Interface ' : 'Ethernet '}{group.slot !== 'eth' ? group.slot : ''}
-                                </div>
-                                <div className="port-panel">
-                                  <div className="port-row">
-                                    {group.ports.filter(p => p.parsed.portNum % 2 === 1).map(port => (
-                                      <div
-                                        key={port.IF_INDEX}
-                                        className={`port-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartPortsSet.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
-                                        title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
-                                        onClick={() => handleToggleChartPort(port)}
-                                      >
-                                        <span className="port-num">{port.parsed.portNum}</span>
-                                        <div className="port-connector"><div className="port-led"></div></div>
-                                        {chartPortsSet.has(port.IF_INDEX) && <span className="chart-icon"></span>}
-                                      </div>
-                                    ))}
-                                  </div>
-                                  <div className="port-row">
-                                    {group.ports.filter(p => p.parsed.portNum % 2 === 0).map(port => (
-                                      <div
-                                        key={port.IF_INDEX}
-                                        className={`port-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartPortsSet.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
-                                        title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
-                                        onClick={() => handleToggleChartPort(port)}
-                                      >
-                                        <span className="port-num">{port.parsed.portNum}</span>
-                                        <div className="port-connector"><div className="port-led"></div></div>
-                                        {chartPortsSet.has(port.IF_INDEX) && <span className="chart-icon"></span>}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                          {switchLayout.uplinkGroups.length > 0 && (
-                            <div className="switch-uplink-ports">
-                              <div className="uplink-divider"></div>
-                              {switchLayout.uplinkGroups.map((group, gIdx) => (
-                                <div key={`uplink-${gIdx}`} className="port-group uplink">
-                                  <div className="port-group-label">
-                                    {group.interfaceType === 'gigabit' ? 'GigabitEthernet ' :
-                                     group.interfaceType === 'tengigabit' ? 'TenGigabitEthernet ' :
-                                     group.interfaceType === 'management' ? 'Management' : 'Uplink '}{group.slot !== 'mgmt' ? group.slot : ''}
-                                  </div>
-                                  <div className="port-panel uplink-panel">
-                                    {group.ports.map(port => (
-                                      <div
-                                        key={port.IF_INDEX}
-                                        className={`port-jack uplink-jack ${port.IF_OPER_STATUS === 1 ? 'up' : 'down'}${chartPortsSet.has(port.IF_INDEX) ? ' chart-selected' : ''}`}
-                                        title={`${port.parsed.originalName}\n상태: ${port.IF_OPER_STATUS === 1 ? 'UP' : 'DOWN'}\n속도: ${port.IF_HIGH_SPEED || port.IF_SPEED || '-'}\n클릭하여 차트에 추가/제거`}
-                                        onClick={() => handleToggleChartPort(port)}
-                                      >
-                                        <span className="port-num">{port.parsed.portNum}</span>
-                                        <div className="port-connector sfp"><div className="port-led"></div></div>
-                                        {chartPortsSet.has(port.IF_INDEX) && <span className="chart-icon"></span>}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="no-port">포트 정보 없음</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 트래픽 차트 */}
-                  <div className="info-box traffic-box">
-                    <div className="info-box-header">
-                      <i className="bi bi-graph-up-arrow"></i> 포트별 트래픽
-                      <span className="time-label">
-                        {chartPortsSet.size > 0
-                          ? `선택: ${chartPortsSet.size}개 포트`
-                          : 'OPER UP 포트 (포트 클릭으로 선택)'}
-                      </span>
-                      {trafficLoading && <i className="bi bi-arrow-repeat spinning" style={{marginLeft:'8px',fontSize:'11px',color:'#64748b'}}></i>}
-                      <div className="global-settings-wrapper" ref={trafficSettingsRef}>
-                        <button className="btn btn-icon" onClick={() => setShowTrafficSettings(prev => !prev)} title="차트 설정">
-                          <i className="bi bi-sliders"></i>
-                        </button>
-                        {showTrafficSettings && (
-                          <div className="global-settings-dropdown">
-                            <div className="option-group-label">트래픽 카운터</div>
-                            <label className="option-item">
-                              <input type="radio" name="ptcCounter" checked={trafficChartSettings.counterType === '32bit'} onChange={() => setTrafficChartSettings(s => ({...s, counterType: '32bit'}))} />
-                              <span>32-bit</span>
-                            </label>
-                            <label className="option-item">
-                              <input type="radio" name="ptcCounter" checked={trafficChartSettings.counterType === '64bit'} onChange={() => setTrafficChartSettings(s => ({...s, counterType: '64bit'}))} />
-                              <span>64-bit</span>
-                            </label>
-
-                            <div className="option-group-label">표시 단위</div>
-                            <label className="option-item">
-                              <input type="radio" name="ptcUnit" checked={trafficChartSettings.trafficUnit === 'bit'} onChange={() => setTrafficChartSettings(s => ({...s, trafficUnit: 'bit'}))} />
-                              <span>bit (bps)</span>
-                            </label>
-                            <label className="option-item">
-                              <input type="radio" name="ptcUnit" checked={trafficChartSettings.trafficUnit === 'byte'} onChange={() => setTrafficChartSettings(s => ({...s, trafficUnit: 'byte'}))} />
-                              <span>byte (B/s)</span>
-                            </label>
-                            <label className="option-item">
-                              <input type="radio" name="ptcUnit" checked={trafficChartSettings.trafficUnit === 'bps'} onChange={() => setTrafficChartSettings(s => ({...s, trafficUnit: 'bps'}))} />
-                              <span>사용률 (%)</span>
-                            </label>
-
-                            <div className="option-group-label">품질 지표</div>
-                            <label className="option-item">
-                              <input type="checkbox" checked={trafficChartSettings.showError} onChange={(e) => setTrafficChartSettings(s => ({...s, showError: e.target.checked}))} />
-                              <span style={{color:'#ef4444'}}>Error</span>
-                            </label>
-                            <label className="option-item">
-                              <input type="checkbox" checked={trafficChartSettings.showDiscard} onChange={(e) => setTrafficChartSettings(s => ({...s, showDiscard: e.target.checked}))} />
-                              <span style={{color:'#f97316'}}>Discard</span>
-                            </label>
-
-                            <div className="option-group-label">포트 선택</div>
-                            <label className="option-item" style={{cursor:'pointer'}} onClick={handleResetChartFlags}>
-                              <i className="bi bi-arrow-counterclockwise" style={{fontSize:12,color:'#94a3b8'}}></i>
-                              <span>선택 초기화</span>
-                            </label>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="info-box-body">
-                      <PortTrafficChart
-                        rawData={trafficRawData}
-                        chartPortsSet={chartPortsSet}
-                        portsData={portsData}
-                        settings={trafficChartSettings}
-                        loading={trafficLoading}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px', color: '#94a3b8' }}>
-                장비 정보가 없습니다.
-              </div>
-            )}
-          </div>
+          <DeviceInfoTab
+            deviceLoading={deviceLoading}
+            device={device}
+            deviceId={deviceId}
+            hasEditChanges={hasEditChanges}
+            handleSaveDevice={handleSaveDevice}
+            editSaving={editSaving}
+            handleOpenSettingsSidebar={handleOpenSettingsSidebar}
+            editFormData={editFormData}
+            setEditFormData={setEditFormData}
+            deviceMetrics={deviceMetrics}
+            cpuMemData={cpuMemData}
+            trafficRawData={trafficRawData}
+            portsData={portsData}
+            chartPortsSet={chartPortsSet}
+            handlePortContextMenu={handlePortContextMenu}
+            handleToggleChartPort={handleToggleChartPort}
+            trafficChartSettings={trafficChartSettings}
+            trafficLoading={trafficLoading}
+            switchLayout={switchLayout}
+          />
         )}
 
-        {/* 포트 정보 탭 */}
         {activeTab === 'port-info' && (
-          <div id="port-info-tab" className="detail-tab-content active">
-            <DataTable
-              tableId="modal-ports"
-              columns={portColumns}
-              data={sortedPorts}
-              rowKey="IF_INDEX"
-              loading={portsLoading}
-              loadingText="포트 정보를 불러오는 중..."
-              emptyText="등록된 포트가 없습니다"
-              emptyIcon="bi-ethernet"
-              sort={{ field: portSortField, order: portSortOrder }}
-              onSort={handlePortSort}
-              maxHeight="calc(100vh - 380px)"
-              className="port-data-table"
-              exportConfig={{ fileName: '포트정보' }}
-            />
-          </div>
+          <PortInfoTab
+            columns={portColumns}
+            data={sortedPorts}
+            loading={portsLoading}
+            sort={{ field: portSortField, order: portSortOrder }}
+            onSort={handlePortSort}
+          />
         )}
 
-        {/* 장애 탭 */}
         {activeTab === 'fault-info' && (
-          <div id="fault-info-tab" className="detail-tab-content active">
-            <DataTable
-              tableId="modal-faults"
-              columns={faultColumns}
-              data={faultData}
-              rowKey="_faultRowId"
-              rowAttrs={(row) => ({ 'data-fault-row': row._faultRowId || '' })}
-              loading={faultLoading}
-              loadingText="장애 이력을 불러오는 중..."
-              emptyText="장애 이력이 없습니다"
-              emptyIcon="bi-check-circle"
-              sort={{ field: faultSortField, order: faultSortOrder }}
-              onSort={handleFaultSort}
-              maxHeight="calc(100vh - 380px)"
-              rowClassName={(row) => row._isActive ? 'fault-active-row' : ''}
-              pagination={{
-                currentPage: faultPage,
-                pageSize: faultPageSize,
-                totalItems: faultTotal,
-                onPageChange: setFaultPage,
-                onPageSizeChange: (size) => {
-                  setFaultPageSize(size);
-                  setFaultPage(1);
-                },
-                pageSizeOptions: [10, 20, 50],
-              }}
-            />
-
-            {/* 장애 인지 처리 모달 */}
-            {showFaultAckModal && (
-              <div className="modal-overlay" onClick={() => setShowFaultAckModal(false)}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                  <div className="modal-header">
-                    <h3>장애 인지 처리</h3>
-                    <button className="modal-close" onClick={() => setShowFaultAckModal(false)}>
-                      <i className="bi bi-x-lg"></i>
-                    </button>
-                  </div>
-                  <div className="modal-body">
-                    <div className="ack-info">
-                      <p><strong>장비:</strong> {device?.DEVICE_NAME} ({device?.DEVICE_IP})</p>
-                      <p><strong>장애:</strong> {selectedFaultError?.ERROR_MESSAGE}</p>
-                    </div>
-                    <div className="form-group">
-                      <label>인지 메시지</label>
-                      <textarea
-                        value={faultAckMessage}
-                        onChange={(e) => setFaultAckMessage(e.target.value)}
-                        placeholder="인지 처리 메시지를 입력하세요..."
-                        rows={3}
-                      />
-                    </div>
-                  </div>
-                  <div className="modal-footer">
-                    <button className="btn btn-secondary" onClick={() => setShowFaultAckModal(false)}>취소</button>
-                    <button className="btn btn-primary" onClick={handleFaultAcknowledge}>인지 처리</button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <FaultInfoTab
+            columns={faultColumns}
+            data={faultData}
+            loading={faultLoading}
+            sort={{ field: faultSortField, order: faultSortOrder }}
+            onSort={handleFaultSort}
+            pageState={{
+              page: faultPage,
+              pageSize: faultPageSize,
+              total: faultTotal,
+              onPageChange: setFaultPage,
+              onPageSizeChange: (size) => { setFaultPageSize(size); setFaultPage(1); },
+            }}
+            setPageState={{
+              onPageChange: setFaultPage,
+              onPageSizeChange: (size) => { setFaultPageSize(size); setFaultPage(1); },
+            }}
+            ackModal={{
+              open: showFaultAckModal,
+              onClose: () => setShowFaultAckModal(false),
+            }}
+            device={device}
+            selectedError={selectedFaultError}
+            ackMessage={faultAckMessage}
+            onAckMessageChange={setFaultAckMessage}
+            onAcknowledge={handleFaultAcknowledge}
+          />
         )}
 
-        {/* 변경이력 탭 */}
         {activeTab === 'change-history' && (
-          <div id="change-history-tab" className="detail-tab-content active">
-            {changeHistoryLoading ? (
-              <div className="tab-loading"><i className="bi bi-arrow-repeat spinning"></i> 변경이력을 불러오는 중...</div>
-            ) : changeHistory.length === 0 ? (
-              <div className="tab-empty"><i className="bi bi-clock-history"></i><span>변경이력이 없습니다</span></div>
-            ) : (
-              <>
-                <div className="history-timeline">
-                  {changeHistory.map((log, idx) => (
-                    <div key={log.LOG_ID || idx} className="history-item">
-                      <div className="history-item-icon">
-                        {log.ACTION_TYPE === 'CREATE' && <i className="bi bi-plus-circle text-success"></i>}
-                        {log.ACTION_TYPE === 'UPDATE' && <i className="bi bi-pencil-square text-info"></i>}
-                        {log.ACTION_TYPE === 'DELETE' && <i className="bi bi-trash text-danger"></i>}
-                      </div>
-                      <div className="history-item-content">
-                        <div className="history-item-header">
-                          <span className={`history-action-badge ${log.ACTION_TYPE?.toLowerCase()}`}>
-                            {log.ACTION_TYPE === 'CREATE' ? '등록' : log.ACTION_TYPE === 'UPDATE' ? '수정' : log.ACTION_TYPE === 'DELETE' ? '삭제' : log.ACTION_TYPE}
-                          </span>
-                          <span className="history-target-type">{log.TARGET_TYPE}</span>
-                          <span className="history-user">{log.USER_NAME || '시스템'}</span>
-                          <span className="history-time">{log.CREATED_AT ? new Date(log.CREATED_AT).toLocaleString('ko-KR') : ''}</span>
-                        </div>
-                        {log.DETAIL && (
-                          <div className="history-item-detail">{log.DETAIL}</div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {changeHistoryTotal > 20 && (
-                  <div className="history-pagination">
-                    <button disabled={changeHistoryPage <= 1} onClick={() => setChangeHistoryPage(p => p - 1)}>
-                      <i className="bi bi-chevron-left"></i>
-                    </button>
-                    <span>{changeHistoryPage} / {Math.ceil(changeHistoryTotal / 20)}</span>
-                    <button disabled={changeHistoryPage >= Math.ceil(changeHistoryTotal / 20)} onClick={() => setChangeHistoryPage(p => p + 1)}>
-                      <i className="bi bi-chevron-right"></i>
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+          <ChangeHistoryTab
+            loading={changeHistoryLoading}
+            history={changeHistory}
+            total={changeHistoryTotal}
+            page={changeHistoryPage}
+            onPageChange={setChangeHistoryPage}
+          />
         )}
 
         {/* SSH이력 탭 */}
         {activeTab === 'ssh-history' && (
-          <div id="ssh-history-tab" className="detail-tab-content active">
-            {sshHistoryLoading ? (
-              <div className="tab-loading"><i className="bi bi-arrow-repeat spinning"></i> SSH이력을 불러오는 중...</div>
-            ) : sshHistory.length === 0 ? (
-              <div className="tab-empty"><i className="bi bi-terminal"></i><span>SSH 접속 이력이 없습니다</span></div>
-            ) : (
-              <>
-                <div className="ssh-history-list">
-                  {sshHistory.map((session, idx) => (
-                    <div key={session.sessionId || idx} className="ssh-history-item">
-                      <div className="ssh-history-icon">
-                        <i className={`bi ${session.disconnectedAt ? 'bi-plug' : 'bi-plug-fill text-success'}`}></i>
-                      </div>
-                      <div className="ssh-history-content">
-                        <div className="ssh-history-header">
-                          <span className="ssh-user-badge">{session.sshUser}@{session.host}</span>
-                          <span className="ssh-history-user">{session.userName || '알 수 없음'}</span>
-                          <span className={`ssh-status-badge ${session.disconnectedAt ? 'closed' : 'active'}`}>
-                            {session.disconnectedAt ? '종료' : '접속중'}
-                          </span>
-                        </div>
-                        <div className="ssh-history-times">
-                          <span><i className="bi bi-box-arrow-in-right"></i> {session.connectedAt ? new Date(session.connectedAt).toLocaleString('ko-KR') : ''}</span>
-                          {session.disconnectedAt && (
-                            <span><i className="bi bi-box-arrow-right"></i> {new Date(session.disconnectedAt).toLocaleString('ko-KR')}</span>
-                          )}
-                          <span className="ssh-remote-addr">접속IP: {session.remoteAddr}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {sshHistoryTotal > 20 && (
-                  <div className="history-pagination">
-                    <button disabled={sshHistoryPage <= 1} onClick={() => setSshHistoryPage(p => p - 1)}>
-                      <i className="bi bi-chevron-left"></i>
-                    </button>
-                    <span>{sshHistoryPage} / {Math.ceil(sshHistoryTotal / 20)}</span>
-                    <button disabled={sshHistoryPage >= Math.ceil(sshHistoryTotal / 20)} onClick={() => setSshHistoryPage(p => p + 1)}>
-                      <i className="bi bi-chevron-right"></i>
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+          <SshHistoryTab
+            loading={sshHistoryLoading}
+            history={sshHistory}
+            expandedSessionId={expandedSessionId}
+            onToggleExpand={toggleSessionExpand}
+            sessionCommands={sessionCommands}
+            sessionCommandsLoading={sessionCommandsLoading}
+            page={sshHistoryPage}
+            total={sshHistoryTotal}
+            onPageChange={setSshHistoryPage}
+          />
+        )}
+
+        {activeTab === 'config' && (
+          <ConfigTab
+            configDiffStats={configDiffStats}
+            configSyncScroll={configSyncScroll}
+            setConfigSyncScroll={setConfigSyncScroll}
+            configLeftDateRef={configLeftDateRef}
+            configLeftDate={configLeftDate}
+            setConfigLeftDate={setConfigLeftDate}
+            configRightDate={configRightDate}
+            configLeftPanelRef={configLeftPanelRef}
+            handleConfigScroll={handleConfigScroll}
+            configLeft={configLeft}
+            configRight={configRight}
+            configDates={configDates}
+            configShowOnlyChanges={configShowOnlyChanges}
+            setConfigShowOnlyChanges={setConfigShowOnlyChanges}
+            formatConfigDateLabel={formatConfigDateLabel}
+            configRightDateRef={configRightDateRef}
+            setConfigRightDate={setConfigRightDate}
+            configRightPanelRef={configRightPanelRef}
+            configLoading={configLoading}
+            configDiff={configDiff}
+          />
         )}
       </div>
     </div>
   );
 }
 
-// 온습도 표시 컴포넌트
-function EnvironmentBox({ deviceId, metrics }) {
-  const [latest, setLatest] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!deviceId) return;
-    setLoading(true);
-    devicesApi.getEnvironmentLatest(deviceId)
-      .then(r => setLatest(r.data?.data || r.data || []))
-      .catch(() => setLatest([]))
-      .finally(() => setLoading(false));
-  }, [deviceId]);
-
-  const temp = latest.find(d => d.METRIC_CODE === 'TEMPERATURE');
-  const hum = latest.find(d => d.METRIC_CODE === 'HUMIDITY');
-
-  return (
-    <div className="info-box cpu-mem-box">
-      <div className="info-box-header"><i className="bi bi-thermometer-half"></i> 온습도</div>
-      <div className="info-box-body pie-body">
-        {loading ? (
-          <div style={{ padding: 20, color: '#94a3b8', textAlign: 'center', width: '100%' }}>
-            <i className="bi bi-arrow-repeat spinning" /> 로딩 중...
-          </div>
-        ) : (
-          <>
-            {metrics.includes('TEMPERATURE') && (
-              <div className="pie-wrapper">
-                <div className="env-gauge temp">
-                  <i className="bi bi-thermometer-half" />
-                  <span className="env-gauge-value">{temp ? `${temp.VALUE}` : '—'}</span>
-                  <span className="env-gauge-unit">°C</span>
-                </div>
-                <span className="pie-name">온도</span>
-              </div>
-            )}
-            {metrics.includes('HUMIDITY') && (
-              <div className="pie-wrapper">
-                <div className="env-gauge hum">
-                  <i className="bi bi-droplet-half" />
-                  <span className="env-gauge-value">{hum ? `${hum.VALUE}` : '—'}</span>
-                  <span className="env-gauge-unit">%RH</span>
-                </div>
-                <span className="pie-name">습도</span>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}

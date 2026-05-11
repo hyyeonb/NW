@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { GroupTree, DataTable } from '../components';
-import { useGroupStore } from '../stores';
+import GroupTree from '../components/GroupTree';
+import DataTable from '../components/DataTable';
+import { useGroupStore } from '../stores/groupStore';
 import apiClient from '../api/client';
 
 // 장비 목록 조회 훅
@@ -164,91 +165,94 @@ export default function AssetConfig() {
   ], [navigate]);
 
   return (
-    <div className="page-container">
-      <GroupTree />
-      <main className="page-main-content">
-        {/* 페이지 헤더 */}
-        <div className="page-header">
-          <div className="page-header-left">
-            <h1 className="page-title">
-              <i className="bi bi-sliders"></i>
-              자산 Config 관리
-            </h1>
-            <span className="page-subtitle">장비의 Config 정보를 조회하고 비교합니다</span>
-            {selectedGroup && (
-              <span className="selected-group-badge">
-                <i className="bi bi-folder2"></i>
-                {selectedGroup.GROUP_NAME}
-              </span>
-            )}
-          </div>
+    <div className="asset-config-container">
+      {/* 페이지 헤더 */}
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="page-title">
+            <i className="bi bi-sliders"></i>
+            자산 Config 관리
+          </h1>
+          <span className="page-subtitle">장비의 Config 정보를 조회하고 비교합니다</span>
+          {selectedGroup && (
+            <span className="selected-group-badge">
+              <i className="bi bi-folder2"></i>
+              {selectedGroup.GROUP_NAME}
+            </span>
+          )}
         </div>
+      </div>
 
-        {!selectedGroup ? (
-          <p id="welcome-message">그룹을 선택하여 해당 그룹의 장비 설정 목록을 확인하세요.</p>
-        ) : isLoading ? (
-          <p style={{ color: 'var(--theme-text-tertiary, #94a3b8)' }}>로딩 중...</p>
-        ) : (
-          <div id="device-list-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-            {/* 검색 필터 바 + 테이블 통합 */}
-            <div className="table-panel">
-              <div className="filter-bar">
-                <div className="filter-group">
-                  <label>장비명</label>
-                  <input
-                    type="text"
-                    className="filter-input"
-                    placeholder="장비명"
-                    value={searchDeviceName}
-                    onChange={(e) => setSearchDeviceName(e.target.value)}
-                  />
+      {/* 패널 래퍼 - 사이드바와 메인 컨텐츠를 하나로 묶음 */}
+      <div className="page-panels-wrapper">
+        <GroupTree />
+        <main className="page-main-content">
+          {!selectedGroup ? (
+            <p id="welcome-message">그룹을 선택하여 해당 그룹의 장비 설정 목록을 확인하세요.</p>
+          ) : isLoading ? (
+            <p style={{ color: 'var(--theme-text-tertiary, #94a3b8)' }}>로딩 중...</p>
+          ) : (
+            <div id="device-list-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+              {/* 검색 필터 바 + 테이블 통합 */}
+              <div className="table-panel">
+                <div className="filter-bar">
+                  <div className="filter-group">
+                    <label>장비명</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      placeholder="장비명"
+                      value={searchDeviceName}
+                      onChange={(e) => setSearchDeviceName(e.target.value)}
+                    />
+                  </div>
+                  <div className="filter-group">
+                    <label>IP 주소</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      placeholder="IP"
+                      value={searchDeviceIp}
+                      onChange={(e) => setSearchDeviceIp(e.target.value)}
+                    />
+                  </div>
+                  <div className="filter-actions">
+                    <button className="btn btn-icon-only" onClick={handleSearchReset} title="초기화">
+                      <i className="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                  </div>
                 </div>
-                <div className="filter-group">
-                  <label>IP 주소</label>
-                  <input
-                    type="text"
-                    className="filter-input"
-                    placeholder="IP"
-                    value={searchDeviceIp}
-                    onChange={(e) => setSearchDeviceIp(e.target.value)}
-                  />
-                </div>
-                <div className="filter-actions">
-                  <button className="btn btn-icon-only" onClick={handleSearchReset} title="초기화">
-                    <i className="bi bi-arrow-counterclockwise"></i>
-                  </button>
-                </div>
+
+                <DataTable
+                  columns={deviceColumns}
+                  data={pagedDevices}
+                  rowKey="deviceId"
+                  loading={isLoading}
+                  exportConfig={{ fileName: '자산Config' }}
+                  loadingText="장비 정보를 불러오는 중..."
+                  emptyText="등록된 장비가 없습니다"
+                  emptyIcon="bi-hdd-rack"
+                  sort={{ field: deviceSortField, order: deviceSortOrder }}
+                  onSort={handleDeviceSort}
+                  selectable={false}
+                  onRowClick={handleRowClick}
+                  pagination={{
+                    currentPage: page,
+                    pageSize: pageSize,
+                    totalItems: totalElements,
+                    onPageChange: setPage,
+                    onPageSizeChange: (newSize) => {
+                      setPageSize(newSize);
+                      setPage(1);
+                    },
+                  }}
+                  maxHeight="100%"
+                />
               </div>
-
-            <DataTable
-              columns={deviceColumns}
-              data={pagedDevices}
-              rowKey="deviceId"
-              loading={isLoading}
-              exportConfig={{ fileName: '자산Config' }}
-              loadingText="장비 정보를 불러오는 중..."
-              emptyText="등록된 장비가 없습니다"
-              emptyIcon="bi-hdd-rack"
-              sort={{ field: deviceSortField, order: deviceSortOrder }}
-              onSort={handleDeviceSort}
-              selectable={false}
-              onRowClick={handleRowClick}
-              pagination={{
-                currentPage: page,
-                pageSize: pageSize,
-                totalItems: totalElements,
-                onPageChange: setPage,
-                onPageSizeChange: (newSize) => {
-                  setPageSize(newSize);
-                  setPage(1);
-                },
-              }}
-              maxHeight="calc(100vh - 260px)"
-            />
             </div>
-          </div>
-        )}
-      </main>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
