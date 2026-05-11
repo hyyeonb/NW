@@ -171,11 +171,13 @@
     color: var(--theme-accent-light);
 }
 
-/* 슬롯 내부 포트들 — 한 줄 + 가로 스크롤 (selected ring/hover 효과 공간 확보) */
+/* 슬롯 내부 포트들 — 위쪽 홀수/아래쪽 짝수 2행 + 가로 스크롤 */
 .spg-slot-ports {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 6px;
+    display: grid;
+    grid-template-rows: repeat(2, auto);
+    grid-auto-flow: column dense;
+    grid-auto-columns: 52px;
+    gap: 4px 6px;
     overflow-x: auto;
     overflow-y: hidden;
     padding: 4px 4px 6px;

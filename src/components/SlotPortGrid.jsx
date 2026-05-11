@@ -58,7 +58,7 @@ function PortIcon({ data, color, isUp }) {
 /**
  * 개별 포트 카드
  */
-function PortCard({ port, history, onClick, onContextMenu, selected }) {
+function PortCard({ port, history, onClick, onContextMenu, selected, style }) {
   const speedBps = (port.IF_HIGH_SPEED || 0) * 1e6; // Mbps → bps
   const latestBps = history && history.length > 0 ? history[history.length - 1] : 0;
   const usagePercent = speedBps > 0 ? Math.min(100, (latestBps / speedBps) * 100) : 0;
@@ -70,6 +70,7 @@ function PortCard({ port, history, onClick, onContextMenu, selected }) {
       className={`spg-port-card ${status.cls} ${selected ? 'selected' : ''}`}
       onClick={onClick}
       onContextMenu={onContextMenu}
+      style={style}
       title={`${parsed?.label || port.IF_NAME} · ${status.label}\n속도: ${port.IF_HIGH_SPEED || '-'} Mbps\n현재: ${formatBps(latestBps)}\n우클릭: 포트 점검`}
     >
       <div className="spg-port-name">{parsed?.label || port.IF_NAME}</div>
@@ -130,9 +131,24 @@ function PortDetailPanel({ port, deviceId, inHistory, outHistory, timestamps, on
 
   const chartOption = useMemo(() => {
     const showDate = timeRange === '7d' || timeRange === '30d';
-    const xLabels = activeTimestamps.map(t => {
-      if (!t) return '';
+    const rangeEnd = Date.now();
+    const rangeStart = rangeEnd - selectedRange.minutes * 60 * 1000;
+    const toMs = (t) => {
+      if (t == null) return null;
       const d = typeof t === 'string' ? new Date(t) : t;
+      const ms = d.getTime();
+      return Number.isFinite(ms) ? ms : null;
+    };
+    const inPairs = [];
+    const outPairs = [];
+    for (let i = 0; i < activeTimestamps.length; i++) {
+      const ms = toMs(activeTimestamps[i]);
+      if (ms == null) continue;
+      inPairs.push([ms, activeInHistory[i] ?? null]);
+      outPairs.push([ms, activeOutHistory[i] ?? null]);
+    }
+    const labelFormatter = (v) => {
+      const d = new Date(v);
       if (showDate) {
         const mo = String(d.getMonth() + 1).padStart(2, '0');
         const da = String(d.getDate()).padStart(2, '0');
@@ -141,14 +157,27 @@ function PortDetailPanel({ port, deviceId, inHistory, outHistory, timestamps, on
       const h = String(d.getHours()).padStart(2, '0');
       const m = String(d.getMinutes()).padStart(2, '0');
       return `${h}:${m}`;
-    });
+    };
     return {
       grid: { left: 50, right: 16, top: 12, bottom: 24 },
-      tooltip: { trigger: 'axis' },
+      tooltip: {
+        trigger: 'axis',
+        formatter: (params) => {
+          if (!params || params.length === 0) return '';
+          const ts = params[0].value?.[0];
+          const d = new Date(ts);
+          const header = showDate
+            ? `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+            : `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+          const lines = params.map(p => `${p.marker}${p.seriesName} <strong>${formatBps(p.value?.[1] ?? 0)}</strong>`).join('<br/>');
+          return `${header}<br/>${lines}`;
+        },
+      },
       xAxis: {
-        type: 'category',
-        data: xLabels,
-        axisLabel: { fontSize: 10, hideOverlap: true },
+        type: 'time',
+        min: rangeStart,
+        max: rangeEnd,
+        axisLabel: { fontSize: 10, hideOverlap: true, formatter: labelFormatter },
         axisLine: { show: false },
         axisTick: { show: false },
       },
@@ -159,20 +188,22 @@ function PortDetailPanel({ port, deviceId, inHistory, outHistory, timestamps, on
       },
       series: [
         {
-          name: 'IN', type: 'line', smooth: true, showSymbol: false, data: activeInHistory,
+          name: 'IN', type: 'line', smooth: true, showSymbol: false, data: inPairs,
+          connectNulls: false,
           lineStyle: { width: 2, color: '#3b82f6' },
           areaStyle: { color: 'rgba(59, 130, 246, 0.25)' },
           itemStyle: { color: '#3b82f6' },
         },
         {
-          name: 'OUT', type: 'line', smooth: true, showSymbol: false, data: activeOutHistory,
+          name: 'OUT', type: 'line', smooth: true, showSymbol: false, data: outPairs,
+          connectNulls: false,
           lineStyle: { width: 2, color: '#10b981' },
           areaStyle: { color: 'rgba(16, 185, 129, 0.2)' },
           itemStyle: { color: '#10b981' },
         },
       ],
     };
-  }, [activeInHistory, activeOutHistory, activeTimestamps, timeRange]);
+  }, [activeInHistory, activeOutHistory, activeTimestamps, timeRange, selectedRange.minutes]);
 
   return (
     <div className="spg-detail">
@@ -450,16 +481,20 @@ export default function SlotPortGrid({ deviceId, portsData, trafficRawData, onPo
                 </div>
               </div>
               <div className="spg-slot-ports">
-                {slot.ports.map(port => (
-                  <PortCard
-                    key={port.IF_INDEX}
-                    port={port}
-                    history={portHistoryMap.get(port.IF_INDEX)?.max}
-                    selected={focusedPortIndex === port.IF_INDEX || selectedPorts?.has(port.IF_INDEX)}
-                    onClick={() => handlePortCardClick(port)}
-                    onContextMenu={onPortContextMenu ? (e) => { e.preventDefault(); onPortContextMenu(e, port); } : undefined}
-                  />
-                ))}
+                {slot.ports.map(port => {
+                  const portNum = port._parsed?.port ?? 0;
+                  return (
+                    <PortCard
+                      key={port.IF_INDEX}
+                      port={port}
+                      history={portHistoryMap.get(port.IF_INDEX)?.max}
+                      selected={focusedPortIndex === port.IF_INDEX || selectedPorts?.has(port.IF_INDEX)}
+                      onClick={() => handlePortCardClick(port)}
+                      onContextMenu={onPortContextMenu ? (e) => { e.preventDefault(); onPortContextMenu(e, port); } : undefined}
+                      style={{ gridRow: portNum % 2 === 1 ? 1 : 2 }}
+                    />
+                  );
+                })}
               </div>
             </div>
           ))}
